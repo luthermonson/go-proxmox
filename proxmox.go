@@ -2,10 +2,11 @@ package proxmox
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/luthermonson/go-proxmox/types"
+	"strings"
 )
 
 var (
@@ -14,54 +15,76 @@ var (
 
 type Client struct {
 	httpClient *http.Client
-	BaseUrl    string
-	Version    types.Version
-	Session    types.Session
+	BaseURL    string
+	Version    Version
+	Session    Session
 }
 
-func NewClient(baseUrl string, opts ...Option) *Client {
+func NewClient(baseURL string, opts ...Option) *Client {
 	c := &Client{
-		BaseUrl: baseUrl,
+		BaseURL: baseURL,
 	}
 
 	for _, o := range opts {
 		o(c)
 	}
 
+	if c.httpClient == nil {
+		c.httpClient = http.DefaultClient
+	}
+
 	return c
 }
 
-func (c *Client) Login(un, pw, otf string) {
-
-}
-
-func (c *Client) Req(method, path string, data []byte) ([]byte, error) {
-	req, err := http.NewRequest(method, path, bytes.NewBuffer(data))
-	if err != nil {
-		return nil, err
+func (c *Client) Req(method, path string, data []byte, v interface{}) error {
+	if strings.HasPrefix(path, "/") {
+		path = c.BaseURL + path
 	}
+	var body io.Reader
+	if data != nil {
+		body = bytes.NewBuffer(data)
+	}
+	req, err := http.NewRequest(method, path, body)
+	if err != nil {
+		return err
+	}
+	if body != nil {
+		req.Header.Add("Content-Type", "application/json")
+	}
+	req.Header.Add("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
-	return ioutil.ReadAll(resp.Body)
+	resBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	strBody := string(resBody)
+	if strings.HasPrefix(strBody, "{\"data\":") && strings.HasSuffix(strBody, "}") {
+		strBody = strings.TrimPrefix(strBody, "{\"data\":")
+		strBody = strings.TrimSuffix(strBody, "}")
+	}
+
+	return json.Unmarshal([]byte(strBody), &v)
 }
 
-func (c *Client) Get(p string) error {
-	return c.Req("GET", p, nil)
+func (c *Client) Get(p string, v interface{}) error {
+	return c.Req(http.MethodGet, p, nil, v)
 }
 
-func (c *Client) Post(p string, d []byte) error {
-	return c.Req("POST", p, d)
+func (c *Client) Post(p string, d []byte, v interface{}) error {
+	return c.Req(http.MethodPost, p, d, v)
 }
 
-func (c *Client) Put(p string, d []byte) error {
-	return c.Req("PUT", p, d)
+func (c *Client) Put(p string, d []byte, v interface{}) error {
+	return c.Req(http.MethodPut, p, d, v)
 }
 
-func (c *Client) Delete(p string) error {
-	return c.Req("DELETE", p, nil)
+func (c *Client) Delete(p string, v interface{}) error {
+	return c.Req(http.MethodDelete, p, nil, v)
 }

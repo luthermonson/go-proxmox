@@ -1,6 +1,8 @@
 package proxmox
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type Option func(*Client)
 

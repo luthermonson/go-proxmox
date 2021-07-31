@@ -1,0 +1,26 @@
+{
+  "linters": {
+    "disable-all": true,
+    "enable": [
+      "govet",
+      "revive",
+      "goimports",
+      "misspell",
+      "ineffassign",
+      "gofmt"
+    ]
+  },
+  "linters-settings": {
+    "govet": {
+      "check-shadowing": false
+    },
+    "gofmt": {
+      "simplify": false
+    }
+  },
+  "run": {
+    "skip-dirs": [],
+    "tests": false,
+    "timeout": "10m"
+  }
+}
