@@ -27,7 +27,7 @@ func TestNodes(t *testing.T) {
 			assert.Nil(t, err)
 		})
 
-		continue // only pull status from one node
+		break // only pull status from one node
 	}
 
 	_, err = client.Node("doesnt-exist")

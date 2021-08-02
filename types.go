@@ -54,6 +54,17 @@ type Node struct {
 	Wait       float64
 }
 
+type IsTemplate bool
+
+func (it *IsTemplate) UnmarshalJSON(b []byte) error {
+	*it = true
+	if string(b) == "\"\"" {
+		*it = false
+	}
+
+	return nil
+}
+
 type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
 	Name      string
@@ -71,7 +82,8 @@ type VirtualMachine struct {
 	MaxMem    uint64
 	MaxDisk   uint64
 	DiskRead  uint64
-	HA        HA `json:",omitempty"`
+	Template  IsTemplate // empty str if a vm, int 1 if a template
+	HA        HA         `json:",omitempty"`
 }
 
 type HA struct {
