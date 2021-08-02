@@ -21,16 +21,16 @@ import (
 func main() {
     client := proxmox.NewClient("https://localhost:8006/api2/json")
     if _, err := client.Login(proxmox.Credentials{
-    	Username: "root@pam",
-    	Password: "password",
+        Username: "root@pam",
+        Password: "password",
     }); err != nil {
         panic(err)
     }
     version, err := client.Version()
     if err != nil {
-		panic(err)
-	}
-	fmt.Println(version.Release) // 6.3
+        panic(err)
+    }
+    fmt.Println(version.Release) // 6.3
 }
 ```
 
@@ -43,25 +43,25 @@ import (
 	"github.com/luthermonson/go-proxmox"
 )
 func main() {
-	insecureHTTPClient := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-	tokenID := "root@pam!mytoken"
-	secret := "somegeneratedapitokenguidefromtheproxmoxui"
-	
+    insecureHTTPClient := http.Client{
+        Transport: &http.Transport{
+            TLSClientConfig: &tls.Config{
+                InsecureSkipVerify: true,
+            },
+        },
+    }
+    tokenID := "root@pam!mytoken"
+    secret := "somegeneratedapitokenguidefromtheproxmoxui"
+    
     client := proxmox.NewClient("https://localhost:8006/api2/json",
-    	proxmox.WithClient(&insecureHTTPClient),
-    	proxmox.WithAPIToken(tokenID, secret),
+        proxmox.WithClient(&insecureHTTPClient),
+        proxmox.WithAPIToken(tokenID, secret),
     )
     
     version, err := client.Version()
     if err != nil {
-		panic(err)
-	}
+        panic(err)
+    }
     fmt.Println(version.Release) // 6.3
 }
 ```
