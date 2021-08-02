@@ -31,5 +31,5 @@ func TestNodes(t *testing.T) {
 	}
 
 	_, err = client.Node("doesnt-exist")
-	assert.EqualError(t, err, "500 hostname lookup 'doesnt-exist' failed - failed to get address info for: doesnt-exist: No address associated with hostname")
+	assert.Contains(t, err.Error(), "500 hostname lookup 'doesnt-exist' failed - failed to get address info for: doesnt-exist:")
 }
