@@ -28,3 +28,11 @@ func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
 func (n *Node) VirtualMachine(vmid int) (vm *VirtualMachine, err error) {
 	return vm, n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm)
 }
+
+func (n *Node) Containers() (c Containers, err error) {
+	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c)
+}
+
+func (n *Node) Container(vmid int) (c *Container, err error) {
+	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
+}

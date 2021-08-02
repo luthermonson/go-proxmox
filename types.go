@@ -123,3 +123,15 @@ type Time struct {
 	Time      uint64
 	Localtime uint64
 }
+
+type Containers []*Container
+type Container struct {
+	Name    string
+	CPUs    int
+	Status  string
+	VMID    string
+	Uptime  uint64
+	MaxMem  uint64
+	MaxDisk uint64
+	MaxSwap uint64
+}
