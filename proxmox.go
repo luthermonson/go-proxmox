@@ -44,10 +44,6 @@ func NewClient(baseURL string, opts ...Option) *Client {
 		c.httpClient = http.DefaultClient
 	}
 
-	if c.credentials != nil {
-		c.Ticket(c.credentials)
-	}
-
 	return c
 }
 
@@ -84,6 +80,13 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
+		if c.credentials != nil && c.session == nil {
+			// credentials passed but no session started, try a login and retry the request
+			if _, err = c.Ticket(c.credentials); err != nil {
+				return err
+			}
+			return c.Req(method, path, data, v)
+		}
 		return ErrNotAuthorized
 	}
 
