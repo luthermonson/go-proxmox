@@ -47,6 +47,10 @@ func NewClient(baseURL string, opts ...Option) *Client {
 	return c
 }
 
+func (c *Client) Version() (*Version, error) {
+	return c.version, c.Get("/version", &c.version)
+}
+
 func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	if strings.HasPrefix(path, "/") {
 		path = c.baseURL + path
@@ -90,6 +94,10 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		return ErrNotAuthorized
 	}
 
+	if resp.StatusCode == http.StatusInternalServerError {
+		return errors.New(resp.Status)
+	}
+
 	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -119,9 +127,4 @@ func (c *Client) Put(p string, d []byte, v interface{}) error {
 
 func (c *Client) Delete(p string, v interface{}) error {
 	return c.Req(http.MethodDelete, p, nil, v)
-}
-
-func (c *Client) Version() (*Version, error) {
-	err := c.Get("/version", &c.version)
-	return c.version, err
 }
