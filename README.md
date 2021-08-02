@@ -30,7 +30,6 @@ func main() {
     if err != nil {
 		panic(err)
 	}
-	
 	fmt.Println(version.Release) // 6.3
 }
 ```
@@ -54,7 +53,7 @@ func main() {
 	tokenID := "root@pam!mytoken"
 	secret := "somegeneratedapitokenguidefromtheproxmoxui"
 	
-    client := proxmox.NewClient("https://localhost:8006",
+    client := proxmox.NewClient("https://localhost:8006/api2/json",
     	proxmox.WithClient(&insecureHTTPClient),
     	proxmox.WithAPIToken(tokenID, secret),
     )
@@ -63,8 +62,7 @@ func main() {
     if err != nil {
 		panic(err)
 	}
-	
-	fmt.Println(version.Release) // 6.3
+    fmt.Println(version.Release) // 6.3
 }
 ```
 ## Testing
@@ -72,7 +70,7 @@ When developing this package you can run the testing suite against an existing P
 vars in your shell before running `make`. The integration tests will test both logging in and using an API token  
 credentials so make sure you set all five env vars before running tests for them to pass.
 
-//TODO make the 
+TODO: make the tests generate the api token?
 
 ### Bash
 ```shell
