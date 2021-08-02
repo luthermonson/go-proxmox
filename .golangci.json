@@ -22,5 +22,13 @@
     "skip-dirs": [],
     "tests": false,
     "timeout": "10m"
+  },
+  "issues": {
+    "exclude-rules": [
+      {
+        "linters": "revive",
+        "text": "should have comment"
+      }
+    ]
   }
 }
