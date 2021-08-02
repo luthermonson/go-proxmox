@@ -5,21 +5,28 @@ import (
 	"fmt"
 )
 
-func (c *Client) Login(credentials Credentials) (Session, error) {
-	var session Session
-	credJSON, err := json.Marshal(credentials)
-	if err != nil {
-		return session, err
-	}
+func (c *Client) Login(username, password string) error {
+	_, err := c.Ticket(&Credentials{
+		Username: username,
+		Password: password,
+	})
 
-	if err := c.Post("/access/ticket", credJSON, &session); err != nil {
-		return session, err
-	}
-	c.session = &session
-
-	return session, nil
+	return err
 }
 
 func (c *Client) APIToken(tokenID, secret string) {
 	c.token = fmt.Sprintf("%s=%s", tokenID, secret)
+}
+
+func (c *Client) Ticket(credentials *Credentials) (*Session, error) {
+	credJSON, err := json.Marshal(credentials)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.Post("/access/ticket", credJSON, &c.session); err != nil {
+		return nil, err
+	}
+
+	return c.session, nil
 }

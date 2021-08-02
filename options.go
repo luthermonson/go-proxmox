@@ -13,9 +13,12 @@ func WithClient(client *http.Client) Option {
 	}
 }
 
-func WithCredentials(credentials Credentials) Option {
+func WithLogins(username, password string) Option {
 	return func(c *Client) {
-		c.Login(credentials)
+		c.credentials = &Credentials{
+			Username: username,
+			Password: password,
+		}
 	}
 }
 

@@ -20,10 +20,7 @@ import (
 )
 func main() {
     client := proxmox.NewClient("https://localhost:8006/api2/json")
-    if _, err := client.Login(proxmox.Credentials{
-        Username: "root@pam",
-        Password: "password",
-    }); err != nil {
+    if err := client.Login("root@pam", "password"); err != nil {
         panic(err)
     }
     version, err := client.Version()

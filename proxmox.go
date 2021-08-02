@@ -21,12 +21,13 @@ func IsNotAuthorized(err error) bool {
 }
 
 type Client struct {
-	httpClient *http.Client
-	userAgent  string
-	baseURL    string
-	token      string
-	version    *Version
-	session    *Session
+	httpClient  *http.Client
+	userAgent   string
+	baseURL     string
+	token       string
+	credentials *Credentials
+	version     *Version
+	session     *Session
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -41,6 +42,10 @@ func NewClient(baseURL string, opts ...Option) *Client {
 
 	if c.httpClient == nil {
 		c.httpClient = http.DefaultClient
+	}
+
+	if c.credentials != nil {
+		c.Ticket(c.credentials)
 	}
 
 	return c
@@ -113,9 +118,7 @@ func (c *Client) Delete(p string, v interface{}) error {
 	return c.Req(http.MethodDelete, p, nil, v)
 }
 
-func (c *Client) Version() (Version, error) {
-	var version Version
-	err := c.Get("/version", &version)
-	c.version = &version
-	return version, err
+func (c *Client) Version() (*Version, error) {
+	err := c.Get("/version", &c.version)
+	return c.version, err
 }

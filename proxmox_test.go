@@ -10,9 +10,11 @@ import (
 )
 
 var (
-	creds              Credentials
+	username           string
+	password           string
 	tokenID            string
 	secret             string
+	otp                string
 	insecureHTTPClient = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -23,9 +25,9 @@ var (
 )
 
 func init() {
-	creds.Username = os.Getenv("PROXMOX_USERNAME")
-	creds.Password = os.Getenv("PROXMOX_PASSWORD")
-	creds.Otp = os.Getenv("PROXMOX_OTP")
+	username = os.Getenv("PROXMOX_USERNAME")
+	password = os.Getenv("PROXMOX_PASSWORD")
+	otp = os.Getenv("PROXMOX_OTP")
 	tokenID = os.Getenv("PROXMOX_TOKENID")
 	secret = os.Getenv("PROXMOX_SECRET")
 }
@@ -36,10 +38,10 @@ func ClientFromEnv() *Client {
 	)
 }
 
-func ClientFromCredentials() *Client {
+func ClientFromLogins() *Client {
 	client := NewClient(os.Getenv("PROXMOX_URL"),
 		WithClient(&insecureHTTPClient),
-		WithCredentials(creds),
+		WithLogins(username, password),
 	)
 
 	return client
@@ -53,7 +55,7 @@ func ClientFromToken() *Client {
 }
 
 func TestVersion(t *testing.T) {
-	client := ClientFromCredentials()
+	client := ClientFromLogins()
 	version, err := client.Version()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, version.Version)
