@@ -98,31 +98,54 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		return errors.New(resp.Status)
 	}
 
-	resBody, err := ioutil.ReadAll(resp.Body)
+	r, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	strBody := string(resBody)
+	// account for everything being in a data key
+	if strings.HasPrefix(string(r), "{\"data\":") {
+		var datakey map[string]json.RawMessage
+		if err := json.Unmarshal(r, &datakey); err != nil {
+			return err
+		}
 
-	if strings.HasPrefix(strBody, "{\"data\":") && strings.HasSuffix(strBody, "}") {
-		strBody = strings.TrimPrefix(strBody, "{\"data\":")
-		strBody = strings.TrimSuffix(strBody, "}")
+		if body, ok := datakey["data"]; ok {
+			return json.Unmarshal(body, &v)
+		}
 	}
 
-	return json.Unmarshal([]byte(strBody), &v)
+	return json.Unmarshal(r, &v) // assume passed in type fully supports response
 }
 
 func (c *Client) Get(p string, v interface{}) error {
 	return c.Req(http.MethodGet, p, nil, v)
 }
 
-func (c *Client) Post(p string, d []byte, v interface{}) error {
-	return c.Req(http.MethodPost, p, d, v)
+func (c *Client) Post(p string, d interface{}, v interface{}) error {
+	var data []byte
+	if d != nil {
+		var err error
+		data, err = json.Marshal(d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.Req(http.MethodPost, p, data, v)
 }
 
-func (c *Client) Put(p string, d []byte, v interface{}) error {
-	return c.Req(http.MethodPut, p, d, v)
+func (c *Client) Put(p string, d interface{}, v interface{}) error {
+	var data []byte
+	if d != nil {
+		var err error
+		data, err = json.Marshal(d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.Req(http.MethodPut, p, data, v)
 }
 
 func (c *Client) Delete(p string, v interface{}) error {

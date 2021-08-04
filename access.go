@@ -1,7 +1,6 @@
 package proxmox
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -19,14 +18,5 @@ func (c *Client) APIToken(tokenID, secret string) {
 }
 
 func (c *Client) Ticket(credentials *Credentials) (*Session, error) {
-	credJSON, err := json.Marshal(credentials)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := c.Post("/access/ticket", credJSON, &c.session); err != nil {
-		return nil, err
-	}
-
-	return c.session, nil
+	return c.session, c.Post("/access/ticket", credentials, &c.session)
 }
