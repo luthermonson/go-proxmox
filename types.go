@@ -127,6 +127,8 @@ type Time struct {
 type Containers []*Container
 type Container struct {
 	Name    string
+	Node    string
+	client  *Client
 	CPUs    int
 	Status  string
 	VMID    string
@@ -134,4 +136,9 @@ type Container struct {
 	MaxMem  uint64
 	MaxDisk uint64
 	MaxSwap uint64
+}
+
+type ContainerStatuses []*ContainerStatus
+type ContainerStatus struct {
+	Data string `json:",omitempty"`
 }
