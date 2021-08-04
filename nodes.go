@@ -30,9 +30,21 @@ func (n *Node) VirtualMachine(vmid int) (vm *VirtualMachine, err error) {
 }
 
 func (n *Node) Containers() (c Containers, err error) {
-	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c)
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
+		return nil, err
+	}
+
+	for _, container := range c {
+		container.client = n.client
+		container.Node = n.Name
+	}
+
+	return c, nil
 }
 
 func (n *Node) Container(vmid int) (c *Container, err error) {
+	c.client = n.client
+	c.Node = n.Name
+
 	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
 }
