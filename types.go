@@ -134,11 +134,28 @@ type Container struct {
 	VMID    string
 	Uptime  uint64
 	MaxMem  uint64
-	MaxDisk uint64
+	MaxDisk string
 	MaxSwap uint64
 }
 
 type ContainerStatuses []*ContainerStatus
 type ContainerStatus struct {
 	Data string `json:",omitempty"`
+}
+
+type AplInfos []*AplInfo
+type AplInfo struct {
+	Os           string
+	Source       string
+	Type         string
+	SHA512Sum    string
+	Package      string
+	Template     string
+	Architecture string
+	InfoPage     string
+	Description  string
+	ManageURL    string
+	Version      string
+	Section      string
+	Headline     string
 }

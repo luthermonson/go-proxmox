@@ -48,3 +48,7 @@ func (n *Node) Container(vmid int) (c *Container, err error) {
 
 	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
 }
+
+func (n *Node) AplInfo() (aplinfos AplInfos, err error) {
+	return aplinfos, n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &aplinfos)
+}
