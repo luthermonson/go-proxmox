@@ -49,6 +49,20 @@ func (n *Node) Container(vmid int) (c *Container, err error) {
 	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
 }
 
-func (n *Node) AplInfo() (aplinfos AplInfos, err error) {
-	return aplinfos, n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &aplinfos)
+func (n *Node) AvailableContainerTemplates() (templates ContainerTemplates, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &templates)
+	if err != nil {
+		return templates, err
+	}
+
+	for _, t := range templates {
+		t.client = n.client
+		t.Node = n.Name
+	}
+
+	return templates, nil
+}
+
+func (n *Node) ContainerTemplates(storage string) (templates ContainerTemplates, err error) {
+	return templates, n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
 }

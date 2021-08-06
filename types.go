@@ -143,8 +143,10 @@ type ContainerStatus struct {
 	Data string `json:",omitempty"`
 }
 
-type AplInfos []*AplInfo
-type AplInfo struct {
+type ContainerTemplates []*ContainerTemplate
+type ContainerTemplate struct {
+	client       *Client
+	Node         string `json:",omitempty"`
 	Os           string
 	Source       string
 	Type         string

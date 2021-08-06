@@ -15,6 +15,7 @@ var (
 	tokenID            string
 	secret             string
 	otp                string
+	nodeName           string
 	insecureHTTPClient = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -30,6 +31,7 @@ func init() {
 	otp = os.Getenv("PROXMOX_OTP")
 	tokenID = os.Getenv("PROXMOX_TOKENID")
 	secret = os.Getenv("PROXMOX_SECRET")
+	nodeName = os.Getenv("PROXMOX_NODENAME")
 }
 
 func ClientFromEnv() *Client {
