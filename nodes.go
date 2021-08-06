@@ -49,20 +49,52 @@ func (n *Node) Container(vmid int) (c *Container, err error) {
 	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
 }
 
-func (n *Node) AvailableContainerTemplates() (templates ContainerTemplates, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &templates)
+func (n *Node) Appliances() (appliances Appliances, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &appliances)
 	if err != nil {
-		return templates, err
+		return appliances, err
 	}
 
-	for _, t := range templates {
+	for _, t := range appliances {
 		t.client = n.client
 		t.Node = n.Name
 	}
 
-	return templates, nil
+	return appliances, nil
 }
 
-func (n *Node) ContainerTemplates(storage string) (templates ContainerTemplates, err error) {
+func (n *Node) DownloadAppliance(template, storage string) (ret string, err error) {
+	return ret, n.client.Post(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), map[string]string{
+		"template": template,
+		"storage":  storage,
+	}, &ret)
+}
+
+func (n *Node) VzTmpls(storage string) (templates VzTpls, err error) {
 	return templates, n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
+}
+
+func (n *Node) VzTmpl(template, storage string) (*VzTpl, error) {
+	templates, err := n.VzTmpls(storage)
+	if err != nil {
+		return nil, err
+	}
+
+	volid := fmt.Sprintf("%s:vztmpl/%s", storage, template)
+	for _, t := range templates {
+		if t.VolID == volid {
+			return t, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find vztmpl: %s", template)
+}
+
+func (n *Node) Storages() (storages Storages, err error) {
+	return storages, n.client.Get(fmt.Sprintf("/nodes/%s/storage", n.Name), &storages)
+}
+
+// TODO https://192.168.1.6:8006/api2/extjs/nodes/i7/storage/local/content//local:vztmpl/alpine-3.11-default_20200425_amd64.tar.xz?delay=5
+func (n *Node) DeleteFile() (ret string, err error) {
+	return ret, err
 }

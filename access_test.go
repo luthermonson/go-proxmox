@@ -27,5 +27,5 @@ func TestAPIToken(t *testing.T) {
 	client.APIToken(tokenID, secret)
 	version, err := client.Version()
 	assert.Nil(t, err)
-	assert.NotEmpty(t, version.Version)
+	assert.NotNil(t, version.Version)
 }

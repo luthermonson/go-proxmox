@@ -14,6 +14,5 @@ if ($Tags -eq "") {
 
 if ($Ci) {
     golangci-lint run
-    Write-Host $Tags
     go test -tags "$Tags"
 }

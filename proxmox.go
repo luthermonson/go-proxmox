@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -101,6 +102,19 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	r, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+
+	if resp.StatusCode == http.StatusBadRequest {
+		var errorskey map[string]json.RawMessage
+		if err := json.Unmarshal(r, &errorskey); err != nil {
+			return err
+		}
+
+		if body, ok := errorskey["errors"]; ok {
+			return fmt.Errorf("bad request: %s - %s", resp.Status, body)
+		}
+
+		return fmt.Errorf("bad request: %s - %s", resp.Status, string(r))
 	}
 
 	// account for everything being in a data key
