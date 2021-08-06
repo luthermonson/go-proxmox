@@ -143,8 +143,10 @@ type ContainerStatus struct {
 	Data string `json:",omitempty"`
 }
 
-type AplInfos []*AplInfo
-type AplInfo struct {
+type Appliances []*Appliance
+type Appliance struct {
+	client       *Client
+	Node         string `json:",omitempty"`
 	Os           string
 	Source       string
 	Type         string
@@ -158,4 +160,43 @@ type AplInfo struct {
 	Version      string
 	Section      string
 	Headline     string
+}
+
+type Content interface {
+	Delete() error
+}
+
+type Storages []*Storages
+type Storage struct {
+	Enabled      bool
+	UsedFraction float64 `json:"used_fraction"`
+	Active       bool
+	Content      string
+	Shared       int
+	Avail        string
+	Storage      string
+	Type         string
+	Used         uint64
+	Total        uint64
+}
+
+type ISOs []*ISO
+type ISO struct{ File }
+
+type VzTpls []*VzTpl
+type VzTpl struct{ File }
+
+type Backups []*Backup
+type Backup struct{ File }
+
+type File struct {
+	client  *Client
+	URL     string
+	Node    string
+	Storage string
+	Content string
+	VolID   string
+	CTime   uint64
+	Format  string
+	Size    uint64
 }

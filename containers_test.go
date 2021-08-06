@@ -1,3 +1,5 @@
+// +build containers
+
 package proxmox
 
 import (
