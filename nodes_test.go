@@ -40,74 +40,73 @@ func TestNodes(t *testing.T) {
 
 func TestNode(t *testing.T) {
 	client := ClientFromLogins()
-	node, err := client.Node(nodeName)
+	node, err := client.Node(td.nodeName)
 	assert.Nil(t, err)
-	assert.Equal(t, node.Name, nodeName)
-}
-
-func TestNode_Storage(t *testing.T) {
-	client := ClientFromLogins()
-	node, err := client.Node(nodeName)
-	assert.Nil(t, err)
-	assert.Equal(t, node.Name, nodeName)
-
-	//storages, err := n.Storages()
-	//assert.Nil(t, err)
-	//fmt.Println(storages)
+	assert.Equal(t, node.Name, td.nodeName)
 }
 
 func TestContainers(t *testing.T) {
-	client := ClientFromLogins()
-	node, err := client.Node(nodeName)
-	assert.Nil(t, err)
-	assert.Equal(t, node.Name, nodeName)
-
-	t.Run("get Containers for node "+node.Name, func(t *testing.T) {
-		_, err := node.Containers()
+	t.Run("get Containers for node "+td.node.Name, func(t *testing.T) {
+		_, err := td.node.Containers()
 		assert.Nil(t, err)
 	})
 }
 
 func TestNode_Appliances(t *testing.T) {
-	client := ClientFromLogins()
-	node, err := client.Node(nodeName)
-	assert.Nil(t, err)
-	assert.Equal(t, node.Name, nodeName)
-
-	t.Run("get Containers for node "+node.Name, func(t *testing.T) {
-		aplinfos, err := node.Appliances()
+	t.Run("get Containers for node "+td.node.Name, func(t *testing.T) {
+		aplinfos, err := td.node.Appliances()
 		assert.Nil(t, err)
 		assert.GreaterOrEqual(t, len(aplinfos), 1)
 	})
 }
 
 func TestNode_DownloadAppliance(t *testing.T) {
-	client := ClientFromLogins()
-	node, err := client.Node(nodeName)
-	assert.Nil(t, err)
-	assert.Equal(t, node.Name, nodeName)
-
 	var aplinfos Appliances
-	t.Run("get Containers for node "+node.Name, func(t *testing.T) {
-		aplinfos, err = node.Appliances()
+	t.Run("get Containers for node "+td.node.Name, func(t *testing.T) {
+		var err error
+		aplinfos, err = td.node.Appliances()
 		assert.Nil(t, err)
 		assert.GreaterOrEqual(t, len(aplinfos), 1)
 	})
 
-	t.Run("download appliance "+applianceName, func(t *testing.T) {
-		_, err := node.DownloadAppliance("doesnt-exist", nodeStorage)
+	t.Run("download non existing appliance template", func(t *testing.T) {
+		_, err := td.node.DownloadAppliance("doesnt-exist", td.nodeStorage)
 		assert.NotNil(t, err)
 		assert.True(t, strings.Contains(err.Error(), "no such template"))
 	})
 
-	t.Run("download appliance "+applianceName, func(t *testing.T) {
+	t.Run("download appliance "+td.applianceName, func(t *testing.T) {
 		for _, a := range aplinfos {
-			if a.Template == applianceName {
-				ret, err := node.DownloadAppliance(a.Template, nodeStorage)
+			if a.Template == td.applianceName {
+				ret, err := td.node.DownloadAppliance(a.Template, td.nodeStorage)
 				assert.Nil(t, err)
 				fmt.Println(ret)
-				assert.True(t, strings.HasPrefix("UPID:"+node.Name, ret))
+				assert.True(t, strings.HasPrefix("UPID:"+td.node.Name, ret))
 			}
 		}
 	})
+}
+
+func TestNode_Storages(t *testing.T) {
+	storages, err := td.node.Storages()
+	assert.Nil(t, err)
+	assert.True(t, len(storages) > 0)
+
+	for _, s := range storages {
+		if s.Name == td.nodeStorage {
+			assert.True(t, true, "storage exists: "+td.nodeStorage)
+			return
+		}
+	}
+
+	assert.True(t, false, "no storage: "+td.nodeStorage)
+}
+
+func TestNode_Storage(t *testing.T) {
+	_, err := td.node.Storage("doesnt-exist")
+	assert.Contains(t, err.Error(), "No such storage.")
+
+	storage, err := td.node.Storage(td.nodeStorage)
+	assert.Nil(t, err)
+	assert.Equal(t, td.nodeStorage, storage.Name)
 }
