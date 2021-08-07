@@ -29,12 +29,14 @@ type Client struct {
 	credentials *Credentials
 	version     *Version
 	session     *Session
+	log         LeveledLoggerInterface
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
 	c := &Client{
 		baseURL:   baseURL,
 		userAgent: DefaultUserAgent,
+		log:       &LeveledLogger{Level: LevelError},
 	}
 
 	for _, o := range opts {
@@ -56,10 +58,15 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	if strings.HasPrefix(path, "/") {
 		path = c.baseURL + path
 	}
+
+	c.log.Infof("SEND: %s - %s", method, path)
+
 	var body io.Reader
 	if data != nil {
+		c.log.Debugf("DATA: %s", string(data))
 		body = bytes.NewBuffer(data)
 	}
+
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
 		return err
@@ -104,6 +111,8 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		return err
 	}
 
+	c.log.Infof("RECV: %d - %s", resp.StatusCode, resp.Status)
+	c.log.Debugf("BODY: %s", string(r))
 	if resp.StatusCode == http.StatusBadRequest {
 		var errorskey map[string]json.RawMessage
 		if err := json.Unmarshal(r, &errorskey); err != nil {

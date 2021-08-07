@@ -166,18 +166,21 @@ type Content interface {
 	Delete() error
 }
 
-type Storages []*Storages
+type Storages []*Storage
 type Storage struct {
-	Enabled      bool
+	client       *Client
+	Node         string
+	Name         string `json:"storage"`
+	Enabled      int
 	UsedFraction float64 `json:"used_fraction"`
-	Active       bool
+	Active       int
 	Content      string
 	Shared       int
-	Avail        string
-	Storage      string
+	Avail        uint64
 	Type         string
 	Used         uint64
 	Total        uint64
+	Storage      string
 }
 
 type ISOs []*ISO

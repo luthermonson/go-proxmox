@@ -91,10 +91,28 @@ func (n *Node) VzTmpl(template, storage string) (*VzTpl, error) {
 }
 
 func (n *Node) Storages() (storages Storages, err error) {
-	return storages, n.client.Get(fmt.Sprintf("/nodes/%s/storage", n.Name), &storages)
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/storage", n.Name), &storages)
+	if err != nil {
+		return
+	}
+
+	for _, s := range storages {
+		s.Node = n.Name
+		s.client = n.client
+	}
+
+	return
 }
 
-// TODO https://192.168.1.6:8006/api2/extjs/nodes/i7/storage/local/content//local:vztmpl/alpine-3.11-default_20200425_amd64.tar.xz?delay=5
-func (n *Node) DeleteFile() (ret string, err error) {
-	return ret, err
+func (n *Node) Storage(name string) (storage *Storage, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/status", n.Name, name), &storage)
+	if err != nil {
+		return
+	}
+
+	storage.Node = n.Name
+	storage.client = n.client
+	storage.Name = name
+
+	return
 }

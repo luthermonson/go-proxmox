@@ -33,3 +33,9 @@ func WithUserAgent(ua string) Option {
 		c.userAgent = ua
 	}
 }
+
+func WithLogger(logger LeveledLoggerInterface) Option {
+	return func(c *Client) {
+		c.log = logger
+	}
+}

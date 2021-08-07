@@ -11,7 +11,7 @@ func TestLogin(t *testing.T) {
 	_, err := client.Version()
 	assert.Equal(t, err, ErrNotAuthorized)
 
-	err = client.Login(username, password)
+	err = client.Login(td.username, td.password)
 	assert.Nil(t, err)
 
 	version, err := client.Version()
@@ -24,7 +24,7 @@ func TestAPIToken(t *testing.T) {
 	_, err := client.Version()
 	assert.Equal(t, err, ErrNotAuthorized)
 
-	client.APIToken(tokenID, secret)
+	client.APIToken(td.tokenID, td.secret)
 	version, err := client.Version()
 	assert.Nil(t, err)
 	assert.NotNil(t, version.Version)
