@@ -70,11 +70,11 @@ func (n *Node) DownloadAppliance(template, storage string) (ret string, err erro
 	}, &ret)
 }
 
-func (n *Node) VzTmpls(storage string) (templates VzTpls, err error) {
+func (n *Node) VzTmpls(storage string) (templates VzTmpls, err error) {
 	return templates, n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
 }
 
-func (n *Node) VzTmpl(template, storage string) (*VzTpl, error) {
+func (n *Node) VzTmpl(template, storage string) (*VzTmpl, error) {
 	templates, err := n.VzTmpls(storage)
 	if err != nil {
 		return nil, err

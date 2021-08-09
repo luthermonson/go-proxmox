@@ -75,13 +75,16 @@ func TestNode_DownloadAppliance(t *testing.T) {
 		assert.True(t, strings.Contains(err.Error(), "no such template"))
 	})
 
-	t.Run("download appliance "+td.applianceName, func(t *testing.T) {
+	if td.appliancePrefix == "" { // no point if no prefix to check for
+		return
+	}
+	t.Run("download appliance "+td.appliancePrefix, func(t *testing.T) {
 		for _, a := range aplinfos {
-			if a.Template == td.applianceName {
+			if strings.HasPrefix(a.Template, td.appliancePrefix) {
+				td.appliance = a // set to use in later tests
 				ret, err := td.node.DownloadAppliance(a.Template, td.nodeStorage)
 				assert.Nil(t, err)
-				fmt.Println(ret)
-				assert.True(t, strings.HasPrefix("UPID:"+td.node.Name, ret))
+				assert.True(t, strings.HasPrefix(ret, fmt.Sprintf("UPID:%s:", td.node.Name)))
 			}
 		}
 	})

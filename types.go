@@ -162,10 +162,6 @@ type Appliance struct {
 	Headline     string
 }
 
-type Content interface {
-	Delete() error
-}
-
 type Storages []*Storage
 type Storage struct {
 	client       *Client
@@ -183,16 +179,20 @@ type Storage struct {
 	Storage      string
 }
 
-type ISOs []*ISO
-type ISO struct{ File }
+type Volume interface {
+	Delete() error
+}
 
-type VzTpls []*VzTpl
-type VzTpl struct{ File }
+type ISOs []*ISO
+type ISO struct{ Content }
+
+type VzTmpls []*VzTmpl
+type VzTmpl struct{ Content }
 
 type Backups []*Backup
-type Backup struct{ File }
+type Backup struct{ Content }
 
-type File struct {
+type Content struct {
 	client  *Client
 	URL     string
 	Node    string
@@ -202,4 +202,7 @@ type File struct {
 	CTime   uint64
 	Format  string
 	Size    uint64
+	Used    uint64 `json:",omitempty"`
+	Path    string `json:",omitempty"`
+	Notes   string `json:",omitempty"`
 }

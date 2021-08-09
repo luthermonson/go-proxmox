@@ -102,7 +102,8 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		return ErrNotAuthorized
 	}
 
-	if resp.StatusCode == http.StatusInternalServerError {
+	if resp.StatusCode == http.StatusInternalServerError ||
+		resp.StatusCode == http.StatusNotImplemented {
 		return errors.New(resp.Status)
 	}
 

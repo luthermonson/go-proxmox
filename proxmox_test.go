@@ -10,19 +10,20 @@ import (
 )
 
 type TestingData struct {
-	client  *Client
-	node    *Node
-	storage *Storage
+	client    *Client
+	node      *Node
+	storage   *Storage
+	appliance *Appliance
 
-	username      string
-	password      string
-	tokenID       string
-	secret        string
-	otp           string
-	nodeName      string
-	nodeStorage   string
-	applianceName string
-	isoURL        string
+	username        string
+	password        string
+	tokenID         string
+	secret          string
+	otp             string
+	nodeName        string
+	nodeStorage     string
+	appliancePrefix string
+	isoURL          string
 }
 
 var (
@@ -46,7 +47,7 @@ func init() {
 	td.secret = os.Getenv("PROXMOX_SECRET")
 	td.nodeName = os.Getenv("PROXMOX_NODE_NAME")
 	td.nodeStorage = os.Getenv("PROXMOX_NODE_STORAGE")
-	td.applianceName = os.Getenv("PROXMOX_CONTAINER_TEMPLATE") // alpine-3.14-default_20210623_amd64.tar.xz
+	td.appliancePrefix = os.Getenv("PROXMOX_APPLIANCE_PREFIX") // alpine-3.14-default_20210623_amd64.tar.xz
 	td.isoURL = os.Getenv("PROXMOX_ISO_URL")                   // https://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-virt-3.14.1-x86_64.iso
 
 	td.client = ClientFromLogins()
