@@ -42,11 +42,15 @@ func (n *Node) Containers() (c Containers, err error) {
 	return c, nil
 }
 
-func (n *Node) Container(vmid int) (c *Container, err error) {
+func (n *Node) Container(vmid int) (*Container, error) {
+	var c Container
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c); err != nil {
+		return nil, err
+	}
 	c.client = n.client
 	c.Node = n.Name
 
-	return c, n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c)
+	return &c, nil
 }
 
 func (n *Node) Appliances() (appliances Appliances, err error) {

@@ -134,7 +134,7 @@ type Container struct {
 	VMID    string
 	Uptime  uint64
 	MaxMem  uint64
-	MaxDisk string
+	MaxDisk uint64
 	MaxSwap uint64
 }
 
