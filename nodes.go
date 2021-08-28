@@ -22,10 +22,22 @@ func (n *Node) Version() (version *Version, err error) {
 }
 
 func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
-	return vms, n.client.Get(fmt.Sprintf("/nodes/%s/qemu", n.Name), &vms)
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu", n.Name), &vms); err != nil {
+		return nil, err
+	}
+
+	for _, v := range vms {
+		v.client = n.client
+		v.Node = n.Name
+	}
+
+	return vms, nil
 }
 
 func (n *Node) VirtualMachine(vmid int) (vm *VirtualMachine, err error) {
+	vm.client = n.client
+	vm.Node = n.Name
+
 	return vm, n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm)
 }
 

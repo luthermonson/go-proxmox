@@ -68,8 +68,10 @@ func (it *IsTemplate) UnmarshalJSON(b []byte) error {
 type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
 	Name      string
+	Node      string
 	NetIn     uint64
 	CPUs      int
+	client    *Client
 	DiskWrite uint64
 	Status    string
 	VMID      string
@@ -84,6 +86,11 @@ type VirtualMachine struct {
 	DiskRead  uint64
 	Template  IsTemplate // empty str if a vm, int 1 if a template
 	HA        HA         `json:",omitempty"`
+}
+
+type VirtualMachineStatuses []*VirtualMachineStatus
+type VirtualMachineStatus struct {
+	Data string `json:",omitempty"`
 }
 
 type HA struct {
