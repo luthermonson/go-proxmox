@@ -3,13 +3,14 @@
 package proxmox
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 var (
-	testVirtualMachineID   = 0
+	testVirtualMachineID = 0
 )
 
 func TestVMStart(t *testing.T) {
