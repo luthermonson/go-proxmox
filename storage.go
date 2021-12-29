@@ -5,6 +5,16 @@ import (
 	"path/filepath"
 )
 
+func (s *Storage) Upload(content, filename string) error {
+	if content != "iso" || content != "vztmpl" {
+		return fmt.Errorf("only iso and vztmpl allowed")
+	}
+
+	s.client.Post()
+
+	return nil
+}
+
 func (s *Storage) ISO(name string) (iso *ISO, err error) {
 	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
@@ -44,12 +54,15 @@ func (s *Storage) Backup(name string) (backup *Backup, err error) {
 func (v *VzTmpl) Delete() error {
 	return deleteVolume(v.client, v.Node, v.Storage, v.VolID, v.Path, "vztmpl")
 }
+
 func (b *Backup) Delete() error {
 	return deleteVolume(b.client, b.Node, b.Storage, b.VolID, b.Path, "backup")
 }
+
 func (i *ISO) Delete() error {
 	return deleteVolume(i.client, i.Node, i.Storage, i.VolID, i.Path, "iso")
 }
+
 func deleteVolume(c *Client, n, s, v, p, t string) error {
 	var res string
 	if v == "" && p == "" {

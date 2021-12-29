@@ -1,3 +1,4 @@
+//go:build nodes
 // +build nodes
 
 package proxmox
@@ -8,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+33
 
 // Windows_1909.iso
 func TestStorage_ISO(t *testing.T) {
