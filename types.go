@@ -22,6 +22,29 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+type ClusterResources []*ClusterResource
+
+type ClusterResource struct {
+	ID         string  `jsont:"id"`
+	Type       string  `json:"type"`
+	Content    string  `json:",omitempty"`
+	CPU        float64 `json:",omitempty"`
+	Disk       uint64  `json:",omitempty"` // documented as string but this is an int
+	HAstate    string  `json:",omitempty"`
+	Level      string  `json:",omitempty"`
+	MaxCPU     uint64  `json:",omitempty"`
+	MaxDisk    uint64  `json:",omitempty"`
+	MaxMem     uint64  `json:",omitempty"`
+	Mem        uint64  `json:",omitempty"` // documented as string but this is an int
+	Name       string  `json:",omitempty"`
+	Node       string  `json:",omitempty"`
+	PluginType string  `json:",omitempty"`
+	Pool       string  `json:",omitempty"`
+	Status     string  `json:",omitempty"`
+	Storage    string  `json:",omitempty"`
+	Uptime     uint64  `json:",omitempty"`
+}
+
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
 	Status         string  `json:",omitempty"`
