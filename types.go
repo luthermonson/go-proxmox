@@ -1,5 +1,14 @@
 package proxmox
 
+import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/jinzhu/copier"
+)
+
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -77,17 +86,6 @@ type Node struct {
 	Wait       float64
 }
 
-type IsTemplate bool
-
-func (it *IsTemplate) UnmarshalJSON(b []byte) error {
-	*it = true
-	if string(b) == "\"\"" {
-		*it = false
-	}
-
-	return nil
-}
-
 type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
 	Name      string
@@ -97,8 +95,8 @@ type VirtualMachine struct {
 	client    *Client
 	DiskWrite uint64
 	Status    string
-	VMID      string
-	PID       string
+	VMID      StringOrUint64
+	PID       StringOrUint64
 	Netout    uint64
 	Disk      uint64
 	Uptime    uint64
@@ -152,6 +150,76 @@ type Time struct {
 	Timezone  string
 	Time      uint64
 	Localtime uint64
+}
+
+type Tasks []*Tasks
+type Task struct {
+	client     *Client
+	UPID       string
+	ID         string
+	Type       string
+	User       string
+	Status     string
+	Node       string
+	PID        uint64        `json:",omitempty"`
+	PStart     uint64        `json:",omitempty"`
+	Saved      string        `json:",omitempty"`
+	ExitStatus string        `json:",omitempty"`
+	StartTime  time.Time     `json:"-"`
+	EndTime    time.Time     `json:"-"`
+	Duration   time.Duration `json:"-"`
+}
+
+func (t *Task) UnmarshalJSON(b []byte) error {
+	var tmp map[string]interface{}
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+
+	type TempTask Task
+	var task TempTask
+	if err := json.Unmarshal(b, &task); err != nil {
+		return err
+	}
+
+	if starttime, ok := tmp["starttime"]; ok {
+		task.StartTime = time.Unix(int64(starttime.(float64)), 0)
+	}
+
+	if endtime, ok := tmp["endtime"]; ok {
+		task.EndTime = time.Unix(int64(endtime.(float64)), 0)
+	}
+
+	if !task.StartTime.IsZero() && !task.EndTime.IsZero() {
+		task.Duration = task.EndTime.Sub(task.StartTime)
+	}
+
+	c := Task(task)
+	copier.Copy(t, &c)
+
+	return nil
+}
+
+type Log map[int]string
+
+// line numbers in the response start a 1  but the start param indexes from 0 so converting to that
+func (l *Log) UnmarshalJSON(b []byte) error {
+	var data []map[string]interface{}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	log := make(map[int]string, len(data))
+	for _, row := range data {
+		if n, ok := row["n"]; ok {
+			if t, ok := row["t"]; ok {
+				log[int(n.(float64))-1] = t.(string)
+			}
+		}
+	}
+
+	copier.Copy(l, Log(log))
+	return nil
 }
 
 type Containers []*Container
@@ -226,13 +294,36 @@ type Content struct {
 	client  *Client
 	URL     string
 	Node    string
-	Storage string
-	Content string
-	VolID   string
-	CTime   uint64
+	Storage string `json:",omitempty"`
+	Content string `json:",omitempty"`
+	VolID   string `json:",omitempty"`
+	CTime   uint64 `json:",omitempty"`
 	Format  string
-	Size    uint64
-	Used    uint64 `json:",omitempty"`
-	Path    string `json:",omitempty"`
-	Notes   string `json:",omitempty"`
+	Size    StringOrUint64
+	Used    StringOrUint64 `json:",omitempty"`
+	Path    string         `json:",omitempty"`
+	Notes   string         `json:",omitempty"`
+}
+
+type IsTemplate bool
+
+func (it *IsTemplate) UnmarshalJSON(b []byte) error {
+	*it = true
+	if string(b) == "\"\"" {
+		*it = false
+	}
+
+	return nil
+}
+
+type StringOrUint64 uint64
+
+func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
+	str := strings.Replace(string(b), "\"", "", -1)
+	parsed, err := strconv.ParseUint(str, 0, 64)
+	if err != nil {
+		return err
+	}
+	*d = StringOrUint64(parsed)
+	return nil
 }
