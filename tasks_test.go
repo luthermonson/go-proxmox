@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewTask(t *testing.T) {
-	upid := "UPID:test:002F0193:09CCCA13:61CC858A:tasktype:taskid:root@pam:"
+	upid := UPID("UPID:test:002F0193:09CCCA13:61CC858A:tasktype:taskid:root@pam:")
 	task := NewTask(upid, td.client)
 	assert.Equal(t, task.Node, "test")
 	assert.Equal(t, task.Type, "tasktype")

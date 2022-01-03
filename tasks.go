@@ -6,13 +6,17 @@ import (
 	"time"
 )
 
-func NewTask(upid string, client *Client) *Task {
+const (
+	TaskRunning = "running"
+)
+
+func NewTask(upid UPID, client *Client) *Task {
 	task := &Task{
 		UPID:   upid,
 		client: client,
 	}
 
-	sp := strings.Split(task.UPID, ":")
+	sp := strings.Split(string(task.UPID), ":")
 	if len(sp) == 0 || len(sp) < 7 {
 		return task
 	}
@@ -87,7 +91,7 @@ func tasktail(start int, watch chan string, task *Task) error {
 			return err
 		}
 
-		if task.Status != "running" {
+		if task.Status != TaskRunning {
 			task.client.log.Debugf("task %s is no longer running, closing down watcher", task.UPID)
 			close(watch)
 			return nil
@@ -115,13 +119,13 @@ func (t *Task) Wait(interval, max time.Duration) error {
 		select {
 		case <-timeout:
 			t.client.log.Debugf("timed out waiting for task %s for %fs", t.UPID, max.Seconds())
-			return fmt.Errorf("timeout while waiting for task %s", t.UPID)
+			return ErrTimeout
 		default:
 			if err := t.Ping(); err != nil {
 				return err
 			}
 
-			if t.Status != "running" {
+			if t.Status != TaskRunning {
 				t.client.log.Debugf("task %s has completed with status %s", t.UPID, t.Status)
 				return nil
 			}

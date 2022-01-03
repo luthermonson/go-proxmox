@@ -34,9 +34,11 @@ func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
 	return vms, nil
 }
 
-func (n *Node) VirtualMachine(vmid int) (vm *VirtualMachine, err error) {
-	vm.client = n.client
-	vm.Node = n.Name
+func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
+	vm := &VirtualMachine{
+		client: n.client,
+		Node:   n.Name,
+	}
 
 	return vm, n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm)
 }

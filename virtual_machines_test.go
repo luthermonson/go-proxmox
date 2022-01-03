@@ -1,19 +1,21 @@
-// +build vms
+//go:build nodes
+// +build nodes
 
 package proxmox
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	testVirtualMachineID = 0
+	testVirtualMachineID = 113
 )
 
-func TestVMStart(t *testing.T) {
+func TestVirtualMachine_Start(t *testing.T) {
 	if testVirtualMachineID == 0 || td.nodeName == "" {
 		t.Skip()
 	}
@@ -24,23 +26,22 @@ func TestVMStart(t *testing.T) {
 	vm, err := node.VirtualMachine(testVirtualMachineID)
 	require.NoError(t, err)
 
-	if vm.Status != "stopped" {
-		_, err = vm.Stop()
+	if vm.Status != StatusVirtualMachineStopped {
+		task, err := vm.Stop()
 		require.NoError(t, err)
-		vm, err = node.VirtualMachine(testVirtualMachineID)
-		require.NoError(t, err)
+		require.NoError(t, task.Wait(1*time.Second, 5*time.Second))
+		require.NoError(t, vm.Ping())
 		require.Equal(t, "stopped", vm.Status)
 	}
 
-	_, err = vm.Start()
+	task, err := vm.Start()
 	assert.NoError(t, err)
-
-	vm, err = node.VirtualMachine(testVirtualMachineID)
-	require.NoError(t, err)
-	assert.Equal(t, "running", vm.Status)
+	require.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
 }
 
-func TestVMStop(t *testing.T) {
+func TestVirtualMachine_Stop(t *testing.T) {
 	if testVirtualMachineID == 0 || td.nodeName == "" {
 		t.Skip()
 	}
@@ -51,23 +52,22 @@ func TestVMStop(t *testing.T) {
 	vm, err := node.VirtualMachine(testVirtualMachineID)
 	require.NoError(t, err)
 
-	if vm.Status != "running" {
-		_, err = vm.Start()
+	if vm.Status != StatusVirtualMachineRunning {
+		task, err := vm.Start()
 		require.NoError(t, err)
-		vm, err = node.VirtualMachine(testVirtualMachineID)
-		require.NoError(t, err)
-		require.Equal(t, "running", vm.Status)
+		require.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+		require.NoError(t, vm.Ping())
+		require.Equal(t, StatusVirtualMachineRunning, vm.Status)
 	}
 
-	_, err = vm.Stop()
+	task, err := vm.Stop()
 	assert.NoError(t, err)
-
-	vm, err = node.VirtualMachine(testVirtualMachineID)
-	require.NoError(t, err)
-	assert.Equal(t, "stopped", vm.Status)
+	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.Equal(t, StatusVirtualMachineStopped, vm.Status)
 }
 
-func TestVMReboot(t *testing.T) {
+func TestVirtualMachine_Reboot(t *testing.T) {
 	if testVirtualMachineID == 0 || td.nodeName == "" {
 		t.Skip()
 	}
@@ -78,23 +78,22 @@ func TestVMReboot(t *testing.T) {
 	vm, err := node.VirtualMachine(testVirtualMachineID)
 	require.NoError(t, err)
 
-	if vm.Status != "running" {
-		_, err = vm.Start()
+	if vm.Status != StatusVirtualMachineRunning {
+		task, err := vm.Start()
 		require.NoError(t, err)
-		vm, err = node.VirtualMachine(testVirtualMachineID)
-		require.NoError(t, err)
-		require.Equal(t, "running", vm.Status)
+		assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+		require.NoError(t, vm.Ping())
+		require.Equal(t, StatusVirtualMachineRunning, vm.Status)
 	}
 
-	_, err = vm.Reboot()
+	task, err := vm.Reboot()
 	assert.NoError(t, err)
-
-	vm, err = node.VirtualMachine(testVirtualMachineID)
-	require.NoError(t, err)
-	assert.Equal(t, "running", vm.Status)
+	assert.NoError(t, task.Wait(1*time.Second, 30*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
 }
 
-func TestVMSuspendAndResume(t *testing.T) {
+func TestVirtualMachine_Hibernate(t *testing.T) {
 	if testVirtualMachineID == 0 || td.nodeName == "" {
 		t.Skip()
 	}
@@ -105,25 +104,55 @@ func TestVMSuspendAndResume(t *testing.T) {
 	vm, err := node.VirtualMachine(testVirtualMachineID)
 	require.NoError(t, err)
 
-	if vm.Status != "running" {
-		_, err = vm.Start()
+	if vm.Status != StatusVirtualMachineRunning {
+		task, err := vm.Start()
 		require.NoError(t, err)
-		vm, err = node.VirtualMachine(testVirtualMachineID)
-		require.NoError(t, err)
-		require.Equal(t, "running", vm.Status)
+		assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+		require.NoError(t, vm.Ping())
+		require.Equal(t, StatusVirtualMachineRunning, vm.Status)
 	}
 
-	_, err = vm.Suspend()
+	task, err := vm.Hibernate()
 	assert.NoError(t, err)
+	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.True(t, vm.IsHibernated())
 
-	vm, err = node.VirtualMachine(testVirtualMachineID)
-	require.NoError(t, err)
-	assert.Equal(t, "suspended", vm.Status)
-
-	_, err = vm.Resume()
+	task, err = vm.Resume()
 	assert.NoError(t, err)
+	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+}
 
-	vm, err = node.VirtualMachine(testVirtualMachineID)
+func TestVirtualMachine_Pause(t *testing.T) {
+	if testVirtualMachineID == 0 || td.nodeName == "" {
+		t.Skip()
+	}
+	client := ClientFromLogins()
+	node, err := client.Node(td.nodeName)
 	require.NoError(t, err)
-	assert.Equal(t, "running", vm.Status)
+
+	vm, err := node.VirtualMachine(testVirtualMachineID)
+	require.NoError(t, err)
+
+	if vm.Status != StatusVirtualMachineRunning {
+		task, err := vm.Start()
+		require.NoError(t, err)
+		assert.NoError(t, task.Wait(1*time.Second, 5*time.Second))
+		require.NoError(t, vm.Ping())
+		require.Equal(t, StatusVirtualMachineRunning, vm.Status)
+	}
+
+	task, err := vm.Pause()
+	assert.NoError(t, err)
+	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.True(t, vm.IsPaused())
+
+	task, err = vm.Resume()
+	assert.NoError(t, err)
+	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping())
+	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
 }

@@ -88,13 +88,15 @@ type Node struct {
 
 type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
+	client *Client
+
 	Name      string
 	Node      string
 	NetIn     uint64
 	CPUs      int
-	client    *Client
 	DiskWrite uint64
 	Status    string
+	Lock      string `json:",omitempty"`
 	VMID      StringOrUint64
 	PID       StringOrUint64
 	Netout    uint64
@@ -105,13 +107,9 @@ type VirtualMachine struct {
 	MaxMem    uint64
 	MaxDisk   uint64
 	DiskRead  uint64
+	QMPStatus string     `json:"qmpstatus,omitempty"`
 	Template  IsTemplate // empty str if a vm, int 1 if a template
 	HA        HA         `json:",omitempty"`
-}
-
-type VirtualMachineStatuses []*VirtualMachineStatus
-type VirtualMachineStatus struct {
-	Data string `json:",omitempty"`
 }
 
 type HA struct {
@@ -152,10 +150,12 @@ type Time struct {
 	Localtime uint64
 }
 
+type UPID string
+
 type Tasks []*Tasks
 type Task struct {
 	client     *Client
-	UPID       string
+	UPID       UPID
 	ID         string
 	Type       string
 	User       string
