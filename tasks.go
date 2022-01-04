@@ -11,6 +11,10 @@ const (
 )
 
 func NewTask(upid UPID, client *Client) *Task {
+	if upid == "" {
+		return nil
+	}
+
 	task := &Task{
 		UPID:   upid,
 		client: client,

@@ -34,6 +34,19 @@ func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
 	return vms, nil
 }
 
+func (n *Node) NewVirtualMachine(vmid int, options ...VirtualMachineOption) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	data["vmid"] = vmid
+
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+
+	err := n.client.Post(fmt.Sprintf("/nodes/%s/qemu", n.Name), data, &upid)
+	return NewTask(upid, n.client), err
+}
+
 func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
 	vm := &VirtualMachine{
 		client: n.client,

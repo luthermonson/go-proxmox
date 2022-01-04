@@ -20,7 +20,7 @@ func TestStorage_ISO(t *testing.T) {
 
 func TestStorage_DownloadUrl(t *testing.T) {
 	// download url
-	isoName := randomString(12) + ".iso"
+	isoName := nameGenerator(12) + ".iso"
 	task, err := td.storage.DownloadURL("iso", isoName, tinycoreURL)
 	assert.Nil(t, err)
 	assert.Nil(t, task.Wait(time.Duration(5*time.Second), time.Duration(5*time.Minute)))
@@ -33,7 +33,7 @@ func TestStorage_DownloadUrl(t *testing.T) {
 
 func TestStorage_Upload(t *testing.T) {
 	// upload from local file
-	isoName := randomString(12) + ".iso"
+	isoName := nameGenerator(12) + ".iso"
 	file := filepath.Join("./", isoName)
 	createTestISO(file)
 	defer os.Remove(file)

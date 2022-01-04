@@ -31,6 +31,74 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+type Cluster struct {
+	client  *Client
+	Version int
+	Quorate int
+	Nodes   NodeStatuses
+	Name    string
+	ID      string
+}
+
+func (cl *Cluster) UnmarshalJSON(b []byte) error {
+	var tmp []map[string]interface{}
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+
+	for _, d := range tmp {
+		t, ok := d["type"]
+		if !ok {
+			break
+		}
+
+		switch t.(string) {
+		case "cluster":
+			if v, ok := d["id"]; ok {
+				cl.ID = v.(string)
+			}
+			if v, ok := d["name"]; ok {
+				cl.Name = v.(string)
+			}
+			if v, ok := d["version"]; ok {
+				cl.Version = int(v.(float64))
+			}
+			if v, ok := d["quorate"]; ok {
+				cl.Quorate = int(v.(float64))
+			}
+		case "node":
+			ns := NodeStatus{
+				Status: "offline",
+			}
+			if v, ok := d["name"]; ok {
+				ns.Name = v.(string)
+			}
+			if v, ok := d["level"]; ok {
+				ns.Level = v.(string)
+			}
+			if v, ok := d["online"]; ok {
+				ns.Online = int(v.(float64))
+				if ns.Online == 1 {
+					ns.Status = "online"
+				}
+			}
+			if v, ok := d["id"]; ok {
+				ns.ID = v.(string)
+			}
+			if v, ok := d["ip"]; ok {
+				ns.IP = v.(string)
+			}
+			if v, ok := d["local"]; ok {
+				ns.Local = int(v.(float64))
+			}
+
+			cl.Nodes = append(cl.Nodes, &ns)
+		}
+	}
+
+	return nil
+}
+
 type ClusterResources []*ClusterResource
 
 type ClusterResource struct {
@@ -56,17 +124,27 @@ type ClusterResource struct {
 
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
-	Status         string  `json:",omitempty"`
-	Level          string  `json:",omitempty"`
-	CPU            float64 `json:",omitempty"`
+	// shared
+	Status string `json:",omitempty"`
+	Level  string `json:",omitempty"`
+	ID     string `json:",omitempty"` // format "node/<name>"
+
+	// from /nodes endpoint
 	Node           string  `json:",omitempty"`
+	MaxCPU         int     `json:",omitempty"`
 	MaxMem         uint64  `json:",omitempty"`
 	Disk           uint64  `json:",omitempty"`
-	SslFingerprint string  `json:"ssl_fingerprint,omitempty"`
+	SSLFingerprint string  `json:"ssl_fingerprint,omitempty"`
 	MaxDisk        uint64  `json:",omitempty"`
-	MaxCPU         int     `json:",omitempty"`
-	ID             string  `json:",omitempty"`
 	Mem            uint64  `json:",omitempty"`
+	CPU            float64 `json:",omitempty"`
+
+	// from /cluster endpoint
+	NodeID int    `json:",omitempty"` // the internal id of the node
+	Name   string `json:",omitempty"`
+	IP     string `json:",omitempty"`
+	Online int    `json:",omitempty"`
+	Local  int    `json:",omitempty"`
 }
 
 type Node struct {
@@ -148,6 +226,11 @@ type Time struct {
 	Timezone  string
 	Time      uint64
 	Localtime uint64
+}
+type VirtualMachineOptions []*VirtualMachineOption
+type VirtualMachineOption struct {
+	Name  string
+	Value interface{}
 }
 
 type UPID string

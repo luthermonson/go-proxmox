@@ -74,3 +74,12 @@ func (v *VirtualMachine) Reboot() (task *Task, err error) {
 
 	return NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) Delete() (task *Task, err error) {
+	var upid UPID
+	if err := v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}

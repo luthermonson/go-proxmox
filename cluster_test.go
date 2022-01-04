@@ -1,17 +1,26 @@
 package proxmox
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func TestClient_Cluster(t *testing.T) {
+	client := ClientFromLogins()
+	cluster, err := client.Cluster()
+	assert.NoError(t, err)
+	fmt.Println(cluster)
+}
+
 func TestClusterResources(t *testing.T) {
 	client := ClientFromLogins()
 
 	// Check a call without parameters
-	rs, err := client.ClusterResources()
+	cluster, err := client.Cluster()
+	rs, err := cluster.Resources()
 	assert.Nil(t, err)
 	assert.GreaterOrEqual(t, len(rs), 1)
 
@@ -23,7 +32,7 @@ func TestClusterResources(t *testing.T) {
 
 	// Check a call with all the valid filter values
 	for _, rsType := range []string{"vm", "storage", "node", "sdn"} {
-		rs, err = client.ClusterResources(rsType)
+		rs, err = cluster.Resources(rsType)
 		assert.Nil(t, err)
 
 		// vm and sdn may be empty as it is absolutely not mandatory
@@ -45,17 +54,17 @@ func TestClusterResources(t *testing.T) {
 	}
 
 	// Check a call with more than one parameter
-	rs, err = client.ClusterResources("bad", "call")
+	rs, err = cluster.Resources("bad", "call")
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "accepts maximum one parameter")
+	assert.Contains(t, err.Error(), "value 'badcall' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is not a single word
-	rs, err = client.ClusterResources("bad call")
+	rs, err = cluster.Resources("bad filter")
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "accepts only a single word")
+	assert.Contains(t, err.Error(), "value 'badfilter' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is a word
-	rs, err = client.ClusterResources("unknownword")
+	rs, err = cluster.Resources("unknownword")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "bad request: 400 Parameter verification failed")
 }
