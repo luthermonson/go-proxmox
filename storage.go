@@ -31,13 +31,13 @@ func (s *Storage) Upload(content, file string) (*Task, error) {
 	}
 	defer f.Close()
 
-	var ret string
+	var upid UPID
 	if err := s.client.Upload(fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
-		map[string]string{"content": content}, f, &ret); err != nil {
+		map[string]string{"content": content}, f, &upid); err != nil {
 		return nil, err
 	}
 
-	return NewTask(ret, s.client), nil
+	return NewTask(upid, s.client), nil
 }
 
 func (s *Storage) DownloadURL(content, filename, url string) (*Task, error) {
@@ -45,13 +45,13 @@ func (s *Storage) DownloadURL(content, filename, url string) (*Task, error) {
 		return nil, fmt.Errorf("only iso and vztmpl allowed")
 	}
 
-	var ret string
+	var upid UPID
 	s.client.Post(fmt.Sprintf("/nodes/%s/storage/%s/download-url", s.Node, s.Name), map[string]string{
 		"content":  content,
 		"filename": filename,
 		"url":      url,
-	}, &ret)
-	return NewTask(ret, s.client), nil
+	}, &upid)
+	return NewTask(upid, s.client), nil
 }
 
 func (s *Storage) ISO(name string) (iso *ISO, err error) {

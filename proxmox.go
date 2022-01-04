@@ -24,6 +24,12 @@ func IsNotAuthorized(err error) bool {
 	return err == ErrNotAuthorized
 }
 
+var ErrTimeout = errors.New("the operation has timed out")
+
+func IsTimeout(err error) bool {
+	return err == ErrTimeout
+}
+
 type Client struct {
 	httpClient  *http.Client
 	userAgent   string
