@@ -4,6 +4,7 @@
 package proxmox
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,39 @@ import (
 var (
 	testVirtualMachineID = 113
 )
+
+func TestNode_NewVirtualMachine(t *testing.T) {
+	client := ClientFromLogins()
+	node, err := client.Node(td.nodeName)
+	require.NoError(t, err)
+
+	isoName := nameGenerator(12) + ".iso"
+	task, err := td.storage.DownloadURL("iso", isoName, tinycoreURL)
+	assert.Nil(t, err)
+	assert.Nil(t, task.Wait(time.Duration(5*time.Second), time.Duration(5*time.Minute)))
+
+	iso, err := td.storage.ISO(isoName)
+	assert.Nil(t, err)
+
+	cluster, err := client.Cluster()
+	require.NoError(t, err)
+
+	nextid, err := cluster.NextID()
+	require.NoError(t, err)
+
+	task, err = node.NewVirtualMachine(nextid)
+	require.NoError(t, err)
+	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+
+	vm, err := node.VirtualMachine(nextid)
+	require.NoError(t, err)
+	task, err = vm.Delete()
+	require.NoError(t, err)
+	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+
+	assert.True(t, strings.HasSuffix(iso.Path, isoName))
+	assert.Nil(t, iso.Delete())
+}
 
 func TestVirtualMachine_Start(t *testing.T) {
 	if testVirtualMachineID == 0 || td.nodeName == "" {

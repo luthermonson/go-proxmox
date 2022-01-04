@@ -76,11 +76,12 @@ func init() {
 	}
 }
 
-func randomString(length int) string {
+func nameGenerator(length int) string {
 	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	rand.Read(b)
-	return fmt.Sprintf("%x", b)[:length]
+	rstr := fmt.Sprintf("%x", b)[:length]
+	return fmt.Sprintf("go-proxmox-%s", rstr)
 }
 
 func downloadFile(src, dst string) error {
