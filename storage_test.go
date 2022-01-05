@@ -28,7 +28,9 @@ func TestStorage_DownloadUrl(t *testing.T) {
 	iso, err := td.storage.ISO(isoName)
 	assert.Nil(t, err)
 	assert.True(t, strings.HasSuffix(iso.Path, isoName))
-	assert.Nil(t, iso.Delete())
+	task, err = iso.Delete()
+	assert.Nil(t, err)
+	task.Wait(1*time.Second, 10*time.Second)
 }
 
 func TestStorage_Upload(t *testing.T) {
@@ -44,7 +46,10 @@ func TestStorage_Upload(t *testing.T) {
 	iso, err := td.storage.ISO(isoName)
 	assert.Nil(t, err)
 	assert.True(t, strings.HasSuffix(iso.Path, isoName))
-	assert.Nil(t, iso.Delete())
+
+	task, err = iso.Delete()
+	assert.Nil(t, err)
+	task.Wait(1*time.Second, 15*time.Second)
 }
 
 func TestStorage_VzTmpl(t *testing.T) {
@@ -56,5 +61,7 @@ func TestStorage_VzTmpl(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, strings.HasSuffix(vztmpl.Path, td.appliance.Template))
 
-	assert.Nil(t, vztmpl.Delete())
+	task, err := vztmpl.Delete()
+	assert.Nil(t, err)
+	task.Wait(1*time.Second, 15*time.Second)
 }

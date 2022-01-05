@@ -13,6 +13,16 @@ func (v *VirtualMachine) Ping() error {
 	return v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", v.Node, v.VMID), &v)
 }
 
+func (v *VirtualMachine) Config(options ...VirtualMachineOption) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	for _, opt := range options {
+		data[opt.Name] = opt.Value
+	}
+	err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), data, &upid)
+	return NewTask(upid, v.client), err
+}
+
 func (v *VirtualMachine) Start() (*Task, error) {
 	var upid UPID
 	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/status/start", v.Node, v.VMID), nil, &upid); err != nil {
