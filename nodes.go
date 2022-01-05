@@ -53,6 +53,11 @@ func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
 		Node:   n.Name,
 	}
 
+	var vmconf VirtualMachineConfig
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vmconf); err != nil {
+		return nil, err
+	}
+
 	return vm, n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm)
 }
 

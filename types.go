@@ -166,7 +166,8 @@ type Node struct {
 
 type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
-	client *Client
+	client               *Client
+	VirtualMachineConfig *VirtualMachineConfig
 
 	Name      string
 	Node      string
@@ -231,6 +232,24 @@ type VirtualMachineOptions []*VirtualMachineOption
 type VirtualMachineOption struct {
 	Name  string
 	Value interface{}
+}
+
+type VirtualMachineConfig struct {
+	Cores   int
+	Numa    int
+	Memory  int
+	Sockets int
+	Ide2    string
+	OSType  string
+	SMBios1 string
+	SCSIHW  string
+	Net0    string
+	Digest  string
+	Meta    string
+	SCSI0   string
+	Boot    string
+	VMGenID string
+	Name    string
 }
 
 type UPID string

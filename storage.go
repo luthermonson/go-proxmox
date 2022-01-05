@@ -63,6 +63,9 @@ func (s *Storage) ISO(name string) (iso *ISO, err error) {
 	iso.client = s.client
 	iso.Node = s.Node
 	iso.Storage = s.Name
+	if iso.VolID == "" {
+		iso.VolID = fmt.Sprintf("%s:iso/%s", iso.Storage, name)
+	}
 	return
 }
 
@@ -75,6 +78,9 @@ func (s *Storage) VzTmpl(name string) (vztmpl *VzTmpl, err error) {
 	vztmpl.client = s.client
 	vztmpl.Node = s.Node
 	vztmpl.Storage = s.Name
+	if vztmpl.VolID == "" {
+		vztmpl.VolID = fmt.Sprintf("%s:vztmpl/%s", vztmpl.Storage, name)
+	}
 	return
 }
 
@@ -90,22 +96,22 @@ func (s *Storage) Backup(name string) (backup *Backup, err error) {
 	return
 }
 
-func (v *VzTmpl) Delete() error {
+func (v *VzTmpl) Delete() (*Task, error) {
 	return deleteVolume(v.client, v.Node, v.Storage, v.VolID, v.Path, "vztmpl")
 }
 
-func (b *Backup) Delete() error {
+func (b *Backup) Delete() (*Task, error) {
 	return deleteVolume(b.client, b.Node, b.Storage, b.VolID, b.Path, "backup")
 }
 
-func (i *ISO) Delete() error {
+func (i *ISO) Delete() (*Task, error) {
 	return deleteVolume(i.client, i.Node, i.Storage, i.VolID, i.Path, "iso")
 }
 
-func deleteVolume(c *Client, n, s, v, p, t string) error {
-	var res string
+func deleteVolume(c *Client, n, s, v, p, t string) (*Task, error) {
+	var upid UPID
 	if v == "" && p == "" {
-		return fmt.Errorf("volid or path required for a delete")
+		return nil, fmt.Errorf("volid or path required for a delete")
 	}
 
 	if v == "" {
@@ -113,5 +119,6 @@ func deleteVolume(c *Client, n, s, v, p, t string) error {
 		v = fmt.Sprintf("%s:%s/%s", s, t, filepath.Base(p))
 	}
 
-	return c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s?delay=5", n, s, v), &res)
+	err := c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s?delay=5", n, s, v), &upid)
+	return NewTask(upid, c), err
 }
