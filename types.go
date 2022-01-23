@@ -297,9 +297,7 @@ func (t *Task) UnmarshalJSON(b []byte) error {
 	}
 
 	c := Task(task)
-	copier.Copy(t, &c)
-
-	return nil
+	return copier.Copy(t, &c)
 }
 
 type Log map[int]string
@@ -320,8 +318,7 @@ func (l *Log) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	copier.Copy(l, Log(log))
-	return nil
+	return copier.Copy(l, Log(log))
 }
 
 type Containers []*Container
