@@ -72,11 +72,15 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 
 	var body io.Reader
 	if data != nil {
-		if len(data) < 2048 {
-			c.log.Debugf("DATA: %s", string(data))
-		} else {
-			c.log.Debugf("DATA: %s", "truncated due to length")
+		if path != (c.baseURL + "/access/ticket") {
+			// dont show passwords in the logs
+			if len(data) < 2048 {
+				c.log.Debugf("DATA: %s", string(data))
+			} else {
+				c.log.Debugf("DATA: %s", "truncated due to length")
+			}
 		}
+
 		body = bytes.NewBuffer(data)
 	}
 
@@ -223,8 +227,12 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 		return err
 	}
 
-	c.log.Infof("RECV: %d - %s", res.StatusCode, res.Status)
-	c.log.Debugf("BODY: %s", string(body))
+	c.log.Debugf("RECV: %d - %s", res.StatusCode, res.Status)
+
+	if res.Request.URL.String() != (c.baseURL + "/access/ticket") {
+		// dont show tokens out of the logs
+		c.log.Debugf("BODY: %s", string(body))
+	}
 	if res.StatusCode == http.StatusBadRequest {
 		var errorskey map[string]json.RawMessage
 		if err := json.Unmarshal(body, &errorskey); err != nil {
