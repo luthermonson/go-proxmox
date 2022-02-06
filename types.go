@@ -220,7 +220,7 @@ type Memory struct {
 }
 
 type Ksm struct {
-	Shared int
+	Shared int64
 }
 
 type Time struct {
