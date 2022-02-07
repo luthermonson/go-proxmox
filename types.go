@@ -31,6 +31,14 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+type VNC struct {
+	Cert   string
+	Port   StringOrInt
+	Ticket string
+	UPID   string
+	User   string
+}
+
 type Cluster struct {
 	client  *Client
 	Version int
@@ -328,7 +336,7 @@ type Container struct {
 	client  *Client
 	CPUs    int
 	Status  string
-	VMID    string
+	VMID    StringOrUint64
 	Uptime  uint64
 	MaxMem  uint64
 	MaxDisk uint64
@@ -412,6 +420,18 @@ func (it *IsTemplate) UnmarshalJSON(b []byte) error {
 		*it = false
 	}
 
+	return nil
+}
+
+type StringOrInt int
+
+func (d *StringOrInt) UnmarshalJSON(b []byte) error {
+	str := strings.Replace(string(b), "\"", "", -1)
+	parsed, err := strconv.ParseUint(str, 0, 64)
+	if err != nil {
+		return err
+	}
+	*d = StringOrInt(parsed)
 	return nil
 }
 

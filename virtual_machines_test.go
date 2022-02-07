@@ -4,6 +4,7 @@
 package proxmox
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -32,17 +33,19 @@ func NewVirtualMachine(t *testing.T, name string) (*VirtualMachine, error) {
 	nextid, err := cluster.NextID()
 	require.NoError(t, err)
 
-	task, err = node.NewVirtualMachine(nextid, VirtualMachineOption{Name: "ide2", Value: iso.VolID})
+	task, err = node.NewVirtualMachine(nextid, VirtualMachineOption{Name: "cdrom", Value: iso.VolID})
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
 
 	vm, err := node.VirtualMachine(nextid)
 	require.NoError(t, err)
-	task, err = vm.Config(VirtualMachineOption{Name: "name", Value: name})
+	task, err = vm.Config(
+		VirtualMachineOption{Name: "name", Value: name},
+		VirtualMachineOption{Name: "serial0", Value: "socket"},
+	)
+
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
-
-	return vm, nil
 }
 
 func CleanupVirtualMachine(t *testing.T, vm *VirtualMachine) {
@@ -78,6 +81,36 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
 	require.NoError(t, vm.Ping())
 	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+
+	// TODO while this connects it doesn't do anything because the vm isn't setup to use the serial0 socket
+	vnc, err := vm.TermProxy()
+	require.NoError(t, err)
+	send, recv, errs, close, err := vm.VNCWebSocket(vnc)
+	defer close()
+
+	go func() {
+		for {
+			select {
+			case msg := <-recv:
+				if msg != "" {
+					fmt.Println("MSG: " + msg)
+				}
+			case err := <-errs:
+				if err != nil {
+					fmt.Println("ERROR: " + err.Error())
+					return
+				}
+			}
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+	send <- "\n"
+	time.Sleep(2 * time.Second)
+	send <- "ls -la"
+	time.Sleep(2 * time.Second)
+	send <- "hostname"
+	time.Sleep(2 * time.Second)
 
 	// Reboot disabled for now doesnt work great w/o the guest agent installed so will uncomment when that's done
 	//task, err = vm.Reboot()

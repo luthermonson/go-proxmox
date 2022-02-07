@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"fmt"
+	"net/url"
 )
 
 const (
@@ -21,6 +22,20 @@ func (v *VirtualMachine) Config(options ...VirtualMachineOption) (*Task, error) 
 	}
 	err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), data, &upid)
 	return NewTask(upid, v.client), err
+}
+
+func (v *VirtualMachine) TermProxy() (vnc *VNC, err error) {
+	return vnc, v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &vnc)
+}
+
+// VNCWebSocket copy/paste when calling to get the channel names right
+// send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
+// for this to work you need to first setup a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
+func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
+
+	return v.client.VNCWebSocket(p, vnc)
 }
 
 func (v *VirtualMachine) Start() (*Task, error) {
