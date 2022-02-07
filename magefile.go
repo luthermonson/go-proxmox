@@ -15,6 +15,7 @@ import (
 
 var (
 	envConfig = map[string]struct{}{
+		"PROXMOX_URL":              {},
 		"PROXMOX_USERNAME":         {},
 		"PROXMOX_PASSWORD":         {},
 		"PROXMOX_OTP":              {},

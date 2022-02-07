@@ -1,3 +1,4 @@
+//go:build nodes
 // +build nodes
 
 package proxmox
@@ -6,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -112,4 +114,35 @@ func TestNode_Storage(t *testing.T) {
 	storage, err := td.node.Storage(td.nodeStorage)
 	assert.Nil(t, err)
 	assert.Equal(t, td.nodeStorage, storage.Name)
+}
+
+func TestNode_TermProxy(t *testing.T) {
+	vnc, err := td.node.TermProxy()
+	assert.Nil(t, err)
+	send, recv, errs, close, err := td.node.VNCWebSocket(vnc)
+	assert.Nil(t, err)
+	defer close()
+
+	go func() {
+		for {
+			select {
+			case msg := <-recv:
+				if msg != "" {
+					fmt.Println("MSG: " + msg)
+				}
+			case err := <-errs:
+				if err != nil {
+					fmt.Println("ERROR: " + err.Error())
+					return
+				}
+			}
+		}
+	}()
+
+	send <- "ls -la"
+	time.Sleep(10 * time.Second)
+	send <- "hostname"
+	time.Sleep(10 * time.Second)
+	send <- "exit"
+	time.Sleep(5 * time.Second)
 }

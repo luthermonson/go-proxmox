@@ -1,6 +1,9 @@
 package proxmox
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 func (c *Client) Nodes() (ns NodeStatuses, err error) {
 	return ns, c.Get("/nodes", &ns)
@@ -19,6 +22,18 @@ func (c *Client) Node(name string) (*Node, error) {
 
 func (n *Node) Version() (version *Version, err error) {
 	return version, n.client.Get("/nodes/%s/version", &version)
+}
+
+func (n *Node) TermProxy() (vnc *VNC, err error) {
+	return vnc, n.client.Post(fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &vnc)
+}
+
+// VNCWebSocket send, recv, errors, closer, error
+func (n *Node) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/vncwebsocket?port=%d&vncticket=%s",
+		n.Name, vnc.Port, url.QueryEscape(vnc.Ticket))
+
+	return n.client.VNCWebSocket(p, vnc)
 }
 
 func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
