@@ -46,6 +46,7 @@ func NewVirtualMachine(t *testing.T, name string) (*VirtualMachine, error) {
 
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+	return nil, nil
 }
 
 func CleanupVirtualMachine(t *testing.T, vm *VirtualMachine) {

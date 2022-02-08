@@ -198,11 +198,16 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
 
+	var tlsConfig *tls.Config
+	transport := c.httpClient.Transport.(*http.Transport)
+	if transport != nil {
+		tlsConfig = transport.TLSClientConfig
+	}
 	c.log.Debugf("connecting to websocket: %s", path)
 	dialer := &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 15 * time.Second,
-		TLSClientConfig:  &tls.Config{InsecureSkipVerify: true},
+		HandshakeTimeout: 30 * time.Second,
+		TLSClientConfig:  tlsConfig,
 	}
 
 	conn, _, err := dialer.Dial(path, http.Header{
