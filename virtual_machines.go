@@ -3,6 +3,7 @@ package proxmox
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 )
 
 const (
@@ -107,4 +108,27 @@ func (v *VirtualMachine) Delete() (task *Task, err error) {
 	}
 
 	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err error) {
+	var upid UPID
+	cluster, err := v.client.Cluster()
+	if err != nil {
+		return newid, nil, err
+	}
+
+	newid, err = cluster.NextID()
+	if err != nil {
+		return newid, nil, err
+	}
+
+	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/clone", v.Node, v.VMID), map[string]string{
+		"newid":  strconv.Itoa(newid),
+		"name":   name,
+		"target": target,
+	}, &upid); err != nil {
+		return newid, nil, err
+	}
+
+	return newid, NewTask(upid, v.client), nil
 }
