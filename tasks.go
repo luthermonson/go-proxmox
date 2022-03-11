@@ -116,7 +116,7 @@ func tasktail(start int, watch chan string, task *Task) error {
 }
 
 func (t *Task) WaitFor(seconds int) error {
-	return t.Wait(DefaultWaitInterval*time.Second, seconds*time.Second)
+	return t.Wait(DefaultWaitInterval, time.Duration(seconds)*time.Second)
 }
 
 func (t *Task) Wait(interval, max time.Duration) error {
