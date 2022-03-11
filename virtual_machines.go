@@ -9,6 +9,7 @@ import (
 const (
 	StatusVirtualMachineRunning = "running"
 	StatusVirtualMachineStopped = "stopped"
+	StatusVirtualMachinePaused  = "paused"
 )
 
 func (v *VirtualMachine) Ping() error {
@@ -39,6 +40,10 @@ func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan 
 	return v.client.VNCWebSocket(p, vnc)
 }
 
+func (v *VirtualMachine) IsRunning() bool {
+	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == StatusVirtualMachineRunning
+}
+
 func (v *VirtualMachine) Start() (*Task, error) {
 	var upid UPID
 	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/status/start", v.Node, v.VMID), nil, &upid); err != nil {
@@ -46,6 +51,10 @@ func (v *VirtualMachine) Start() (*Task, error) {
 	}
 
 	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) IsStopped() bool {
+	return v.Status == StatusVirtualMachineStopped && v.QMPStatus == StatusVirtualMachineStopped
 }
 
 func (v *VirtualMachine) Stop() (task *Task, err error) {
@@ -58,7 +67,7 @@ func (v *VirtualMachine) Stop() (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsPaused() bool {
-	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == "paused"
+	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == StatusVirtualMachinePaused
 }
 
 func (v *VirtualMachine) Pause() (task *Task, err error) {
