@@ -10,6 +10,8 @@ const (
 	TaskRunning = "running"
 )
 
+var DefaultWaitInterval = 1 * time.Second
+
 func NewTask(upid UPID, client *Client) *Task {
 	if upid == "" {
 		return nil
@@ -111,6 +113,10 @@ func tasktail(start int, watch chan string, task *Task) error {
 		start = start + len(logs)
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func (t *Task) WaitFor(seconds int) error {
+	return t.Wait(DefaultWaitInterval*time.Second, seconds*time.Second)
 }
 
 func (t *Task) Wait(interval, max time.Duration) error {
