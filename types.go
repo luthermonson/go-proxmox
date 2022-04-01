@@ -2,6 +2,8 @@ package proxmox
 
 import (
 	"encoding/json"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -258,6 +260,109 @@ type VirtualMachineConfig struct {
 	Boot    string
 	VMGenID string
 	Name    string
+
+	Ides map[string]string
+	Ide0 string
+	Ide1 string
+	Ide3 string
+	Ide4 string
+	Ide5 string
+	Ide6 string
+	Ide7 string
+	Ide8 string
+	Ide9 string
+
+	Scsis map[string]string
+	Scsi0 string
+	Scsi1 string
+	Scsi2 string
+	Scsi3 string
+	Scsi4 string
+	Scsi5 string
+	Scsi6 string
+	Scsi7 string
+	Scsi8 string
+	Scsi9 string
+
+	Satas map[string]string
+	Sata0 string
+	Sata1 string
+	Sata2 string
+	Sata3 string
+	Sata4 string
+	Sata5 string
+	Sata6 string
+	Sata7 string
+	Sata8 string
+	Sata9 string
+
+	Nets map[string]string
+	Net1 string
+	Net2 string
+	Net3 string
+	Net4 string
+	Net5 string
+	Net6 string
+	Net7 string
+	Net8 string
+	Net9 string
+
+	Unuseds map[string]string
+	Unused0 string
+	Unused1 string
+	Unused2 string
+	Unused3 string
+	Unused4 string
+	Unused5 string
+	Unused6 string
+	Unused7 string
+	Unused8 string
+	Unused9 string
+}
+
+func (s *VirtualMachineConfig) MergeFields() {
+	if nil == s.Ides || nil == s.Scsis || nil == s.Satas || nil == s.Nets || nil == s.Unuseds {
+		s.Ides = map[string]string{}
+		s.Scsis = map[string]string{}
+		s.Satas = map[string]string{}
+		s.Nets = map[string]string{}
+		s.Unuseds = map[string]string{}
+
+		t := reflect.TypeOf(*s)
+		v := reflect.ValueOf(*s)
+		count := v.NumField()
+
+		regIde, _ := regexp.Compile("^Ide[\\d]+$")
+		regScsi, _ := regexp.Compile("^Scsi[\\d]+$")
+		regSata, _ := regexp.Compile("^Sata[\\d]+$")
+		regNet, _ := regexp.Compile("^Net[\\d]+$")
+		regUnused, _ := regexp.Compile("^Unused[\\d]+$")
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if regIde.MatchString(fn) {
+				s.Ides[strings.ToLower(fn)] = fv
+			}
+			if regScsi.MatchString(fn) {
+				s.Scsis[strings.ToLower(fn)] = fv
+			}
+			if regSata.MatchString(fn) {
+				s.Satas[strings.ToLower(fn)] = fv
+			}
+			if regNet.MatchString(fn) {
+				s.Nets[strings.ToLower(fn)] = fv
+			}
+			if regUnused.MatchString(fn) {
+				s.Unuseds[strings.ToLower(fn)] = fv
+			}
+
+		}
+	}
 }
 
 type UPID string
@@ -445,4 +550,38 @@ func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	}
 	*d = StringOrUint64(parsed)
 	return nil
+}
+
+type NodeNetworks []*NodeNetwork
+type NodeNetwork struct {
+	client  *Client `json:"-"`
+	Node    string  `json:"-"`
+	NodeApi *Node   `json:"-"`
+
+	Iface    string `json:"iface,omitempty"`
+	BondMode string `json:"bond_mode,omitempty"`
+
+	Autostart int `json:"autostart,omitempty"`
+
+	Cidr            string `json:"cidr,omitempty"`
+	Cidr6           string `json:"cidr6,omitempty"`
+	Gateway         string `json:"gateway,omitempty"`
+	Gateway6        string `json:"gateway6,omitempty"`
+	Netmask         string `json:"netmask,omitempty"`
+	Netmask6        string `json:"netmask6,omitempty"`
+	BridgeVlanAware bool   `json:"bridge_vlan_aware,omitempty"`
+	BridgePorts     string `json:"bridge_ports,omitempty"`
+	Comments        string `json:"comments,omitempty"`
+	Comments6       string `json:"comments6,omitempty"`
+	BridgeStp       string `json:"bridge_stp,omitempty"`
+	BridgeFd        string `json:"bridge_fd,omitempty"`
+	BondPrimary     string `json:"bond-primary,omitempty"`
+
+	Address  string `json:"address,omitempty"`
+	Address6 string `json:"address6,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Active   int    `json:"active,omitempty"`
+	Method   string `json:"method,omitempty"`
+	Method6  string `json:"method6,omitempty"`
+	Priority int    `json:"priority,omitempty"`
 }

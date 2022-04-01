@@ -141,3 +141,16 @@ func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err 
 
 	return newid, NewTask(upid, v.client), nil
 }
+func (v *VirtualMachine) MoveDisk(disk, storage string) (task *Task, err error) {
+	var upid UPID
+
+	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/move_disk", v.Node, v.VMID), map[string]string{
+		"disk":    disk,
+		"storage": storage,
+	}, &upid)
+	if err != nil {
+		return
+	}
+
+	return NewTask(upid, v.client), nil
+}

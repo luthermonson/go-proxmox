@@ -68,12 +68,18 @@ func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
 		Node:   n.Name,
 	}
 
-	var vmconf VirtualMachineConfig
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vmconf); err != nil {
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm); nil != err {
 		return nil, err
 	}
 
-	return vm, n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm)
+	//var vmconf VirtualMachineConfig
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vm.VirtualMachineConfig); err != nil {
+		return nil, err
+	}
+
+	//vm.VirtualMachineConfig = &vmconf
+
+	return vm, nil
 }
 
 func (n *Node) Containers() (c Containers, err error) {
@@ -166,4 +172,60 @@ func (n *Node) Storage(name string) (storage *Storage, err error) {
 	storage.Name = name
 
 	return
+}
+
+//networks
+func (n *Node) Networks() (networks NodeNetworks, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range networks {
+		v.client = n.client
+		v.Node = n.Name
+		v.NodeApi = n
+	}
+
+	return
+}
+func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
+
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/network/%s", n.Name, iface), &network)
+	if err != nil {
+		return nil, err
+	}
+
+	if nil != network {
+		network.client = n.client
+		network.Node = n.Name
+		network.NodeApi = n
+		network.Iface = iface
+	}
+
+	return network, nil
+}
+
+func (n *Node) NewNetwork(network *NodeNetwork) error {
+
+	err := n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
+	if nil != err {
+		network = &NodeNetwork{}
+		return err
+	}
+
+	network.client = n.client
+	network.Node = n.Name
+	network.NodeApi = n
+	n.NetworkReload()
+	return err
+}
+func (n *Node) NetworkReload() (*Task, error) {
+	var upid UPID
+	err := n.client.Put(fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, n.client), nil
 }
