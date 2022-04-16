@@ -57,6 +57,24 @@ func (v *VirtualMachine) IsStopped() bool {
 	return v.Status == StatusVirtualMachineStopped && v.QMPStatus == StatusVirtualMachineStopped
 }
 
+func (v *VirtualMachine) Reset() (task *Task, err error) {
+	var upid UPID
+	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/status/reset", v.Node, v.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) Shutdown() (task *Task, err error) {
+	var upid UPID
+	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/status/shutdown", v.Node, v.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}
+
 func (v *VirtualMachine) Stop() (task *Task, err error) {
 	var upid UPID
 	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/status/stop", v.Node, v.VMID), nil, &upid); err != nil {
