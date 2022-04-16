@@ -44,6 +44,19 @@ func (t *Task) Ping() error {
 	if nil == t.client {
 		t.client = tmp.client
 	}
+
+	if "stopped" == t.Status {
+		t.IsCompleted = true
+	} else {
+		t.IsRunning = true
+	}
+	if t.IsCompleted {
+		if "OK" == t.ExitStatus {
+			t.IsSuccessful = true
+		} else {
+			t.IsFailed = true
+		}
+	}
 	return err
 }
 
@@ -170,10 +183,10 @@ func (t *Task) WaitForCompleteStatus(timesNum int, steps ...int) (status bool, c
 				t.client.log.Debugf("task %s ping error %+v", t.UPID, err)
 				break
 			}
-			completed = "stopped" == t.Status
-			status = "OK" == t.ExitStatus
+			completed = t.IsCompleted
 
 			if completed {
+				status = t.IsSuccessful
 				return
 			}
 		}
