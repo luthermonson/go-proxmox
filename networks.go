@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (nw *NodeNetwork) Delete() (err error) {
+func (nw *NodeNetwork) Delete() (task *Task, err error) {
 	var upid UPID
 	if "" == nw.Iface {
 		return
@@ -13,6 +13,6 @@ func (nw *NodeNetwork) Delete() (err error) {
 	if err != nil {
 		return
 	}
-	nw.NodeApi.NetworkReload()
-	return
+
+	return nw.NodeApi.NetworkReload()
 }

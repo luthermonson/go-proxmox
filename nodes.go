@@ -206,19 +206,18 @@ func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 	return network, nil
 }
 
-func (n *Node) NewNetwork(network *NodeNetwork) error {
+func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
 
-	err := n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
+	err = n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
 	if nil != err {
 		network = &NodeNetwork{}
-		return err
+		return
 	}
 
 	network.client = n.client
 	network.Node = n.Name
 	network.NodeApi = n
-	n.NetworkReload()
-	return err
+	return n.NetworkReload()
 }
 func (n *Node) NetworkReload() (*Task, error) {
 	var upid UPID
