@@ -210,7 +210,6 @@ func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
 
 	err = n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
 	if nil != err {
-		network = &NodeNetwork{}
 		return
 	}
 
