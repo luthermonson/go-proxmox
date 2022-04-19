@@ -2,12 +2,30 @@ package proxmox
 
 import (
 	"encoding/json"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/copier"
 )
+
+var (
+	vmConfigRegexpIDE    *regexp.Regexp
+	vmConfigRegexpSCSI   *regexp.Regexp
+	vmConfigRegexpSATA   *regexp.Regexp
+	vmConfigRegexpNet    *regexp.Regexp
+	vmConfigRegexpUnused *regexp.Regexp
+)
+
+func init() {
+	vmConfigRegexpIDE, _ = regexp.Compile("^IDE[\\d]+$")
+	vmConfigRegexpSCSI, _ = regexp.Compile("^SCSI[\\d]+$")
+	vmConfigRegexpSATA, _ = regexp.Compile("^SATAIDE[\\d]+$")
+	vmConfigRegexpNet, _ = regexp.Compile("^Net[\\d]+$")
+	vmConfigRegexpUnused, _ = regexp.Compile("^Unused[\\d]+$")
+}
 
 type Credentials struct {
 	Username string `json:"username"`
@@ -247,7 +265,7 @@ type VirtualMachineConfig struct {
 	Numa    int
 	Memory  int
 	Sockets int
-	Ide2    string
+	IDE2    string
 	OSType  string
 	SMBios1 string
 	SCSIHW  string
@@ -258,26 +276,194 @@ type VirtualMachineConfig struct {
 	Boot    string
 	VMGenID string
 	Name    string
+
+	IDEs map[string]string
+	IDE0 string
+	IDE1 string
+	IDE3 string
+	IDE4 string
+	IDE5 string
+	IDE6 string
+	IDE7 string
+	IDE8 string
+	IDE9 string
+
+	SCSIs map[string]string
+	SCSI1 string
+	SCSI2 string
+	SCSI3 string
+	SCSI4 string
+	SCSI5 string
+	SCSI6 string
+	SCSI7 string
+	SCSI8 string
+	SCSI9 string
+
+	SATAs map[string]string
+	SATA0 string
+	SATA1 string
+	SATA2 string
+	SATA3 string
+	SATA4 string
+	SATA5 string
+	SATA6 string
+	SATA7 string
+	SATA8 string
+	SATA9 string
+
+	Nets map[string]string
+	Net1 string
+	Net2 string
+	Net3 string
+	Net4 string
+	Net5 string
+	Net6 string
+	Net7 string
+	Net8 string
+	Net9 string
+
+	Unuseds map[string]string
+	Unused0 string
+	Unused1 string
+	Unused2 string
+	Unused3 string
+	Unused4 string
+	Unused5 string
+	Unused6 string
+	Unused7 string
+	Unused8 string
+	Unused9 string
+}
+
+func (vmc *VirtualMachineConfig) MergeIDEs() map[string]string {
+	if nil == vmc.IDEs {
+		vmc.IDEs = map[string]string{}
+		t := reflect.TypeOf(*vmc)
+		v := reflect.ValueOf(*vmc)
+		count := v.NumField()
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if vmConfigRegexpIDE.MatchString(fn) {
+				vmc.IDEs[strings.ToLower(fn)] = fv
+			}
+		}
+	}
+	return vmc.IDEs
+}
+func (vmc *VirtualMachineConfig) MergeSCSIs() map[string]string {
+	if nil == vmc.SCSIs {
+		vmc.SCSIs = map[string]string{}
+		t := reflect.TypeOf(*vmc)
+		v := reflect.ValueOf(*vmc)
+		count := v.NumField()
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if vmConfigRegexpSCSI.MatchString(fn) {
+				vmc.SCSIs[strings.ToLower(fn)] = fv
+			}
+		}
+	}
+	return vmc.SCSIs
+}
+
+func (vmc *VirtualMachineConfig) MergeSATAs() map[string]string {
+	if nil == vmc.SATAs {
+		vmc.SATAs = map[string]string{}
+		t := reflect.TypeOf(*vmc)
+		v := reflect.ValueOf(*vmc)
+		count := v.NumField()
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if vmConfigRegexpSATA.MatchString(fn) {
+				vmc.SATAs[strings.ToLower(fn)] = fv
+			}
+		}
+	}
+	return vmc.SATAs
+}
+func (vmc *VirtualMachineConfig) MergeNets() map[string]string {
+	if nil == vmc.Nets {
+		vmc.Nets = map[string]string{}
+		t := reflect.TypeOf(*vmc)
+		v := reflect.ValueOf(*vmc)
+		count := v.NumField()
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if vmConfigRegexpNet.MatchString(fn) {
+				vmc.Nets[strings.ToLower(fn)] = fv
+			}
+		}
+	}
+	return vmc.Nets
+}
+func (vmc *VirtualMachineConfig) MergeUnuseds() map[string]string {
+	if nil == vmc.Unuseds {
+		vmc.Unuseds = map[string]string{}
+		t := reflect.TypeOf(*vmc)
+		v := reflect.ValueOf(*vmc)
+		count := v.NumField()
+
+		for i := 0; i < count; i++ {
+			fn := t.Field(i).Name
+			fv := v.Field(i).String()
+			//fmt.Println(fn, fv)
+			if "" == fv {
+				continue
+			}
+			if vmConfigRegexpUnused.MatchString(fn) {
+				vmc.Unuseds[strings.ToLower(fn)] = fv
+			}
+		}
+	}
+	return vmc.Unuseds
 }
 
 type UPID string
 
 type Tasks []*Tasks
 type Task struct {
-	client     *Client
-	UPID       UPID
-	ID         string
-	Type       string
-	User       string
-	Status     string
-	Node       string
-	PID        uint64        `json:",omitempty"`
-	PStart     uint64        `json:",omitempty"`
-	Saved      string        `json:",omitempty"`
-	ExitStatus string        `json:",omitempty"`
-	StartTime  time.Time     `json:"-"`
-	EndTime    time.Time     `json:"-"`
-	Duration   time.Duration `json:"-"`
+	client       *Client
+	UPID         UPID
+	ID           string
+	Type         string
+	User         string
+	Status       string
+	Node         string
+	PID          uint64 `json:",omitempty"`
+	PStart       uint64 `json:",omitempty"`
+	Saved        string `json:",omitempty"`
+	ExitStatus   string `json:",omitempty"`
+	IsCompleted  bool
+	IsRunning    bool
+	IsFailed     bool
+	IsSuccessful bool
+	StartTime    time.Time     `json:"-"`
+	EndTime      time.Time     `json:"-"`
+	Duration     time.Duration `json:"-"`
 }
 
 func (t *Task) UnmarshalJSON(b []byte) error {
@@ -445,4 +631,38 @@ func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	}
 	*d = StringOrUint64(parsed)
 	return nil
+}
+
+type NodeNetworks []*NodeNetwork
+type NodeNetwork struct {
+	client  *Client `json:"-"`
+	Node    string  `json:"-"`
+	NodeApi *Node   `json:"-"`
+
+	Iface    string `json:"iface,omitempty"`
+	BondMode string `json:"bond_mode,omitempty"`
+
+	Autostart int `json:"autostart,omitempty"`
+
+	CIDR            string `json:"cidr,omitempty"`
+	CIDR6           string `json:"cidr6,omitempty"`
+	Gateway         string `json:"gateway,omitempty"`
+	Gateway6        string `json:"gateway6,omitempty"`
+	Netmask         string `json:"netmask,omitempty"`
+	Netmask6        string `json:"netmask6,omitempty"`
+	BridgeVlanAware bool   `json:"bridge_vlan_aware,omitempty"`
+	BridgePorts     string `json:"bridge_ports,omitempty"`
+	Comments        string `json:"comments,omitempty"`
+	Comments6       string `json:"comments6,omitempty"`
+	BridgeStp       string `json:"bridge_stp,omitempty"`
+	BridgeFd        string `json:"bridge_fd,omitempty"`
+	BondPrimary     string `json:"bond-primary,omitempty"`
+
+	Address  string `json:"address,omitempty"`
+	Address6 string `json:"address6,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Active   int    `json:"active,omitempty"`
+	Method   string `json:"method,omitempty"`
+	Method6  string `json:"method6,omitempty"`
+	Priority int    `json:"priority,omitempty"`
 }

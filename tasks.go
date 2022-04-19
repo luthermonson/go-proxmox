@@ -36,7 +36,28 @@ func NewTask(upid UPID, client *Client) *Task {
 }
 
 func (t *Task) Ping() error {
-	return t.client.Get(fmt.Sprintf("/nodes/%s/tasks/%s/status", t.Node, t.UPID), t)
+	tmp := NewTask(t.UPID, t.client)
+	err := t.client.Get(fmt.Sprintf("/nodes/%s/tasks/%s/status", t.Node, t.UPID), t)
+	if nil != err || nil == t {
+		t = tmp
+	}
+	if nil == t.client {
+		t.client = tmp.client
+	}
+
+	if "stopped" == t.Status {
+		t.IsCompleted = true
+	} else {
+		t.IsRunning = true
+	}
+	if t.IsCompleted {
+		if "OK" == t.ExitStatus {
+			t.IsSuccessful = true
+		} else {
+			t.IsFailed = true
+		}
+	}
+	return err
 }
 
 func (t *Task) Stop() error {
@@ -143,4 +164,35 @@ func (t *Task) Wait(interval, max time.Duration) error {
 		}
 		time.Sleep(interval)
 	}
+}
+
+func (t *Task) WaitForCompleteStatus(timesNum int, steps ...int) (status bool, completed bool, err error) {
+	step := 1
+	if len(steps) > 0 && steps[0] > 1 {
+		step = steps[0]
+	}
+	timeout := time.After(time.Duration(step*timesNum) * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			return
+		default:
+			err = t.Ping()
+			if nil != err {
+				t.client.log.Debugf("task %s ping error %+v", t.UPID, err)
+				break
+			}
+			completed = t.IsCompleted
+
+			if completed {
+				status = t.IsSuccessful
+				return
+			}
+		}
+
+		time.Sleep(time.Duration(step) * time.Second)
+
+	}
+	return
 }
