@@ -355,8 +355,16 @@ func (c *Client) Put(p string, d interface{}, v interface{}) error {
 	return c.Req(http.MethodPut, p, data, v)
 }
 
-func (c *Client) Delete(p string, v interface{}) error {
-	return c.Req(http.MethodDelete, p, nil, v)
+func (c *Client) Delete(p string, d interface{}, v interface{}) error {
+	var data []byte
+	if d != nil {
+		var err error
+		data, err = json.Marshal(d)
+		if err != nil {
+			return err
+		}
+	}
+	return c.Req(http.MethodDelete, p, data, v)
 }
 
 func (c *Client) authHeaders(req *http.Request) {
