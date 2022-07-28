@@ -666,3 +666,27 @@ type NodeNetwork struct {
 	Method6  string `json:"method6,omitempty"`
 	Priority int    `json:"priority,omitempty"`
 }
+
+type AgentNetworkIpAddress struct {
+	IpAddressType string `json:"ip-address-type"` //ipv4 ipv6
+	IpAddress     string `json:"ip-address"`
+	Prefix        int    `json:"prefix"`
+	MacAddress    string `json:"mac-address"`
+}
+
+type AgentNetworkIface struct {
+	Name            string                   `json:"name"`
+	HardwareAddress string                   `json:"hardware-address"`
+	IpAddresses     []*AgentNetworkIpAddress `json:"ip-addresses"`
+}
+
+type AgentOsInfo struct {
+	Version       string `json:"version"`
+	VersionId     string `json:"version-id"`
+	Id            string `json:"id"`
+	Machine       string `json:"machine"`
+	PrettyName    string `json:"pretty-name"`
+	Name          string `json:"name"`
+	KernelRelease string `json:"kernel-release"`
+	KernelVersion string `json:"kernel-version"`
+}

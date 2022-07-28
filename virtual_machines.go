@@ -172,3 +172,57 @@ func (v *VirtualMachine) MoveDisk(disk, storage string) (task *Task, err error) 
 
 	return NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) AgentGetNetworkIFaces() (iFaces []*AgentNetworkIface, err error) {
+	node, err := v.client.Node(v.Node)
+	if err != nil {
+		return
+	}
+
+	networks := map[string][]*AgentNetworkIface{}
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", node.Name, v.VMID), &networks)
+	if err != nil {
+		return
+	}
+	if result, ok := networks["result"]; ok {
+		for _, iface := range result {
+			if "lo" == iface.Name {
+				continue
+			}
+			iFaces = append(iFaces, iface)
+		}
+	}
+
+	return
+
+}
+
+func (v *VirtualMachine) AgentOsInfo() (info *AgentOsInfo, err error) {
+	node, err := v.client.Node(v.Node)
+	if err != nil {
+		return
+	}
+	results := map[string]*AgentOsInfo{}
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", node.Name, v.VMID), &results)
+
+	if err != nil {
+		return
+	}
+	info, ok := results["result"]
+	if !ok {
+		err = fmt.Errorf("result is empty")
+	}
+	return
+
+}
+func (v *VirtualMachine) AgentSetUserPassword(password string, username string) (err error) {
+	node, err := v.client.Node(v.Node)
+	if err != nil {
+		return
+	}
+
+	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", node.Name, v.VMID), map[string]string{"password": password, "username": username}, nil)
+
+	return
+
+}
