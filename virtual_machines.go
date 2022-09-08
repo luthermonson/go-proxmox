@@ -226,3 +226,52 @@ func (v *VirtualMachine) AgentSetUserPassword(password string, username string) 
 	return
 
 }
+
+func (v *VirtualMachine) FirewallOptionGet() (firewallOption *FirewallVirtualMachineOption, err error) {
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
+	return
+}
+func (v *VirtualMachine) FirewallOptionSet(firewallOption *FirewallVirtualMachineOption) (err error) {
+	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
+	return
+}
+
+func (v *VirtualMachine) FirewallGetRules() (rules []*FirewallRule, err error) {
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), &rules)
+	return
+}
+
+func (v *VirtualMachine) FirewallRulesCreate(rule *FirewallRule) (err error) {
+	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil)
+	return
+}
+func (v *VirtualMachine) FirewallRulesUpdate(rule *FirewallRule) (err error) {
+	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rule.Pos), rule, nil)
+	return
+}
+func (v *VirtualMachine) FirewallRulesDelete(rulePos int) (err error) {
+	err = v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rulePos), nil)
+	return
+}
+
+func (v *VirtualMachine) NewSnapshot(name string) (task *Task, err error) {
+	var upid UPID
+	if err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), map[string]string{"snapname": name}, &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}
+func (v *VirtualMachine) Snapshots() (snapshots []*Snapshot, err error) {
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), &snapshots)
+	return
+}
+
+func (v *VirtualMachine) SnapshotRollback(name string) (task *Task, err error) {
+	var upid UPID
+	if err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/rollback", v.Node, v.VMID, name), nil, &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}

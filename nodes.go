@@ -227,3 +227,30 @@ func (n *Node) NetworkReload() (*Task, error) {
 
 	return NewTask(upid, n.client), nil
 }
+
+func (n *Node) FirewallOptionGet() (firewallOption *FirewallNodeOption, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
+	return
+}
+func (n *Node) FirewallOptionSet(firewallOption *FirewallNodeOption) (err error) {
+	err = n.client.Put(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
+	return
+}
+
+func (n *Node) FirewallGetRules() (rules []*FirewallRule, err error) {
+	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), &rules)
+	return
+}
+
+func (n *Node) FirewallRulesCreate(rule *FirewallRule) (err error) {
+	err = n.client.Post(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
+	return
+}
+func (n *Node) FirewallRulesUpdate(rule *FirewallRule) (err error) {
+	err = n.client.Put(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
+	return
+}
+func (n *Node) FirewallRulesDelete(rulePos int) (err error) {
+	err = n.client.Delete(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
+	return
+}

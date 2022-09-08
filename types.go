@@ -690,3 +690,71 @@ type AgentOsInfo struct {
 	KernelRelease string `json:"kernel-release"`
 	KernelVersion string `json:"kernel-version"`
 }
+
+type FirewallSecurityGroup struct {
+	client  *Client
+	Group   string          `json:"group,omitempty"`
+	Comment string          `json:"comment,omitempty"`
+	Rules   []*FirewallRule `json:"rules,omitempty"`
+}
+type FirewallRule struct {
+	Type     string `json:"type,omitempty"`
+	Action   string `json:"action,omitempty"`
+	Pos      int    `json:"pos,omitempty"`
+	Comment  string `json:"comment,omitempty"`
+	Dest     string `json:"dest,omitempty"`
+	Dport    string `json:"dport,omitempty"`
+	Enable   int    `json:"enable,omitempty"`
+	IcmpType string `json:"icmp_type,omitempty"`
+	Iface    string `json:"iface,omitempty"`
+	Log      string `json:"log,omitempty"`
+	Macro    string `json:"macro,omitempty"`
+	Proto    string `json:"proto,omitempty"`
+	Source   string `json:"source,omitempty"`
+	Sport    string `json:"sport,omitempty"`
+}
+
+func (r *FirewallRule) IsEnable() bool {
+	return 1 == r.Enable
+}
+
+type FirewallNodeOption struct {
+	Enable                           bool   `json:"enable,omitempty"`
+	LogLevelIn                       string `json:"log_level_in,omitempty"`
+	LogLevelOut                      string `json:"log_level_out,omitempty"`
+	LogNfConntrack                   bool   `json:"log_nf_conntrack,omitempty"`
+	Ntp                              bool   `json:"ntp,omitempty"`
+	NfConntrackAllowInvalid          bool   `json:"nf_conntrack_allow_invalid,omitempty"`
+	NfConntrackMax                   int    `json:"nf_conntrack_max,omitempty"`
+	NfConntrackTcpTimeoutEstablished int    `json:"nf_conntrack_tcp_timeout_established,omitempty"`
+	NfConntrackTcpTimeoutSynRecv     int    `json:"nf_conntrack_tcp_timeout_syn_recv,omitempty"`
+	Nosmurfs                         bool   `json:"nosmurfs,omitempty"`
+	ProtectionSynflood               bool   `json:"protection_synflood,omitempty"`
+	ProtectionSynfloodBurst          int    `json:"protection_synflood_burst,omitempty"`
+	ProtectionSynfloodRate           int    `json:"protection_synflood_rate,omitempty"`
+	SmurfLogLevel                    string `json:"smurf_log_level,omitempty"`
+	TcpFlagsLogLevel                 string `json:"tcp_flags_log_level,omitempty"`
+	Tcpflags                         bool   `json:"tcpflags,omitempty"`
+}
+
+type FirewallVirtualMachineOption struct {
+	Enable      bool   `json:"enable,omitempty"`
+	Dhcp        bool   `json:"dhcp,omitempty"`
+	Ipfilter    bool   `json:"ipfilter,omitempty"`
+	LogLevelIn  string `json:"log_level_in,omitempty"`
+	LogLevelOut string `json:"log_level_out,omitempty"`
+	Macfilter   bool   `json:"macfilter,omitempty"`
+	Ntp         bool   `json:"ntp,omitempty"`
+	PolicyIn    string `json:"policy_in,omitempty"`
+	PolicyOut   string `json:"policy_out,omitempty"`
+	Radv        bool   `json:"radv,omitempty"`
+}
+
+type Snapshot struct {
+	Name        string
+	Vmstate     int
+	Description string
+	Snaptime    int64
+	Parent      string
+	Snapstate   string
+}
