@@ -77,6 +77,11 @@ func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
 		return nil, err
 	}
 
+	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", n.Name, vmid), &vm.NetworkConfig); err != nil {
+		fmt.Println(err.Error())
+		return nil, err
+	}
+
 	//vm.VirtualMachineConfig = &vmconf
 
 	return vm, nil

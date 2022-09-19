@@ -173,6 +173,33 @@ type NodeStatus struct {
 	Local  int    `json:",omitempty"`
 }
 
+type NetworkConfig struct {
+	Result []Res `json:"result"`
+}
+
+type Statistic struct {
+	TxErrs    int `json:"tx-errs"`
+	TxDropped int `json:"tx-dropped"`
+	RxBytes   int `json:"rx-bytes"`
+	RxPackets int `json:"rx-packets"`
+	RxErrs    int `json:"rx-errs"`
+	RxDropped int `json:"rx-dropped"`
+	TxBytes   int `json:"tx-bytes"`
+	TxPackets int `json:"tx-packets"`
+}
+
+type IPAddress struct {
+	Prefix        int    `json:"prefix"`
+	IPAddress     string `json:"ip-address"`
+	IPAddressType string `json:"ip-address-type"`
+}
+
+type Res struct {
+	Statistic       Statistic   `json:"statistics"`
+	IPAddresses     []IPAddress `json:"ip-addresses"`
+	HardwareAddress string      `json:"hardware-address"`
+	Name            string      `json:"name"`
+}
 type Node struct {
 	Name       string
 	client     *Client
@@ -194,27 +221,27 @@ type VirtualMachines []*VirtualMachine
 type VirtualMachine struct {
 	client               *Client
 	VirtualMachineConfig *VirtualMachineConfig
-
-	Name      string
-	Node      string
-	NetIn     uint64
-	CPUs      int
-	DiskWrite uint64
-	Status    string
-	Lock      string `json:",omitempty"`
-	VMID      StringOrUint64
-	PID       StringOrUint64
-	Netout    uint64
-	Disk      uint64
-	Uptime    uint64
-	Mem       uint64
-	CPU       float64
-	MaxMem    uint64
-	MaxDisk   uint64
-	DiskRead  uint64
-	QMPStatus string     `json:"qmpstatus,omitempty"`
-	Template  IsTemplate // empty str if a vm, int 1 if a template
-	HA        HA         `json:",omitempty"`
+	NetworkConfig        *NetworkConfig
+	Name                 string
+	Node                 string
+	NetIn                uint64
+	CPUs                 int
+	DiskWrite            uint64
+	Status               string
+	Lock                 string `json:",omitempty"`
+	VMID                 StringOrUint64
+	PID                  StringOrUint64
+	Netout               uint64
+	Disk                 uint64
+	Uptime               uint64
+	Mem                  uint64
+	CPU                  float64
+	MaxMem               uint64
+	MaxDisk              uint64
+	DiskRead             uint64
+	QMPStatus            string     `json:"qmpstatus,omitempty"`
+	Template             IsTemplate // empty str if a vm, int 1 if a template
+	HA                   HA         `json:",omitempty"`
 }
 
 type HA struct {
