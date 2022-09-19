@@ -1,4 +1,4 @@
-module github.com/zekiahmetbayar/go-proxmox
+module github.com/luthermonson/go-proxmox
 
 go 1.18
 
