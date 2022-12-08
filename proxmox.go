@@ -97,7 +97,7 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		req.Header.Add("Content-Type", "application/json")
 	}
 
-	c.authHeaders(req)
+	c.authHeaders(&req.Header)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -182,7 +182,7 @@ func (c *Client) Upload(path string, fields map[string]string, file *os.File, v 
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.ContentLength = int64(b.Len()) + fi.Size()
-	c.authHeaders(req)
+	c.authHeaders(&req.Header)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -210,9 +210,10 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 		TLSClientConfig:  tlsConfig,
 	}
 
-	conn, _, err := dialer.Dial(path, http.Header{
-		"Cookie": []string{"PVEAuthCookie=" + c.session.Ticket},
-	})
+	dialerHeaders := http.Header{}
+	c.authHeaders(&dialerHeaders)
+
+	conn, _, err := dialer.Dial(path, dialerHeaders)
 
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -359,14 +360,14 @@ func (c *Client) Delete(p string, v interface{}) error {
 	return c.Req(http.MethodDelete, p, nil, v)
 }
 
-func (c *Client) authHeaders(req *http.Request) {
-	req.Header.Add("User-Agent", c.userAgent)
-	req.Header.Add("Accept", "application/json")
+func (c *Client) authHeaders(header *http.Header) {
+	header.Add("User-Agent", c.userAgent)
+	header.Add("Accept", "application/json")
 	if c.token != "" {
-		req.Header.Add("Authorization", "PVEAPIToken="+c.token)
+		header.Add("Authorization", "PVEAPIToken="+c.token)
 	} else if c.session != nil {
-		req.Header.Add("Cookie", "PVEAuthCookie="+c.session.Ticket)
-		req.Header.Add("CSRFPreventionToken", c.session.CsrfPreventionToken)
+		header.Add("Cookie", "PVEAuthCookie="+c.session.Ticket)
+		header.Add("CSRFPreventionToken", c.session.CsrfPreventionToken)
 	}
 }
 
