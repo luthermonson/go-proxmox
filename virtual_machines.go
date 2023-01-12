@@ -137,6 +137,21 @@ func (v *VirtualMachine) Delete() (task *Task, err error) {
 	return NewTask(upid, v.client), nil
 }
 
+func (v *VirtualMachine) Migrate(target, targetstorage string) (task *Task, err error) {
+	var upid UPID
+	params := map[string]string{
+		"target": target,
+	}
+	if targetstorage != "" {
+		params["targetstorage"] = targetstorage
+	}
+	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/migrate", v.Node, v.VMID), params, &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, v.client), nil
+}
+
 func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err error) {
 	var upid UPID
 	cluster, err := v.client.Cluster()
@@ -159,6 +174,36 @@ func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err 
 
 	return newid, NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) ResizeDisk(disk, size string) (task *Task, err error) {
+	var upid UPID
+
+	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
+		"disk": disk,
+		"size": size,
+	}, &upid)
+	if err != nil {
+		return
+	}
+
+	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) UnlinkDisk(diskID string, force bool) (task *Task, err error) {
+	var upid UPID
+
+	params := map[string]string{"idlist": diskID}
+	if force {
+		params["force"] = "1"
+	}
+	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/unlink", v.Node, v.VMID), params, &upid)
+	if err != nil {
+		return
+	}
+
+	return NewTask(upid, v.client), nil
+}
+
 func (v *VirtualMachine) MoveDisk(disk, storage string) (task *Task, err error) {
 	var upid UPID
 
