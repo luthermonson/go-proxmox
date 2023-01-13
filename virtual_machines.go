@@ -3,7 +3,6 @@ package proxmox
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 )
 
 const (
@@ -152,41 +151,43 @@ func (v *VirtualMachine) Migrate(target, targetstorage string) (task *Task, err 
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err error) {
+func (v *VirtualMachine) Clone(params *VirtualMachineCloneOptions) (newid int, task *Task, err error) {
 	var upid UPID
-	cluster, err := v.client.Cluster()
-	if err != nil {
-		return newid, nil, err
+
+	if params == nil {
+		params = &VirtualMachineCloneOptions{}
 	}
 
-	newid, err = cluster.NextID()
-	if err != nil {
-		return newid, nil, err
+	if params.NewID == 0 {
+		cluster, err := v.client.Cluster()
+		if err != nil {
+			return newid, nil, err
+		}
+
+		newid, err = cluster.NextID()
+		if err != nil {
+			return newid, nil, err
+		}
+		params.NewID = newid
 	}
 
-	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/clone", v.Node, v.VMID), map[string]string{
-		"newid":  strconv.Itoa(newid),
-		"name":   name,
-		"target": target,
-	}, &upid); err != nil {
+	if err := v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/clone", v.Node, v.VMID), params, &upid); err != nil {
 		return newid, nil, err
 	}
 
 	return newid, NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) ResizeDisk(disk, size string) (task *Task, err error) {
-	var upid UPID
-
+func (v *VirtualMachine) ResizeDisk(disk, size string) (err error) {
 	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
 		"disk": disk,
 		"size": size,
-	}, &upid)
+	}, nil)
 	if err != nil {
 		return
 	}
 
-	return NewTask(upid, v.client), nil
+	return
 }
 
 func (v *VirtualMachine) UnlinkDisk(diskID string, force bool) (task *Task, err error) {
@@ -204,13 +205,18 @@ func (v *VirtualMachine) UnlinkDisk(diskID string, force bool) (task *Task, err 
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) MoveDisk(disk, storage string) (task *Task, err error) {
+func (v *VirtualMachine) MoveDisk(disk string, params *VirtualMachineMoveDiskOptions) (task *Task, err error) {
 	var upid UPID
 
-	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/move_disk", v.Node, v.VMID), map[string]string{
-		"disk":    disk,
-		"storage": storage,
-	}, &upid)
+	if params == nil {
+		params = &VirtualMachineMoveDiskOptions{}
+	}
+
+	if disk != "" {
+		params.Disk = disk
+	}
+
+	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/move_disk", v.Node, v.VMID), params, &upid)
 	if err != nil {
 		return
 	}
