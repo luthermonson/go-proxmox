@@ -567,7 +567,7 @@ func (vmc *VirtualMachineConfig) MergeNets() map[string]string {
 	return vmc.Nets
 }
 
-func (vmc *VirtualMachineConfig) MergeVirtios() map[string]string {
+func (vmc *VirtualMachineConfig) MergeVirtIOs() map[string]string {
 	if nil == vmc.VirtIOs {
 		vmc.VirtIOs = map[string]string{}
 		t := reflect.TypeOf(*vmc)
