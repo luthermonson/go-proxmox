@@ -442,6 +442,31 @@ func (vmc *VirtualMachineConfig) MergeUnuseds() map[string]string {
 	return vmc.Unuseds
 }
 
+type VirtualMachineCloneOptions struct {
+	NewID       int    `json:"newid"`
+	BwLimit     uint64 `json:"bwlimit,omitempty"`
+	Description string `json:"description,omitempty"`
+	Format      string `json:"format,omitempty"`
+	Full        uint8  `json:"full,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Pool        string `json:"pool,omitempty"`
+	SnapName    string `json:"snapname,omitempty"`
+	Storage     string `json:"storage,omitempty"`
+	Target      string `json:"target,omitempty"`
+}
+
+type VirtualMachineMoveDiskOptions struct {
+	Disk         string `json:"disk"`
+	BwLimit      uint64 `json:"bwlimit,omitempty"`
+	Delete       uint8  `json:"delete,omitempty"`
+	Digest       string `json:"digest,omitempty"`
+	Format       string `json:"format,omitempty"`
+	Storage      string `json:"storage,omitempty"`
+	TargetDigest string `json:"target-digest,omitempty"`
+	TargetDisk   string `json:"target-disk,omitempty"`
+	TargetVMID   int    `json:"target-vmid,omitempty"`
+}
+
 type UPID string
 
 type Tasks []*Tasks
