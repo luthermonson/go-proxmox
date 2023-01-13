@@ -444,7 +444,7 @@ func (vmc *VirtualMachineConfig) MergeUnuseds() map[string]string {
 
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
-	BwLimit     uint64 `json:"bwlimit,omitempty"`
+	BWLimit     uint64 `json:"bwlimit,omitempty"`
 	Description string `json:"description,omitempty"`
 	Format      string `json:"format,omitempty"`
 	Full        uint8  `json:"full,omitempty"`
@@ -457,7 +457,7 @@ type VirtualMachineCloneOptions struct {
 
 type VirtualMachineMoveDiskOptions struct {
 	Disk         string `json:"disk"`
-	BwLimit      uint64 `json:"bwlimit,omitempty"`
+	BWLimit      uint64 `json:"bwlimit,omitempty"`
 	Delete       uint8  `json:"delete,omitempty"`
 	Digest       string `json:"digest,omitempty"`
 	Format       string `json:"format,omitempty"`
