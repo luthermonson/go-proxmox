@@ -491,7 +491,6 @@ func (vmc *VirtualMachineConfig) MergeIDEs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -512,7 +511,6 @@ func (vmc *VirtualMachineConfig) MergeSCSIs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -534,7 +532,6 @@ func (vmc *VirtualMachineConfig) MergeSATAs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -555,7 +552,6 @@ func (vmc *VirtualMachineConfig) MergeNets() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -577,7 +573,6 @@ func (vmc *VirtualMachineConfig) MergeVirtIOs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -599,7 +594,6 @@ func (vmc *VirtualMachineConfig) MergeUnuseds() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -621,7 +615,6 @@ func (vmc *VirtualMachineConfig) MergeSerials() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -643,7 +636,6 @@ func (vmc *VirtualMachineConfig) MergeUSBs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -665,7 +657,6 @@ func (vmc *VirtualMachineConfig) MergeHostPCIs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -687,7 +678,6 @@ func (vmc *VirtualMachineConfig) MergeNumas() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -709,7 +699,6 @@ func (vmc *VirtualMachineConfig) MergeParallels() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
@@ -731,7 +720,6 @@ func (vmc *VirtualMachineConfig) MergeIPConfigs() map[string]string {
 		for i := 0; i < count; i++ {
 			fn := t.Field(i).Name
 			fv := v.Field(i).String()
-			//fmt.Println(fn, fv)
 			if "" == fv {
 				continue
 			}
