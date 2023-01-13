@@ -3,27 +3,11 @@ package proxmox
 import (
 	"encoding/json"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/copier"
-)
-
-var (
-	vmConfigRegexpIDE      = regexp.MustCompile("^IDE\\d+$")
-	vmConfigRegexpSCSI     = regexp.MustCompile("^SCSI\\d+$")
-	vmConfigRegexpSATA     = regexp.MustCompile("^SATA\\d+$")
-	vmConfigRegexpVirtIO   = regexp.MustCompile("^VirtIO\\d+$")
-	vmConfigRegexpUnused   = regexp.MustCompile("^Unused\\d+$")
-	vmConfigRegexpNet      = regexp.MustCompile("^Net\\d+$")
-	vmConfigRegexpSerial   = regexp.MustCompile("^Serial\\d+$")
-	vmConfigRegexpUSB      = regexp.MustCompile("^USB\\d+$")
-	vmConfigRegexpIPConfig = regexp.MustCompile("^IPConfig\\d+$")
-	vmConfigRegexpHostPCI  = regexp.MustCompile("^HostPCI\\d+$")
-	vmConfigRegexpParallel = regexp.MustCompile("^Parallel\\d+$")
-	vmConfigRegexpNuma     = regexp.MustCompile("^Numa\\d+$")
 )
 
 type Credentials struct {
@@ -481,252 +465,111 @@ type VirtualMachineConfig struct {
 	IPConfig9 string            `json:"ipconfig9,omitempty"`
 }
 
-func (vmc *VirtualMachineConfig) MergeIDEs() map[string]string {
-	if nil == vmc.IDEs {
-		vmc.IDEs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
+func (vmc *VirtualMachineConfig) mergdeIndexedDevices(prefix string) map[string]string {
+	deviceMap := make(map[string]string, 0)
+	t := reflect.TypeOf(*vmc)
+	v := reflect.ValueOf(*vmc)
+	count := v.NumField()
 
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
+	for i := 0; i < count; i++ {
+		fn := t.Field(i).Name
+		fv := v.Field(i).String()
+		if "" == fv {
+			continue
+		}
+		if strings.HasPrefix(fn, prefix) {
+			// Ignore non-numeric suffixes like SCSIHW
+			suffix := strings.TrimPrefix(fn, prefix)
+			if _, err := strconv.Atoi(suffix); err != nil {
 				continue
 			}
-			if vmConfigRegexpIDE.MatchString(fn) {
-				vmc.IDEs[strings.ToLower(fn)] = fv
-			}
+			deviceMap[strings.ToLower(fn)] = fv
 		}
+	}
+
+	return deviceMap
+}
+
+func (vmc *VirtualMachineConfig) MergeIDEs() map[string]string {
+	if nil == vmc.IDEs {
+		vmc.IDEs = vmc.mergdeIndexedDevices("IDE")
 	}
 	return vmc.IDEs
 }
+
 func (vmc *VirtualMachineConfig) MergeSCSIs() map[string]string {
 	if nil == vmc.SCSIs {
-		vmc.SCSIs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpSCSI.MatchString(fn) {
-				vmc.SCSIs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.SCSIs = vmc.mergdeIndexedDevices("SCSI")
 	}
 	return vmc.SCSIs
 }
 
 func (vmc *VirtualMachineConfig) MergeSATAs() map[string]string {
 	if nil == vmc.SATAs {
-		vmc.SATAs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpSATA.MatchString(fn) {
-				vmc.SATAs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.SATAs = vmc.mergdeIndexedDevices("SATA")
 	}
 	return vmc.SATAs
 }
+
 func (vmc *VirtualMachineConfig) MergeNets() map[string]string {
 	if nil == vmc.Nets {
-		vmc.Nets = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpNet.MatchString(fn) {
-				vmc.Nets[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.Nets = vmc.mergdeIndexedDevices("Net")
 	}
 	return vmc.Nets
 }
 
 func (vmc *VirtualMachineConfig) MergeVirtIOs() map[string]string {
 	if nil == vmc.VirtIOs {
-		vmc.VirtIOs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpVirtIO.MatchString(fn) {
-				vmc.VirtIOs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.VirtIOs = vmc.mergdeIndexedDevices("VirtIO")
 	}
 	return vmc.VirtIOs
 }
 
 func (vmc *VirtualMachineConfig) MergeUnuseds() map[string]string {
 	if nil == vmc.Unuseds {
-		vmc.Unuseds = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpUnused.MatchString(fn) {
-				vmc.Unuseds[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.Unuseds = vmc.mergdeIndexedDevices("Unused")
 	}
 	return vmc.Unuseds
 }
 
 func (vmc *VirtualMachineConfig) MergeSerials() map[string]string {
 	if nil == vmc.Serials {
-		vmc.Serials = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpSerial.MatchString(fn) {
-				vmc.Serials[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.Serials = vmc.mergdeIndexedDevices("Serial")
 	}
 	return vmc.Serials
 }
 
 func (vmc *VirtualMachineConfig) MergeUSBs() map[string]string {
 	if nil == vmc.USBs {
-		vmc.HostPCIs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpUSB.MatchString(fn) {
-				vmc.USBs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.HostPCIs = vmc.mergdeIndexedDevices("USB")
 	}
 	return vmc.USBs
 }
 
 func (vmc *VirtualMachineConfig) MergeHostPCIs() map[string]string {
 	if nil == vmc.HostPCIs {
-		vmc.HostPCIs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpHostPCI.MatchString(fn) {
-				vmc.HostPCIs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.HostPCIs = vmc.mergdeIndexedDevices("HostPCI")
 	}
 	return vmc.HostPCIs
 }
 
 func (vmc *VirtualMachineConfig) MergeNumas() map[string]string {
 	if nil == vmc.Numas {
-		vmc.HostPCIs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpNuma.MatchString(fn) {
-				vmc.Numas[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.HostPCIs = vmc.mergdeIndexedDevices("Numa")
 	}
 	return vmc.Numas
 }
 
 func (vmc *VirtualMachineConfig) MergeParallels() map[string]string {
 	if nil == vmc.Parallels {
-		vmc.Parallels = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpParallel.MatchString(fn) {
-				vmc.Parallels[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.Parallels = vmc.mergdeIndexedDevices("Parallel")
 	}
 	return vmc.Parallels
 }
 
 func (vmc *VirtualMachineConfig) MergeIPConfigs() map[string]string {
 	if nil == vmc.IPConfigs {
-		vmc.IPConfigs = map[string]string{}
-		t := reflect.TypeOf(*vmc)
-		v := reflect.ValueOf(*vmc)
-		count := v.NumField()
-
-		for i := 0; i < count; i++ {
-			fn := t.Field(i).Name
-			fv := v.Field(i).String()
-			if "" == fv {
-				continue
-			}
-			if vmConfigRegexpIPConfig.MatchString(fn) {
-				vmc.IPConfigs[strings.ToLower(fn)] = fv
-			}
-		}
+		vmc.IPConfigs = vmc.mergdeIndexedDevices("IPConfig")
 	}
 	return vmc.IPConfigs
 }
