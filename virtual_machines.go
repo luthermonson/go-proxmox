@@ -175,7 +175,7 @@ func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err 
 	return newid, NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) ResizeDisk(disk, size string) (task *Task, err error) {
+func (v *VirtualMachine) ResizeDisk(disk, size string) (err error) {
 	var upid UPID
 
 	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
@@ -186,7 +186,7 @@ func (v *VirtualMachine) ResizeDisk(disk, size string) (task *Task, err error) {
 		return
 	}
 
-	return NewTask(upid, v.client), nil
+	return
 }
 
 func (v *VirtualMachine) UnlinkDisk(diskID string, force bool) (task *Task, err error) {
