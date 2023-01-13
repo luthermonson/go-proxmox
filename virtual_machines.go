@@ -176,12 +176,10 @@ func (v *VirtualMachine) Clone(name, target string) (newid int, task *Task, err 
 }
 
 func (v *VirtualMachine) ResizeDisk(disk, size string) (err error) {
-	var upid UPID
-
 	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
 		"disk": disk,
 		"size": size,
-	}, &upid)
+	}, nil)
 	if err != nil {
 		return
 	}
