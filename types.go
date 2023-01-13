@@ -572,6 +572,7 @@ func (vmc *VirtualMachineConfig) MergeIPConfigs() map[string]string {
 		vmc.IPConfigs = vmc.mergeIndexedDevices("IPConfig")
 	}
 	return vmc.IPConfigs
+}
 
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
