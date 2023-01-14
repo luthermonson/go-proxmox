@@ -37,6 +37,7 @@ func Ci() error {
 	fmt.Println("Running Continuous Integration...")
 	mg.Deps(Lint)
 	mg.Deps(Test)
+	mg.Deps(BuildTest)
 	return nil
 }
 
@@ -54,7 +55,17 @@ func BuildTest() error {
 
 func Test() error {
 	fmt.Println("Running Tests...")
-	return sh.RunV("go", "test", "-tags", "\"nodes containers vms\"")
+	return sh.RunV("go", "test")
+}
+
+func TestCov() error {
+	fmt.Println("Running Tests...")
+	return sh.RunV("go", "test", "-race", "-coverprofile=coverage.txt", "-covermode=atomic")
+}
+
+func TestIntegration() error {
+	fmt.Println("Running Integration Tests against a PVE Cluster...")
+	return sh.RunV("go", "test", "./tests/integration", "-tags", "\"nodes containers vms\"")
 }
 
 // validate all env vars to run the testing suite

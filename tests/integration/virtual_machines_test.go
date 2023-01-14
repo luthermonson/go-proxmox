@@ -1,7 +1,7 @@
 //go:build nodes
 // +build nodes
 
-package proxmox
+package integration
 
 import (
 	"fmt"
@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/luthermonson/go-proxmox"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // NewVirtualMachine fixture to download a tinycore iso and returns a vm, make sure you defer the cleanup if you use it
-func NewVirtualMachine(t *testing.T, name string) (*VirtualMachine, error) {
+func NewVirtualMachine(t *testing.T, name string) (*proxmox.VirtualMachine, error) {
 	client := ClientFromLogins()
 	node, err := client.Node(td.nodeName)
 	require.NoError(t, err)
@@ -33,15 +35,15 @@ func NewVirtualMachine(t *testing.T, name string) (*VirtualMachine, error) {
 	nextid, err := cluster.NextID()
 	require.NoError(t, err)
 
-	task, err = node.NewVirtualMachine(nextid, VirtualMachineOption{Name: "cdrom", Value: iso.VolID})
+	task, err = node.NewVirtualMachine(nextid, proxmox.VirtualMachineOption{Name: "cdrom", Value: iso.VolID})
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
 
 	vm, err := node.VirtualMachine(nextid)
 	require.NoError(t, err)
 	task, err = vm.Config(
-		VirtualMachineOption{Name: "name", Value: name},
-		VirtualMachineOption{Name: "serial0", Value: "socket"},
+		proxmox.VirtualMachineOption{Name: "name", Value: name},
+		proxmox.VirtualMachineOption{Name: "serial0", Value: "socket"},
 	)
 
 	require.NoError(t, err)
@@ -49,7 +51,7 @@ func NewVirtualMachine(t *testing.T, name string) (*VirtualMachine, error) {
 	return nil, nil
 }
 
-func CleanupVirtualMachine(t *testing.T, vm *VirtualMachine) {
+func CleanupVirtualMachine(t *testing.T, vm *proxmox.VirtualMachine) {
 	if vm.VirtualMachineConfig != nil && vm.VirtualMachineConfig.Ide2 != "" {
 		s := strings.Split(vm.VirtualMachineConfig.Ide2, ",")
 		if len(s) > 2 {
@@ -81,7 +83,7 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
 	require.NoError(t, vm.Ping())
-	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// TODO while this connects it doesn't do anything because the vm isn't setup to use the serial0 socket
 	vnc, err := vm.TermProxy()
@@ -125,14 +127,14 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
 	require.NoError(t, vm.Ping())
-	assert.Equal(t, StatusVirtualMachineStopped, vm.Status)
+	assert.Equal(t, proxmox.StatusVirtualMachineStopped, vm.Status)
 
 	// Start again to test hibernating/pause and resumse
 	task, err = vm.Start()
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
 	require.NoError(t, vm.Ping())
-	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// Hibernate
 	task, err = vm.Hibernate()
@@ -145,7 +147,7 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
 	require.NoError(t, vm.Ping())
-	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// Pause
 	task, err = vm.Pause()
@@ -158,5 +160,5 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
 	require.NoError(t, vm.Ping())
-	assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
+	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 }

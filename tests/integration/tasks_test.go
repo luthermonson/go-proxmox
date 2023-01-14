@@ -1,19 +1,20 @@
 //go:build nodes
 // +build nodes
 
-package proxmox
+package integration
 
 import (
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/luthermonson/go-proxmox"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewTask(t *testing.T) {
-	upid := UPID("UPID:test:002F0193:09CCCA13:61CC858A:tasktype:taskid:root@pam:")
-	task := NewTask(upid, td.client)
+	upid := proxmox.UPID("UPID:test:002F0193:09CCCA13:61CC858A:tasktype:taskid:root@pam:")
+	task := proxmox.NewTask(upid, td.client)
 	assert.Equal(t, task.Node, "test")
 	assert.Equal(t, task.Type, "tasktype")
 	assert.Equal(t, task.ID, "taskid")
@@ -25,7 +26,7 @@ func TestTask_JsonUnmarshalNoEndTime(t *testing.T) {
 	data := `{"pstart":165231870,"type":"testtype","status":"teststatus","id":"test.iso","node":"testnode","user":"root@pam","pid":3161937,"upid":"UPID:i7:00303F51:09D93CFE:61CCA568:download:8fd77349e9f6.iso:root@pam:","starttime":1641020400}`
 	starttime := time.Date(2022, time.January, 01, 0, 0, 0, 0, time.Local)
 
-	var task Task
+	var task proxmox.Task
 	assert.Nil(t, json.Unmarshal([]byte(data), &task))
 	assert.Equal(t, "root@pam", task.User)
 	assert.Equal(t, "teststatus", task.Status)
@@ -43,7 +44,7 @@ func TestTask_JsonUnmarshalWithEndTime(t *testing.T) {
 	starttime := time.Date(2022, time.January, 01, 0, 0, 0, 0, time.Local)
 	endtime := time.Date(2022, time.January, 01, 0, 1, 0, 0, time.Local)
 
-	var task Task
+	var task proxmox.Task
 	assert.Nil(t, json.Unmarshal([]byte(data), &task))
 	assert.Equal(t, "root@pam", task.User)
 	assert.Equal(t, "teststatus", task.Status)

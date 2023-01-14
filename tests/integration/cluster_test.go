@@ -1,4 +1,4 @@
-package proxmox
+package integration
 
 import (
 	"fmt"
