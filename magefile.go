@@ -42,6 +42,12 @@ func Lint() error {
 	return sh.RunV("golangci-lint", "run")
 }
 
+func BuildTest() error {
+	mg.Deps(InstallDeps)
+	fmt.Println("Running Build...")
+	return sh.RunV("go", "build", "-tags", "test")
+}
+
 func Test() error {
 	fmt.Println("Running Tests...")
 	return sh.RunV("go", "test", "-tags", "\"nodes containers vms\"")

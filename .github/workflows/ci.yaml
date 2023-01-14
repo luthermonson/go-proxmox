@@ -1,0 +1,28 @@
+name: Continous Integration
+
+on: [pull_request]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      -
+        name: Linter
+        uses: magefile/mage-action@v2
+        with:
+          version: latest
+          args: lint
+      -
+        name: Build Test
+        uses: magefile/mage-action@v2
+        with:
+          version: latest
+          args: buildTest
