@@ -1,6 +1,7 @@
+//go:build containers
 // +build containers
 
-package proxmox
+package integration
 
 import (
 	"testing"

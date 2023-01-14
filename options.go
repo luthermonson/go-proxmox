@@ -28,6 +28,16 @@ func WithAPIToken(tokenID, secret string) Option {
 	}
 }
 
+// WithSession experimental
+func WithSession(ticket, csrfPreventionToken string) Option {
+	return func(c *Client) {
+		c.session = &Session{
+			Ticket:              ticket,
+			CsrfPreventionToken: csrfPreventionToken,
+		}
+	}
+}
+
 func WithUserAgent(ua string) Option {
 	return func(c *Client) {
 		c.userAgent = ua

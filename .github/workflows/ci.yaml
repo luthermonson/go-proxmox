@@ -6,22 +6,25 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v3
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-      -
-        name: Linter
+      - name: Linter
         uses: magefile/mage-action@v2
         with:
           version: latest
           args: lint
-      -
-        name: Build Test
+      - name: Test
+        uses: magefile/mage-action@v2
+        with:
+          version: latest
+          args: testCov
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+      - name: Build Test
         uses: magefile/mage-action@v2
         with:
           version: latest

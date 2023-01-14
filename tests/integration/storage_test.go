@@ -1,7 +1,7 @@
 //go:build nodes
 // +build nodes
 
-package proxmox
+package integration
 
 import (
 	"os"
