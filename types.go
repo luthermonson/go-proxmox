@@ -794,7 +794,7 @@ type NodeNetworks []*NodeNetwork
 type NodeNetwork struct {
 	client  *Client `json:"-"`
 	Node    string  `json:"-"`
-	NodeApi *Node   `json:"-"`
+	NodeAPI *Node   `json:"-"`
 
 	Iface    string `json:"iface,omitempty"`
 	BondMode string `json:"bond_mode,omitempty"`
@@ -824,9 +824,9 @@ type NodeNetwork struct {
 	Priority int    `json:"priority,omitempty"`
 }
 
-type AgentNetworkIpAddress struct {
-	IpAddressType string `json:"ip-address-type"` //ipv4 ipv6
-	IpAddress     string `json:"ip-address"`
+type AgentNetworkIPAddress struct {
+	IPAddressType string `json:"ip-address-type"` //ipv4 ipv6
+	IPAddress     string `json:"ip-address"`
 	Prefix        int    `json:"prefix"`
 	MacAddress    string `json:"mac-address"`
 }
@@ -834,13 +834,13 @@ type AgentNetworkIpAddress struct {
 type AgentNetworkIface struct {
 	Name            string                   `json:"name"`
 	HardwareAddress string                   `json:"hardware-address"`
-	IpAddresses     []*AgentNetworkIpAddress `json:"ip-addresses"`
+	IPAddresses     []*AgentNetworkIPAddress `json:"ip-addresses"`
 }
 
 type AgentOsInfo struct {
 	Version       string `json:"version"`
-	VersionId     string `json:"version-id"`
-	Id            string `json:"id"`
+	VersionID     string `json:"version-id"`
+	ID            string `json:"id"`
 	Machine       string `json:"machine"`
 	PrettyName    string `json:"pretty-name"`
 	Name          string `json:"name"`
@@ -881,17 +881,17 @@ type FirewallNodeOption struct {
 	LogLevelOut                      string `json:"log_level_out,omitempty"`
 	LogNfConntrack                   bool   `json:"log_nf_conntrack,omitempty"`
 	Ntp                              bool   `json:"ntp,omitempty"`
-	NfConntrackAllowInvalid          bool   `json:"nf_conntrack_allow_invalid,omitempty"`
-	NfConntrackMax                   int    `json:"nf_conntrack_max,omitempty"`
-	NfConntrackTcpTimeoutEstablished int    `json:"nf_conntrack_tcp_timeout_established,omitempty"`
-	NfConntrackTcpTimeoutSynRecv     int    `json:"nf_conntrack_tcp_timeout_syn_recv,omitempty"`
+	NFConntrackAllowInvalid          bool   `json:"nf_conntrack_allow_invalid,omitempty"`
+	NFConntrackMax                   int    `json:"nf_conntrack_max,omitempty"`
+	NFConntrackTCPTimeoutEstablished int    `json:"nf_conntrack_tcp_timeout_established,omitempty"`
+	NFConntrackTCPTimeoutSynRecv     int    `json:"nf_conntrack_tcp_timeout_syn_recv,omitempty"`
 	Nosmurfs                         bool   `json:"nosmurfs,omitempty"`
 	ProtectionSynflood               bool   `json:"protection_synflood,omitempty"`
 	ProtectionSynfloodBurst          int    `json:"protection_synflood_burst,omitempty"`
 	ProtectionSynfloodRate           int    `json:"protection_synflood_rate,omitempty"`
 	SmurfLogLevel                    string `json:"smurf_log_level,omitempty"`
-	TcpFlagsLogLevel                 string `json:"tcp_flags_log_level,omitempty"`
-	Tcpflags                         bool   `json:"tcpflags,omitempty"`
+	TCPFlagsLogLevel                 string `json:"tcp_flags_log_level,omitempty"`
+	TCPflags                         bool   `json:"tcpflags,omitempty"`
 }
 
 type FirewallVirtualMachineOption struct {
