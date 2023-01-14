@@ -174,7 +174,6 @@ func (n *Node) Storage(name string) (storage *Storage, err error) {
 	return
 }
 
-//networks
 func (n *Node) Networks() (networks NodeNetworks, err error) {
 	err = n.client.Get(fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
 	if err != nil {
@@ -184,7 +183,7 @@ func (n *Node) Networks() (networks NodeNetworks, err error) {
 	for _, v := range networks {
 		v.client = n.client
 		v.Node = n.Name
-		v.NodeApi = n
+		v.NodeAPI = n
 	}
 
 	return
@@ -199,7 +198,7 @@ func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 	if nil != network {
 		network.client = n.client
 		network.Node = n.Name
-		network.NodeApi = n
+		network.NodeAPI = n
 		network.Iface = iface
 	}
 
@@ -215,7 +214,7 @@ func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
 
 	network.client = n.client
 	network.Node = n.Name
-	network.NodeApi = n
+	network.NodeAPI = n
 	return n.NetworkReload()
 }
 func (n *Node) NetworkReload() (*Task, error) {

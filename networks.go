@@ -14,5 +14,5 @@ func (nw *NodeNetwork) Delete() (task *Task, err error) {
 		return
 	}
 
-	return nw.NodeApi.NetworkReload()
+	return nw.NodeAPI.NetworkReload()
 }

@@ -192,7 +192,5 @@ func (t *Task) WaitForCompleteStatus(timesNum int, steps ...int) (status bool, c
 		}
 
 		time.Sleep(time.Duration(step) * time.Second)
-
 	}
-	return
 }

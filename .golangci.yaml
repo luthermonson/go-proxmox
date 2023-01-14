@@ -1,0 +1,22 @@
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - revive
+    - goimports
+    - misspell
+    - ineffassign
+linters-settings:
+  govet:
+    check-shadowing: false
+  gofmt:
+    simplify: false
+run:
+  skip-dirs: []
+  tests: false
+  timeout: 10m
+issues:
+  exclude-rules:
+    - linters:
+        - revive
+      text: should have comment

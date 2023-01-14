@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 )
 
 const (
@@ -68,17 +69,17 @@ func (l *LeveledLogger) Warnf(format string, v ...interface{}) {
 }
 
 func (l *LeveledLogger) stderr() io.Writer {
-	if l.stderrOverride != nil {
-		return l.stderrOverride
+	if reflect.ValueOf(l.stderrOverride).IsNil() {
+		return os.Stderr
 	}
 
-	return os.Stderr
+	return l.stderrOverride
 }
 
 func (l *LeveledLogger) stdout() io.Writer {
-	if l.stdoutOverride != nil {
-		return l.stdoutOverride
+	if reflect.ValueOf(l.stdoutOverride).IsNil() {
+		return os.Stdout
 	}
 
-	return os.Stdout
+	return l.stdoutOverride
 }

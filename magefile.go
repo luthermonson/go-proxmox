@@ -13,6 +13,10 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+const (
+	GOLANGCI_LINT_VERSION = "v1.50.1"
+)
+
 var (
 	envConfig = map[string]struct{}{
 		"PROXMOX_URL":              {},
@@ -42,6 +46,12 @@ func Lint() error {
 	return sh.RunV("golangci-lint", "run")
 }
 
+func BuildTest() error {
+	mg.Deps(InstallDeps)
+	fmt.Println("Running Build...")
+	return sh.RunV("go", "build", "-tags", "test")
+}
+
 func Test() error {
 	fmt.Println("Running Tests...")
 	return sh.RunV("go", "test", "-tags", "\"nodes containers vms\"")
@@ -63,7 +73,7 @@ func Env() error {
 func InstallDeps() error {
 	fmt.Println("Installing Deps...")
 	installs := []string{
-		"github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0",
+		"github.com/golangci/golangci-lint/cmd/golangci-lint@" + GOLANGCI_LINT_VERSION,
 	}
 
 	for _, pkg := range installs {
