@@ -66,7 +66,7 @@ func TestTask(t *testing.T) {
 	// test ping and wait, big iso should take more than 15s
 	go func() {
 		timeout := task.Wait(time.Duration(5*time.Second), time.Duration(30*time.Second))
-		assert.Contains(t, timeout.Error(), "timeout while waiting for task")
+		assert.True(t, proxmox.IsTimeout(timeout))
 		assert.Nil(t, task.Stop())
 	}()
 
@@ -83,7 +83,7 @@ func TestTask(t *testing.T) {
 				watch = nil
 				break
 			}
-			task.client.log.Debugf("%s", ln)
+			logger.Debugf("%s", ln)
 		}
 		if watch == nil {
 			break

@@ -119,6 +119,6 @@ func deleteVolume(c *Client, n, s, v, p, t string) (*Task, error) {
 		v = fmt.Sprintf("%s:%s/%s", s, t, filepath.Base(p))
 	}
 
-	err := c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s?delay=5", n, s, v), &upid)
+	err := c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s", n, s, v), &upid)
 	return NewTask(upid, c), err
 }

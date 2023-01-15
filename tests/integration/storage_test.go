@@ -56,12 +56,16 @@ func TestStorage_VzTmpl(t *testing.T) {
 	_, err := td.storage.VzTmpl("doesnt-exist")
 	assert.Contains(t, err.Error(), "unable to parse directory volume name 'vztmpl/doesnt-exist'")
 
-	assert.NotNil(t, td.appliance)
-	vztmpl, err := td.storage.VzTmpl(td.appliance.Template)
+	name := nameGenerator(12) + ".tar.xz"
+	task, err := td.storage.DownloadURL("vztmpl", name, alpineAppliance)
 	assert.Nil(t, err)
-	assert.True(t, strings.HasSuffix(vztmpl.Path, td.appliance.Template))
+	task.Wait(1*time.Second, 5*time.Second)
 
-	task, err := vztmpl.Delete()
+	vztmpl, err := td.storage.VzTmpl(name)
+	assert.Nil(t, err)
+	assert.True(t, strings.HasSuffix(vztmpl.Path, "tar.xz"))
+
+	task, err = vztmpl.Delete()
 	assert.Nil(t, err)
 	task.Wait(1*time.Second, 15*time.Second)
 }

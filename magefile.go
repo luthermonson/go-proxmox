@@ -65,7 +65,7 @@ func TestCov() error {
 
 func TestIntegration() error {
 	fmt.Println("Running Integration Tests against a PVE Cluster...")
-	return sh.RunV("go", "test", "./tests/integration", "-tags", "\"nodes containers vms\"")
+	return sh.RunV("go", "test", "./tests/integration", "-tags", "nodes containers vms")
 }
 
 // validate all env vars to run the testing suite

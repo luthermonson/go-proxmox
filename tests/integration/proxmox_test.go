@@ -22,15 +22,14 @@ type TestingData struct {
 	storage   *proxmox.Storage
 	appliance *proxmox.Appliance
 
-	username        string
-	password        string
-	tokenID         string
-	secret          string
-	otp             string
-	nodeName        string
-	nodeStorage     string
-	appliancePrefix string
-	isoURL          string
+	username    string
+	password    string
+	tokenID     string
+	secret      string
+	otp         string
+	nodeName    string
+	nodeStorage string
+	isoURL      string
 }
 
 var (
@@ -45,8 +44,9 @@ var (
 		},
 	}
 
-	tinycoreURL = "https://github.com/luthermonson/go-proxmox/releases/download/tests/tinycore.iso"
-	ubuntuURL   = "https://releases.ubuntu.com/20.04.3/ubuntu-20.04.3-desktop-amd64.iso"
+	tinycoreURL     = "https://github.com/luthermonson/go-proxmox/releases/download/tests/tinycore.iso"
+	ubuntuURL       = "https://releases.ubuntu.com/20.04.3/ubuntu-20.04.3-desktop-amd64.iso"
+	alpineAppliance = "http://download.proxmox.com/images/system/alpine-3.17-default_20221129_amd64.tar.xz"
 )
 
 func init() {
@@ -57,8 +57,7 @@ func init() {
 	td.secret = os.Getenv("PROXMOX_SECRET")
 	td.nodeName = os.Getenv("PROXMOX_NODE_NAME")
 	td.nodeStorage = os.Getenv("PROXMOX_NODE_STORAGE")
-	td.appliancePrefix = os.Getenv("PROXMOX_APPLIANCE_PREFIX") // alpine-3.14-default_20210623_amd64.tar.xz
-	td.isoURL = os.Getenv("PROXMOX_ISO_URL")                   // https://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-virt-3.14.1-x86_64.iso
+	td.isoURL = os.Getenv("PROXMOX_ISO_URL") // https://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-virt-3.14.1-x86_64.iso
 
 	if td.nodeName == "" {
 		return
