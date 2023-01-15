@@ -5,6 +5,7 @@ package integration
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ import (
 )
 
 // NewVirtualMachine fixture to download a tinycore iso and returns a vm, make sure you defer the cleanup if you use it
-func NewVirtualMachine(t *testing.T, name string) (*proxmox.VirtualMachine, error) {
+func NewVirtualMachine(t *testing.T, name string) *proxmox.VirtualMachine {
 	client := ClientFromLogins()
 	node, err := client.Node(td.nodeName)
 	require.NoError(t, err)
@@ -48,24 +49,25 @@ func NewVirtualMachine(t *testing.T, name string) (*proxmox.VirtualMachine, erro
 
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
-	return nil, nil
+
+	return vm
 }
 
 func CleanupVirtualMachine(t *testing.T, vm *proxmox.VirtualMachine) {
-	if vm.VirtualMachineConfig != nil && vm.VirtualMachineConfig.Ide2 != "" {
-		s := strings.Split(vm.VirtualMachineConfig.Ide2, ",")
+	task, err := vm.Stop()
+	require.NoError(t, err)
+	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
+
+	if vm.VirtualMachineConfig != nil && vm.VirtualMachineConfig.IDE2 != "" {
+		s := strings.Split(vm.VirtualMachineConfig.IDE2, ",")
 		if len(s) > 2 {
-			iso, err := td.storage.ISO(s[0])
+			iso, err := td.storage.ISO(filepath.Base(s[0]))
 			assert.Nil(t, err)
 			task, err := iso.Delete()
 			require.NoError(t, err)
 			require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
 		}
 	}
-
-	task, err := vm.Stop()
-	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
 
 	task, err = vm.Delete()
 	require.NoError(t, err)
@@ -74,8 +76,8 @@ func CleanupVirtualMachine(t *testing.T, vm *proxmox.VirtualMachine) {
 
 func TestNode_NewVirtualMachine(t *testing.T) {
 	testname := nameGenerator(12)
-	vm, err := NewVirtualMachine(t, testname)
-	require.NoError(t, err)
+	vm := NewVirtualMachine(t, testname)
+	require.NotNil(t, vm)
 	defer CleanupVirtualMachine(t, vm)
 
 	// Start
