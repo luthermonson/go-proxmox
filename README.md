@@ -99,7 +99,7 @@ export PROXMOX_PASSWORD="password"
 export PROXMOX_TOKENID="root@pam!mytoken"
 export PROXMOX_SECRET="somegeneratedapitokenguidefromtheproxmoxui"
 
-mage testIntegration
+mage test:integration
 ```
 
 ### Powershell
@@ -110,7 +110,7 @@ $Env:PROXMOX_PASSWORD = "password"
 $Env:PROXMOX_TOKENID = "root@pam!mytoken"
 $Env:PROXMOX_SECRET = "somegeneratedapitokenguidefromtheproxmoxui"
 
-mage testIntegration
+mage test:integration
 ```
 
 

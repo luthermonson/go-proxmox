@@ -24,7 +24,7 @@ func TestClusterResources(t *testing.T) {
 	assert.Nil(t, err)
 	assert.GreaterOrEqual(t, len(rs), 1)
 
-	re := regexp.MustCompile("^(pool|qemu|node|storage)$")
+	re := regexp.MustCompile("^(pool|qemu|lxc|node|storage)$")
 	for _, r := range rs {
 		// Check types against known values
 		assert.Regexp(t, re, r.Type)

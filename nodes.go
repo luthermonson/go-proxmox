@@ -72,19 +72,16 @@ func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
 		return nil, err
 	}
 
-	//var vmconf VirtualMachineConfig
 	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vm.VirtualMachineConfig); err != nil {
 		return nil, err
 	}
-
-	//vm.VirtualMachineConfig = &vmconf
 
 	return vm, nil
 }
 
 func (n *Node) Containers() (c Containers, err error) {
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
-		return nil, err
+	if err = n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
+		return
 	}
 
 	for _, container := range c {
@@ -92,7 +89,7 @@ func (n *Node) Containers() (c Containers, err error) {
 		container.Node = n.Name
 	}
 
-	return c, nil
+	return
 }
 
 func (n *Node) Container(vmid int) (*Container, error) {

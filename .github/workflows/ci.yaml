@@ -16,16 +16,6 @@ jobs:
         uses: magefile/mage-action@v2
         with:
           version: latest
-          args: lint
-      - name: Test
-        uses: magefile/mage-action@v2
-        with:
-          version: latest
-          args: testCov
+          args: ci
       - name: Upload to Codecov
         uses: codecov/codecov-action@v3
-      - name: Build Test
-        uses: magefile/mage-action@v2
-        with:
-          version: latest
-          args: buildTest
