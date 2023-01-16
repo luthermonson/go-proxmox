@@ -275,13 +275,13 @@ func (v *VirtualMachine) AgentSetUserPassword(password string, username string) 
 	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", node.Name, v.VMID), map[string]string{"password": password, "username": username}, nil)
 
 	return
-
 }
 
 func (v *VirtualMachine) FirewallOptionGet() (firewallOption *FirewallVirtualMachineOption, err error) {
 	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
 	return
 }
+
 func (v *VirtualMachine) FirewallOptionSet(firewallOption *FirewallVirtualMachineOption) (err error) {
 	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
 	return
@@ -296,13 +296,14 @@ func (v *VirtualMachine) FirewallRulesCreate(rule *FirewallRule) (err error) {
 	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil)
 	return
 }
+
 func (v *VirtualMachine) FirewallRulesUpdate(rule *FirewallRule) (err error) {
 	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rule.Pos), rule, nil)
 	return
 }
-func (v *VirtualMachine) FirewallRulesDelete(rulePos int) (err error) {
-	err = v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rulePos), nil)
-	return
+
+func (v *VirtualMachine) FirewallRulesDelete(rulePos int) error {
+	return v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rulePos), nil)
 }
 
 func (v *VirtualMachine) NewSnapshot(name string) (task *Task, err error) {
