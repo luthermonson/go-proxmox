@@ -25,29 +25,26 @@ func (cl *Cluster) FWGroup(name string) (group *FirewallSecurityGroup, err error
 	return
 }
 
-func (cl *Cluster) NewFWGroup(group *FirewallSecurityGroup) (err error) {
-	err = cl.client.Post(fmt.Sprintf("/cluster/firewall/groups"), group, &group)
-	return
+func (cl *Cluster) NewFWGroup(group *FirewallSecurityGroup) error {
+	return cl.client.Post(fmt.Sprintf("/cluster/firewall/groups"), group, &group)
 }
 
-func (g *FirewallSecurityGroup) GetRules() (rules []*FirewallRule, err error) {
-	err = g.client.Get(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), &g.Rules)
-	rules = g.Rules
-	return
+func (g *FirewallSecurityGroup) GetRules() ([]*FirewallRule, error) {
+	return g.Rules, g.client.Get(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), &g.Rules)
 }
-func (g *FirewallSecurityGroup) Delete() (err error) {
-	err = g.client.Delete(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), nil)
-	return
+
+func (g *FirewallSecurityGroup) Delete() error {
+	return g.client.Delete(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), nil)
 }
-func (g *FirewallSecurityGroup) RuleCreate(rule *FirewallRule) (err error) {
-	err = g.client.Post(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), rule, nil)
-	return
+
+func (g *FirewallSecurityGroup) RuleCreate(rule *FirewallRule) error {
+	return g.client.Post(fmt.Sprintf("/cluster/firewall/groups/%s", g.Group), rule, nil)
 }
-func (g *FirewallSecurityGroup) RuleUpdate(rule *FirewallRule) (err error) {
-	err = g.client.Put(fmt.Sprintf("/cluster/firewall/groups/%s/%d", g.Group, rule.Pos), rule, nil)
-	return
+
+func (g *FirewallSecurityGroup) RuleUpdate(rule *FirewallRule) error {
+	return g.client.Put(fmt.Sprintf("/cluster/firewall/groups/%s/%d", g.Group, rule.Pos), rule, nil)
 }
-func (g *FirewallSecurityGroup) RuleDelete(rulePos int) (err error) {
-	err = g.client.Delete(fmt.Sprintf("/cluster/firewall/groups/%s/%d", g.Group, rulePos), nil)
-	return
+
+func (g *FirewallSecurityGroup) RuleDelete(rulePos int) error {
+	return g.client.Delete(fmt.Sprintf("/cluster/firewall/groups/%s/%d", g.Group, rulePos), nil)
 }
