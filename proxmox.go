@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -137,8 +136,25 @@ func (c *Client) Post(p string, d interface{}, v interface{}) error {
 	return c.Req(http.MethodPost, p, data, v)
 }
 
+func (c *Client) Put(p string, d interface{}, v interface{}) error {
+	var data []byte
+	if d != nil {
+		var err error
+		data, err = json.Marshal(d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.Req(http.MethodPut, p, data, v)
+}
+
+func (c *Client) Delete(p string, v interface{}) error {
+	return c.Req(http.MethodDelete, p, nil, v)
+}
+
 // Upload - There is some weird 16kb limit hardcoded in proxmox for the max POST size, hopefully in the future we make
-// a func to scp the file to the node directly as this API endopitn is kind of janky. For now big ISOs/vztmpl should
+// a func to scp the file to the node directly as this API endpoint is kind of janky. For now big ISOs/vztmpl should
 // be put somewhere and a use DownloadUrl. code link for posterity, I think they meant to do 16mb and got the bit math wrong
 // https://git.proxmox.com/?p=pve-manager.git;a=blob;f=PVE/HTTPServer.pm;h=8a0c308ea6d6601b886b0dec2bada3d4c3da65d0;hb=HEAD#l36
 // the task returned is the imgcopy from the tmp file to where the node actually wants the iso and you should wait for that
@@ -191,6 +207,63 @@ func (c *Client) Upload(path string, fields map[string]string, file *os.File, v 
 	defer res.Body.Close()
 
 	return c.handleResponse(res, &v)
+}
+
+func (c *Client) authHeaders(header *http.Header) {
+	header.Add("User-Agent", c.userAgent)
+	header.Add("Accept", "application/json")
+	if c.token != "" {
+		header.Add("Authorization", "PVEAPIToken="+c.token)
+	} else if c.session != nil {
+		header.Add("Cookie", "PVEAuthCookie="+c.session.Ticket)
+		header.Add("CSRFPreventionToken", c.session.CsrfPreventionToken)
+	}
+}
+
+func (c *Client) handleResponse(res *http.Response, v interface{}) error {
+	if res.StatusCode == http.StatusInternalServerError ||
+		res.StatusCode == http.StatusNotImplemented {
+		return errors.New(res.Status)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	c.log.Debugf("RECV: %d - %s", res.StatusCode, res.Status)
+
+	if res.Request != nil && res.Request.URL != nil {
+		if res.Request.URL.String() != (c.baseURL + "/access/ticket") {
+			// dont show tokens out of the logs
+			c.log.Debugf("BODY: %s", string(body))
+		}
+	}
+
+	if res.StatusCode == http.StatusBadRequest {
+		var errorskey map[string]json.RawMessage
+		if err := json.Unmarshal(body, &errorskey); err != nil {
+			return err
+		}
+
+		if body, ok := errorskey["errors"]; ok {
+			return fmt.Errorf("bad request: %s - %s", res.Status, body)
+		}
+
+		return fmt.Errorf("bad request: %s - %s", res.Status, string(body))
+	}
+
+	// account for everything being in a data key
+	var datakey map[string]json.RawMessage
+	if err := json.Unmarshal(body, &datakey); err != nil {
+		return err
+	}
+
+	if body, ok := datakey["data"]; ok {
+		return json.Unmarshal(body, &v)
+	}
+
+	return json.Unmarshal(body, &v) // assume passed in type fully supports response
 }
 
 func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, chan error, func() error, error) {
@@ -341,75 +414,4 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 	}()
 
 	return send, recv, errors, closer, nil
-}
-
-func (c *Client) Put(p string, d interface{}, v interface{}) error {
-	var data []byte
-	if d != nil {
-		var err error
-		data, err = json.Marshal(d)
-		if err != nil {
-			return err
-		}
-	}
-
-	return c.Req(http.MethodPut, p, data, v)
-}
-
-func (c *Client) Delete(p string, v interface{}) error {
-	return c.Req(http.MethodDelete, p, nil, v)
-}
-
-func (c *Client) authHeaders(header *http.Header) {
-	header.Add("User-Agent", c.userAgent)
-	header.Add("Accept", "application/json")
-	if c.token != "" {
-		header.Add("Authorization", "PVEAPIToken="+c.token)
-	} else if c.session != nil {
-		header.Add("Cookie", "PVEAuthCookie="+c.session.Ticket)
-		header.Add("CSRFPreventionToken", c.session.CsrfPreventionToken)
-	}
-}
-
-func (c *Client) handleResponse(res *http.Response, v interface{}) error {
-	if res.StatusCode == http.StatusInternalServerError ||
-		res.StatusCode == http.StatusNotImplemented {
-		return errors.New(res.Status)
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	c.log.Debugf("RECV: %d - %s", res.StatusCode, res.Status)
-
-	if res.Request.URL.String() != (c.baseURL + "/access/ticket") {
-		// dont show tokens out of the logs
-		c.log.Debugf("BODY: %s", string(body))
-	}
-	if res.StatusCode == http.StatusBadRequest {
-		var errorskey map[string]json.RawMessage
-		if err := json.Unmarshal(body, &errorskey); err != nil {
-			return err
-		}
-
-		if body, ok := errorskey["errors"]; ok {
-			return fmt.Errorf("bad request: %s - %s", res.Status, body)
-		}
-
-		return fmt.Errorf("bad request: %s - %s", res.Status, string(body))
-	}
-
-	// account for everything being in a data key
-	var datakey map[string]json.RawMessage
-	if err := json.Unmarshal(body, &datakey); err != nil {
-		return err
-	}
-
-	if body, ok := datakey["data"]; ok {
-		return json.Unmarshal(body, &v)
-	}
-
-	return json.Unmarshal(body, &v) // assume passed in type fully supports response
 }
