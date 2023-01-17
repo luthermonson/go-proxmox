@@ -42,14 +42,17 @@ func TestClusterResources(t *testing.T) {
 			assert.GreaterOrEqual(t, len(rs), 1)
 		}
 
-		// api v2 returns type = qemu when filtering on vm
+		var s interface{}
+		// api v2 returns type = qemu or lxc when filtering on vm
 		if rsType == "vm" {
-			rsType = "qemu"
+			s = []string{"qemu", "lxc"}
+		} else {
+			s = rsType
 		}
 
 		// Check that every resource returned if of the asked type
 		for _, r := range rs {
-			assert.Equal(t, rsType, r.Type)
+			assert.Contains(t, s, r.Type)
 		}
 	}
 
