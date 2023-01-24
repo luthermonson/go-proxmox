@@ -3,6 +3,7 @@ package proxmox
 import (
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 func (c *Client) Nodes() (ns NodeStatuses, err error) {
@@ -171,6 +172,44 @@ func (n *Node) Storage(name string) (storage *Storage, err error) {
 	return
 }
 
+func (n *Node) StorageISO() (*Storage, error) {
+	return n.findStorageByContent("iso")
+}
+
+func (n *Node) StorageVZTmpl() (*Storage, error) {
+	return n.findStorageByContent("vztmpl")
+}
+
+func (n *Node) StorageBackup() (*Storage, error) {
+	return n.findStorageByContent("backup")
+}
+
+func (n *Node) StorageRootDir() (*Storage, error) {
+	return n.findStorageByContent("rootdir")
+}
+
+func (n *Node) StorageImages() (*Storage, error) {
+	return n.findStorageByContent("images")
+}
+
+// findStorageByContent takes iso/backup/vztmpl/rootdir/images and returns the storage that type of content should be on
+func (n *Node) findStorageByContent(content string) (storage *Storage, err error) {
+	storages, err := n.Storages()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, storage := range storages {
+		if strings.Contains(storage.Content, content) {
+			storage.Node = n.Name
+			storage.client = n.client
+			return storage, nil
+		}
+	}
+
+	return nil, ErrNotFound
+}
+
 func (n *Node) Networks() (networks NodeNetworks, err error) {
 	err = n.client.Get(fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
 	if err != nil {
@@ -185,8 +224,8 @@ func (n *Node) Networks() (networks NodeNetworks, err error) {
 
 	return
 }
-func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 
+func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 	err = n.client.Get(fmt.Sprintf("/nodes/%s/network/%s", n.Name, iface), &network)
 	if err != nil {
 		return nil, err
@@ -203,7 +242,6 @@ func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 }
 
 func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
-
 	err = n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
 	if nil != err {
 		return
@@ -214,6 +252,7 @@ func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
 	network.NodeAPI = n
 	return n.NetworkReload()
 }
+
 func (n *Node) NetworkReload() (*Task, error) {
 	var upid UPID
 	err := n.client.Put(fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)
@@ -228,9 +267,9 @@ func (n *Node) FirewallOptionGet() (firewallOption *FirewallNodeOption, err erro
 	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
 	return
 }
-func (n *Node) FirewallOptionSet(firewallOption *FirewallNodeOption) (err error) {
-	err = n.client.Put(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
-	return
+
+func (n *Node) FirewallOptionSet(firewallOption *FirewallNodeOption) error {
+	return n.client.Put(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
 }
 
 func (n *Node) FirewallGetRules() (rules []*FirewallRule, err error) {
@@ -238,15 +277,14 @@ func (n *Node) FirewallGetRules() (rules []*FirewallRule, err error) {
 	return
 }
 
-func (n *Node) FirewallRulesCreate(rule *FirewallRule) (err error) {
-	err = n.client.Post(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
-	return
+func (n *Node) FirewallRulesCreate(rule *FirewallRule) error {
+	return n.client.Post(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
 }
-func (n *Node) FirewallRulesUpdate(rule *FirewallRule) (err error) {
-	err = n.client.Put(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
-	return
+
+func (n *Node) FirewallRulesUpdate(rule *FirewallRule) error {
+	return n.client.Put(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
 }
-func (n *Node) FirewallRulesDelete(rulePos int) (err error) {
-	err = n.client.Delete(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
-	return
+
+func (n *Node) FirewallRulesDelete(rulePos int) error {
+	return n.client.Delete(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
 }
