@@ -106,14 +106,14 @@ func (v *VirtualMachine) SplitTags() {
 	v.VirtualMachineConfig.TagsSlice = strings.Split(v.VirtualMachineConfig.Tags, ";")
 }
 
-// CloudInit takes two yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
+// CloudInit takes four yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
 // mount it as a CDROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
 // which can be found here: https://pve.proxmox.com/wiki/Cloud-Init_Support#:~:text=and%20meta.-,Cloud%2DInit%20specific%20Options,-cicustom%3A%20%5Bmeta
 // If you want to use the proxmox implementation you'll need to use the cloudinit APIs https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/cloudinit
-func (v *VirtualMachine) CloudInit(device, userdata, metadata string) error {
+func (v *VirtualMachine) CloudInit(device, userdata, metadata, vendordata, networkconfig string) error {
 	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
 	// create userdata iso file on the local fs
-	iso, err := makeCloudInitISO(isoName, userdata, metadata)
+	iso, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (v *VirtualMachine) CloudInit(device, userdata, metadata string) error {
 	return task.WaitFor(2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata string) (iso *os.File, err error) {
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (iso *os.File, err error) {
 	iso, err = os.Create(filepath.Join(os.TempDir(), filename))
 	if err != nil {
 		return nil, err
@@ -182,7 +182,12 @@ func makeCloudInitISO(filename, userdata, metadata string) (iso *os.File, err er
 		return nil, err
 	}
 
-	for filename, content := range map[string]string{"user-data": userdata, "meta-data": metadata} {
+	for filename, content := range map[string]string{
+		"user-data":      userdata,
+		"meta-data":      metadata,
+		"vendor-data":    vendordata,
+		"network-config": networkconfig,
+	} {
 		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
 			return nil, err
