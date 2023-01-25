@@ -20,6 +20,7 @@ import (
 
 const (
 	DefaultUserAgent = "go-proxmox/dev"
+	TagFormat        = "go-proxmox+%s"
 )
 
 var ErrNotAuthorized = errors.New("not authorized to access endpoint")
@@ -32,6 +33,16 @@ var ErrTimeout = errors.New("the operation has timed out")
 
 func IsTimeout(err error) bool {
 	return err == ErrTimeout
+}
+
+var ErrNotFound = errors.New("unable to find the item you are looking for")
+
+func IsNotFound(err error) bool {
+	return err == ErrNotFound
+}
+
+func MakeTag(v string) string {
+	return fmt.Sprintf(TagFormat, v)
 }
 
 type Client struct {
@@ -72,7 +83,7 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		path = c.baseURL + path
 	}
 
-	c.log.Infof("SEND: %s - %s", method, path)
+	c.log.Debugf("SEND: %s - %s", method, path)
 
 	var body io.Reader
 	if data != nil {
@@ -104,7 +115,12 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode == http.StatusUnauthorized {
+	if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
+		if path == (c.baseURL + "/access/ticket") {
+			// received an unauthorized while trying to create a session
+			return ErrNotAuthorized
+		}
+
 		if c.credentials != nil && c.session == nil {
 			// credentials passed but no session started, try a login and retry the request
 			if _, err := c.Ticket(c.credentials); err != nil {

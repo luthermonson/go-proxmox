@@ -3,12 +3,24 @@ package proxmox
 import (
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 const (
 	StatusVirtualMachineRunning = "running"
 	StatusVirtualMachineStopped = "stopped"
 	StatusVirtualMachinePaused  = "paused"
+
+	UserDataISOFormat = "user-data-%d.iso"
+
+	volumeIdentifier = "cidata"
+	fileMode         = 0700
+	blockSize        = 2048
 )
 
 func (v *VirtualMachine) Ping() error {
@@ -27,6 +39,168 @@ func (v *VirtualMachine) Config(options ...VirtualMachineOption) (*Task, error) 
 
 func (v *VirtualMachine) TermProxy() (vnc *VNC, err error) {
 	return vnc, v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &vnc)
+}
+
+func (v *VirtualMachine) HasTag(value string) bool {
+	if v.VirtualMachineConfig.Tags == "" {
+		return false
+	}
+
+	if v.VirtualMachineConfig.TagsSlice == nil {
+		v.SplitTags()
+	}
+
+	for _, tag := range v.VirtualMachineConfig.TagsSlice {
+		if tag == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (v *VirtualMachine) AddTag(value string) (*Task, error) {
+	if v.HasTag(value) {
+		return nil, nil //noop
+	}
+
+	if v.VirtualMachineConfig.TagsSlice == nil {
+		v.SplitTags()
+	}
+
+	v.VirtualMachineConfig.TagsSlice = append(v.VirtualMachineConfig.TagsSlice, value)
+	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, ";")
+
+	return v.Config(VirtualMachineOption{
+		Name:  "tags",
+		Value: v.VirtualMachineConfig.Tags,
+	})
+}
+
+func (v *VirtualMachine) RemoveTag(value string) (*Task, error) {
+	if !v.HasTag(value) {
+		return nil, nil //noop
+	}
+
+	if v.VirtualMachineConfig.TagsSlice == nil {
+		v.SplitTags()
+	}
+
+	for i, tag := range v.VirtualMachineConfig.TagsSlice {
+		if tag == value {
+			v.VirtualMachineConfig.TagsSlice = append(
+				v.VirtualMachineConfig.TagsSlice[:i],
+				v.VirtualMachineConfig.TagsSlice[i+1:]...,
+			)
+		}
+	}
+
+	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, ";")
+	return v.Config(VirtualMachineOption{
+		Name:  "tags",
+		Value: v.VirtualMachineConfig.Tags,
+	})
+}
+
+func (v *VirtualMachine) SplitTags() {
+	v.VirtualMachineConfig.TagsSlice = strings.Split(v.VirtualMachineConfig.Tags, ";")
+}
+
+// CloudInit takes two yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
+// mount it as a CDROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
+// which can be found here: https://pve.proxmox.com/wiki/Cloud-Init_Support#:~:text=and%20meta.-,Cloud%2DInit%20specific%20Options,-cicustom%3A%20%5Bmeta
+// If you want to use the proxmox implementation you'll need to use the cloudinit APIs https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/cloudinit
+func (v *VirtualMachine) CloudInit(device, userdata, metadata string) error {
+	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
+	// create userdata iso file on the local fs
+	iso, err := makeCloudInitISO(isoName, userdata, metadata)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		// _ = os.Remove(iso.Name())
+	}()
+
+	node, err := v.client.Node(v.Node)
+	if err != nil {
+		return err
+	}
+
+	storage, err := node.StorageISO()
+	if err != nil {
+		return err
+	}
+
+	task, err := storage.Upload("iso", iso.Name())
+	if err != nil {
+		return err
+	}
+
+	// iso should only be < 5mb so wait for it and then mount it
+	if err := task.WaitFor(5); err != nil {
+		return err
+	}
+
+	task, err = v.AddTag(MakeTag("cloud-init"))
+	if err != nil {
+		return err
+	}
+	task.WaitFor(2)
+
+	task, err = v.Config(VirtualMachineOption{
+		Name:  device,
+		Value: fmt.Sprintf("%s:iso/%s,media=cdrom", storage.Name, isoName),
+	}, VirtualMachineOption{
+		Name:  "boot",
+		Value: fmt.Sprintf("%s;%s", v.VirtualMachineConfig.Boot, device),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return task.WaitFor(2)
+}
+
+func makeCloudInitISO(filename, userdata, metadata string) (iso *os.File, err error) {
+	iso, err = os.Create(filepath.Join(os.TempDir(), filename))
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = iso.Close()
+	}()
+
+	fs, err := iso9660.Create(iso, 0, 0, blockSize, "")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := fs.Mkdir("/"); err != nil {
+		return nil, err
+	}
+
+	for filename, content := range map[string]string{"user-data": userdata, "meta-data": metadata} {
+		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := rw.Write([]byte(content)); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = fs.Finalize(iso9660.FinalizeOptions{
+		RockRidge:        true,
+		VolumeIdentifier: volumeIdentifier,
+	}); err != nil {
+		return nil, err
+	}
+
+	return
 }
 
 // VNCWebSocket copy/paste when calling to get the channel names right
@@ -128,6 +302,27 @@ func (v *VirtualMachine) Reboot() (task *Task, err error) {
 }
 
 func (v *VirtualMachine) Delete() (task *Task, err error) {
+	if v.HasTag(MakeTag("cloud-init")) {
+		node, err := v.client.Node(v.Node)
+		if err != nil {
+			return nil, err
+		}
+		isoStorage, err := node.StorageISO()
+		if err != nil {
+			return nil, err
+		}
+		iso, err := isoStorage.ISO(fmt.Sprintf(UserDataISOFormat, v.VMID))
+		if err != nil {
+			return nil, err
+		}
+		task, err = iso.Delete()
+		if err != nil {
+			return nil, err
+		}
+		if err := task.WaitFor(5); err != nil {
+			return nil, err
+		}
+	}
 	var upid UPID
 	if err := v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &upid); err != nil {
 		return nil, err
@@ -248,33 +443,83 @@ func (v *VirtualMachine) AgentGetNetworkIFaces() (iFaces []*AgentNetworkIface, e
 
 }
 
-func (v *VirtualMachine) AgentOsInfo() (info *AgentOsInfo, err error) {
-	node, err := v.client.Node(v.Node)
-	if err != nil {
-		return
+func (v *VirtualMachine) WaitForAgent(seconds int) error {
+	wait := time.Duration(seconds) * time.Second
+	for {
+		select {
+		case <-time.After(wait):
+			return ErrTimeout
+		default:
+			_, err := v.AgentOsInfo()
+			if err != nil {
+				if strings.Contains(err.Error(), "500 QEMU guest agent is not running") {
+					time.Sleep(DefaultWaitInterval)
+					continue
+				}
+				return err
+			}
+			return nil
+		}
 	}
-	results := map[string]*AgentOsInfo{}
-	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", node.Name, v.VMID), &results)
+}
 
+func (v *VirtualMachine) AgentExec(command, inputData string) (pid int, err error) {
+	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
+		map[string]string{
+			"command":    command,
+			"input-data": inputData,
+		},
+		pid)
+
+	return
+}
+
+func (v *VirtualMachine) AgentExecStatus(pid int) (status *AgentExecStatus, err error) {
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec-status?pid=%d", v.Node, v.VMID, pid), &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (v *VirtualMachine) WaitForAgentExecExit(pid, seconds int) (*AgentExecStatus, error) {
+	wait := time.Duration(seconds) * time.Second
+	for {
+		select {
+		case <-time.After(wait):
+			return nil, ErrTimeout
+		default:
+			status, err := v.AgentExecStatus(pid)
+			if err != nil {
+				return nil, err
+			}
+			if !status.Exited {
+				continue
+			}
+
+			return status, nil
+		}
+	}
+}
+
+func (v *VirtualMachine) AgentOsInfo() (info *AgentOsInfo, err error) {
+	results := map[string]*AgentOsInfo{}
+	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", v.Node, v.VMID), &results)
 	if err != nil {
 		return
 	}
+
 	info, ok := results["result"]
 	if !ok {
 		err = fmt.Errorf("result is empty")
 	}
-	return
 
+	return
 }
-func (v *VirtualMachine) AgentSetUserPassword(password string, username string) (err error) {
-	node, err := v.client.Node(v.Node)
-	if err != nil {
-		return
-	}
 
-	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", node.Name, v.VMID), map[string]string{"password": password, "username": username}, nil)
-
-	return
+func (v *VirtualMachine) AgentSetUserPassword(password string, username string) error {
+	return v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
 }
 
 func (v *VirtualMachine) FirewallOptionGet() (firewallOption *FirewallVirtualMachineOption, err error) {
@@ -282,9 +527,8 @@ func (v *VirtualMachine) FirewallOptionGet() (firewallOption *FirewallVirtualMac
 	return
 }
 
-func (v *VirtualMachine) FirewallOptionSet(firewallOption *FirewallVirtualMachineOption) (err error) {
-	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
-	return
+func (v *VirtualMachine) FirewallOptionSet(firewallOption *FirewallVirtualMachineOption) error {
+	return v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
 }
 
 func (v *VirtualMachine) FirewallGetRules() (rules []*FirewallRule, err error) {
@@ -292,14 +536,12 @@ func (v *VirtualMachine) FirewallGetRules() (rules []*FirewallRule, err error) {
 	return
 }
 
-func (v *VirtualMachine) FirewallRulesCreate(rule *FirewallRule) (err error) {
-	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil)
-	return
+func (v *VirtualMachine) FirewallRulesCreate(rule *FirewallRule) error {
+	return v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil)
 }
 
-func (v *VirtualMachine) FirewallRulesUpdate(rule *FirewallRule) (err error) {
-	err = v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rule.Pos), rule, nil)
-	return
+func (v *VirtualMachine) FirewallRulesUpdate(rule *FirewallRule) error {
+	return v.client.Put(fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rule.Pos), rule, nil)
 }
 
 func (v *VirtualMachine) FirewallRulesDelete(rulePos int) error {
