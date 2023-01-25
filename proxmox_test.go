@@ -7,12 +7,20 @@ import (
 	"testing"
 
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/types"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	TestURI = "http://test.localhost"
 )
+
+var mockConfig = types.Config{
+	TestURI:        TestURI,
+	Node:           "test-node",
+	VirtualMachine: "test-vm",
+}
 
 // proxmox api returns everything in a { data: {} } key and thie just abstracts that so the gock JSON calls are cleaner
 func data(d map[string]interface{}) map[string]interface{} {
@@ -62,22 +70,28 @@ func TestClient_authHeaders(t *testing.T) {
 	}
 }
 
-func TestClient_Version(t *testing.T) {
-	defer gock.Off()
-	gock.New(TestURI).
-		Get("/version").
-		Reply(200).
-		JSON(data(map[string]interface{}{
-			"version": "7.3-4",
-			"repoid":  "d69b70d4",
-			"release": "7.3",
-		}))
+func TestClient_Version7(t *testing.T) {
+	mockConfig.Version = mocks.ProxmoxVE7x
+	mocks.On(mockConfig)
+	defer mocks.Off()
 
-	v, err := NewClient(TestURI).Version()
+	v, err := NewClient(mockConfig.TestURI).Version()
 	assert.Nil(t, err)
-	assert.Equal(t, "7.3-4", v.Version)
-	assert.Equal(t, "d69b70d4", v.RepoID)
-	assert.Equal(t, "7.3", v.Release)
+	assert.Equal(t, "7.7-7", v.Version)
+	assert.Equal(t, "777777", v.RepoID)
+	assert.Equal(t, "7.7", v.Release)
+}
+
+func TestClient_Version6(t *testing.T) {
+	mockConfig.Version = mocks.ProxmoxVE6x
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	v, err := NewClient(mockConfig.TestURI).Version()
+	assert.Nil(t, err)
+	assert.Equal(t, "6.6-6", v.Version)
+	assert.Equal(t, "666666", v.RepoID)
+	assert.Equal(t, "6.6", v.Release)
 }
 
 func TestClient_Get(t *testing.T) {
