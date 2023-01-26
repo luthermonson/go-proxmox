@@ -182,12 +182,18 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		return nil, err
 	}
 
-	for filename, content := range map[string]string{
-		"user-data":      userdata,
-		"meta-data":      metadata,
-		"vendor-data":    vendordata,
-		"network-config": networkconfig,
-	} {
+	cifiles := map[string]string{
+		"user-data": userdata,
+		"meta-data": metadata,
+	}
+	if vendordata != "" {
+		cifiles["vendor-data"] = vendordata
+	}
+	if networkconfig != "" {
+		cifiles["network-config"] = networkconfig
+	}
+
+	for filename, content := range cifiles {
 		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
 			return nil, err
