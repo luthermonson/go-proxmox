@@ -22,14 +22,15 @@ type TestingData struct {
 	storage   *proxmox.Storage
 	appliance *proxmox.Appliance
 
-	username    string
-	password    string
-	tokenID     string
-	secret      string
-	otp         string
-	nodeName    string
-	nodeStorage string
-	isoURL      string
+	username        string
+	password        string
+	tokenID         string
+	secret          string
+	otp             string
+	nodeName        string
+	nodeStorage     string
+	isoURL          string
+	appliancePrefix string
 }
 
 var (
@@ -58,6 +59,7 @@ func init() {
 	td.nodeName = os.Getenv("PROXMOX_NODE_NAME")
 	td.nodeStorage = os.Getenv("PROXMOX_NODE_STORAGE")
 	td.isoURL = os.Getenv("PROXMOX_ISO_URL") // https://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-virt-3.14.1-x86_64.iso
+	td.appliancePrefix = "alpine-virt-3.14.1"
 
 	if td.nodeName == "" {
 		return
