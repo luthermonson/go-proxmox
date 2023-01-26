@@ -1,13 +1,15 @@
 //go:build nodes
 // +build nodes
 
-package proxmox
+package integration
 
 import (
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/luthermonson/go-proxmox"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +21,7 @@ func TestNodes(t *testing.T) {
 	assert.GreaterOrEqual(t, len(nodes), 1)
 	for _, n := range nodes {
 		assert.NotEmpty(t, n.Node)
-		var node *Node
+		var node *proxmox.Node
 		t.Run("get status for node "+n.Node, func(t *testing.T) {
 			var err error
 			node, err = client.Node(n.Node)
@@ -63,7 +65,7 @@ func TestNode_Appliances(t *testing.T) {
 }
 
 func TestNode_DownloadAppliance(t *testing.T) {
-	var aplinfos Appliances
+	var aplinfos proxmox.Appliances
 	t.Run("get Containers for node "+td.node.Name, func(t *testing.T) {
 		var err error
 		aplinfos, err = td.node.Appliances()
