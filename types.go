@@ -146,6 +146,7 @@ type NodeStatus struct {
 	MaxDisk        uint64  `json:",omitempty"`
 	Mem            uint64  `json:",omitempty"`
 	CPU            float64 `json:",omitempty"`
+	Uptime         uint64  `json:",omitempty"`
 
 	// from /cluster endpoint
 	NodeID int    `json:",omitempty"` // the internal id of the node
