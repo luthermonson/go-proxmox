@@ -15,7 +15,7 @@ import (
 
 func TestStorage_ISO(t *testing.T) {
 	_, err := td.storage.ISO("doesnt-exist")
-	assert.Contains(t, err.Error(), "unable to parse directory volume name 'iso/doesnt-exist'")
+	assert.Contains(t, err.Error(), "unable to parse lvm volume name 'iso-doesnt-exist'")
 }
 
 func TestStorage_DownloadUrl(t *testing.T) {
@@ -54,7 +54,7 @@ func TestStorage_Upload(t *testing.T) {
 
 func TestStorage_VzTmpl(t *testing.T) {
 	_, err := td.storage.VzTmpl("doesnt-exist")
-	assert.Contains(t, err.Error(), "unable to parse directory volume name 'vztmpl/doesnt-exist'")
+	assert.Contains(t, err.Error(), "unable to parse lvm volume name 'vztmpl-doesnt-exist'")
 
 	name := nameGenerator(12) + ".tar.xz"
 	task, err := td.storage.DownloadURL("vztmpl", name, alpineAppliance)

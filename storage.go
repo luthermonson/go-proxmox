@@ -7,8 +7,8 @@ import (
 )
 
 var validContent = map[string]struct{}{
-	"iso":    struct{}{},
-	"vztmpl": struct{}{},
+	"iso":    {},
+	"vztmpl": {},
 }
 
 func (s *Storage) Upload(content, file string) (*Task, error) {
@@ -55,7 +55,7 @@ func (s *Storage) DownloadURL(content, filename, url string) (*Task, error) {
 }
 
 func (s *Storage) ISO(name string) (iso *ISO, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
+	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s-%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
 		return nil, err
 	}
@@ -64,13 +64,13 @@ func (s *Storage) ISO(name string) (iso *ISO, err error) {
 	iso.Node = s.Node
 	iso.Storage = s.Name
 	if iso.VolID == "" {
-		iso.VolID = fmt.Sprintf("%s:iso/%s", iso.Storage, name)
+		iso.VolID = fmt.Sprintf("%s:iso-%s", iso.Storage, name)
 	}
 	return
 }
 
 func (s *Storage) VzTmpl(name string) (vztmpl *VzTmpl, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "vztmpl", name), &vztmpl)
+	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s-%s", s.Node, s.Name, s.Name, "vztmpl", name), &vztmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +79,13 @@ func (s *Storage) VzTmpl(name string) (vztmpl *VzTmpl, err error) {
 	vztmpl.Node = s.Node
 	vztmpl.Storage = s.Name
 	if vztmpl.VolID == "" {
-		vztmpl.VolID = fmt.Sprintf("%s:vztmpl/%s", vztmpl.Storage, name)
+		vztmpl.VolID = fmt.Sprintf("%s:vztmpl-%s", vztmpl.Storage, name)
 	}
 	return
 }
 
 func (s *Storage) Backup(name string) (backup *Backup, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "backup", name), &backup)
+	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s-%s", s.Node, s.Name, s.Name, "backup", name), &backup)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func deleteVolume(c *Client, n, s, v, p, t string) (*Task, error) {
 
 	if v == "" {
 		// volid not returned in the volume endpoints, need to generate
-		v = fmt.Sprintf("%s:%s/%s", s, t, filepath.Base(p))
+		v = fmt.Sprintf("%s:%s-%s", s, t, filepath.Base(p))
 	}
 
 	err := c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s", n, s, v), &upid)
