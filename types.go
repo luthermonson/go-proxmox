@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -664,6 +665,12 @@ type StringOrInt int
 
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
+
+	numeric := regexp.MustCompile(`\d`).MatchString(str)
+	if !numeric {
+		str = "0"
+	}
+
 	parsed, err := strconv.ParseUint(str, 0, 64)
 	if err != nil {
 		return err
@@ -676,6 +683,12 @@ type StringOrUint64 uint64
 
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
+
+	numeric := regexp.MustCompile(`\d`).MatchString(str)
+	if !numeric {
+		str = "0"
+	}
+
 	parsed, err := strconv.ParseUint(str, 0, 64)
 	if err != nil {
 		return err
