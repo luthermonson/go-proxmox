@@ -23,6 +23,9 @@ const (
 	blockSize        = 2048
 )
 
+// DefaultAgentWaitInterval is the polling interval when waiting for agent exec commands
+var DefaultAgentWaitInterval = 100 * time.Millisecond
+
 func (v *VirtualMachine) Ping() error {
 	return v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", v.Node, v.VMID), &v)
 }
@@ -455,21 +458,23 @@ func (v *VirtualMachine) AgentGetNetworkIFaces() (iFaces []*AgentNetworkIface, e
 }
 
 func (v *VirtualMachine) WaitForAgent(seconds int) error {
-	wait := time.Duration(seconds) * time.Second
+	timeout := time.After(time.Duration(seconds) * time.Second)
+	ticker := time.NewTicker(DefaultWaitInterval)
+	defer ticker.Stop()
+
 	for {
-		select {
-		case <-time.After(wait):
-			return ErrTimeout
-		default:
-			_, err := v.AgentOsInfo()
-			if err != nil {
-				if strings.Contains(err.Error(), "500 QEMU guest agent is not running") {
-					time.Sleep(DefaultWaitInterval)
-					continue
-				}
-				return err
-			}
+		_, err := v.AgentOsInfo()
+		if err == nil {
 			return nil
+		}
+		if !strings.Contains(err.Error(), "500 QEMU guest agent is not running") {
+			return err
+		}
+
+		select {
+		case <-timeout:
+			return ErrTimeout
+		case <-ticker.C:
 		}
 	}
 }
@@ -480,7 +485,7 @@ func (v *VirtualMachine) AgentExec(command, inputData string) (pid int, err erro
 			"command":    command,
 			"input-data": inputData,
 		},
-		pid)
+		&pid)
 
 	return
 }
@@ -495,21 +500,23 @@ func (v *VirtualMachine) AgentExecStatus(pid int) (status *AgentExecStatus, err 
 }
 
 func (v *VirtualMachine) WaitForAgentExecExit(pid, seconds int) (*AgentExecStatus, error) {
-	wait := time.Duration(seconds) * time.Second
-	for {
-		select {
-		case <-time.After(wait):
-			return nil, ErrTimeout
-		default:
-			status, err := v.AgentExecStatus(pid)
-			if err != nil {
-				return nil, err
-			}
-			if !status.Exited {
-				continue
-			}
+	timeout := time.After(time.Duration(seconds) * time.Second)
+	ticker := time.NewTicker(DefaultAgentWaitInterval)
+	defer ticker.Stop()
 
+	for {
+		status, err := v.AgentExecStatus(pid)
+		if err != nil {
+			return nil, err
+		}
+		if status.Exited {
 			return status, nil
+		}
+
+		select {
+		case <-timeout:
+			return nil, ErrTimeout
+		case <-ticker.C:
 		}
 	}
 }
