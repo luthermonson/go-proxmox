@@ -10,6 +10,10 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+const (
+	digitOnlyRegex = `\d`
+)
+
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -666,9 +670,10 @@ type StringOrInt int
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
 
-	numeric := regexp.MustCompile(`\d`).MatchString(str)
+	numeric := regexp.MustCompile(digitOnlyRegex).MatchString(str)
 	if !numeric {
-		str = "0"
+		*d = StringOrInt(0)
+		return nil
 	}
 
 	parsed, err := strconv.ParseUint(str, 0, 64)
@@ -684,9 +689,10 @@ type StringOrUint64 uint64
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
 
-	numeric := regexp.MustCompile(`\d`).MatchString(str)
+	numeric := regexp.MustCompile(digitOnlyRegex).MatchString(str)
 	if !numeric {
-		str = "0"
+		*d = StringOrUint64(0)
+		return nil
 	}
 
 	parsed, err := strconv.ParseUint(str, 0, 64)
