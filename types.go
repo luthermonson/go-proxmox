@@ -10,8 +10,8 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-const (
-	digitOnlyRegex = `\d`
+var (
+	numericRegex = regexp.MustCompile(`\d`)
 )
 
 type Credentials struct {
@@ -670,7 +670,7 @@ type StringOrInt int
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
 
-	numeric := regexp.MustCompile(digitOnlyRegex).MatchString(str)
+	numeric := numericRegex.MatchString(str)
 	if !numeric {
 		*d = StringOrInt(0)
 		return nil
@@ -689,7 +689,7 @@ type StringOrUint64 uint64
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
 
-	numeric := regexp.MustCompile(digitOnlyRegex).MatchString(str)
+	numeric := numericRegex.MatchString(str)
 	if !numeric {
 		*d = StringOrUint64(0)
 		return nil
