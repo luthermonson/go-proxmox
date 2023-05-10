@@ -2,11 +2,16 @@ package proxmox
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/copier"
+)
+
+var (
+	numericRegex = regexp.MustCompile(`\d`)
 )
 
 type Credentials struct {
@@ -664,6 +669,13 @@ type StringOrInt int
 
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
+
+	numeric := numericRegex.MatchString(str)
+	if !numeric {
+		*d = StringOrInt(0)
+		return nil
+	}
+
 	parsed, err := strconv.ParseUint(str, 0, 64)
 	if err != nil {
 		return err
@@ -676,6 +688,13 @@ type StringOrUint64 uint64
 
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
+
+	numeric := numericRegex.MatchString(str)
+	if !numeric {
+		*d = StringOrUint64(0)
+		return nil
+	}
+
 	parsed, err := strconv.ParseUint(str, 0, 64)
 	if err != nil {
 		return err
