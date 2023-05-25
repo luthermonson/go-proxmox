@@ -1,7 +1,9 @@
 # Proxmox API Client Go Package
-A Go package to consume the Proxmox VE api2/json. Inspiration drawn from the existing
+Join the community to discuss the client development, usage, the proxmox API or tooling in the [#go-proxmox](https://gophers.slack.com/archives/C05920LDDD3) channel on the Gophers Slack and see the [self generated docs](https://pkg.go.dev/github.com/luthermonson/go-proxmox) for more usage details.
+
+A Go package containing a client for [Proxmox VE](https://www.proxmox.com/). The client implements [/api2/json](https://pve.proxmox.com/pve-docs/api-viewer/index.html) and inspiration was drawn from the existing
 [Telmate](https://github.com/Telmate/proxmox-api-go/tree/master/proxmox) package but looking to improve
-in the following ways.
+in the following ways...
 * Treated as a proper standalone go package
 * Types and JSON marshal/unmarshalling for all end points
 * Full Testing, unit testing and integration tests against an API endpoint
