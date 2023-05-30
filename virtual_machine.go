@@ -587,3 +587,11 @@ func (v *VirtualMachine) SnapshotRollback(name string) (task *Task, err error) {
 
 	return NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) SetClient(client *Client) {
+	v.client = client
+}
+
+func (v *VirtualMachine) GetClient() *Client {
+	return v.client
+}
