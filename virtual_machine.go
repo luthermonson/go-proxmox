@@ -149,7 +149,10 @@ func (v *VirtualMachine) CloudInit(device, userdata, metadata, vendordata, netwo
 	if err != nil {
 		return err
 	}
-	task.WaitFor(2)
+
+	if err := task.WaitFor(2); err != nil {
+		return err
+	}
 
 	task, err = v.Config(VirtualMachineOption{
 		Name:  device,
@@ -454,7 +457,6 @@ func (v *VirtualMachine) AgentGetNetworkIFaces() (iFaces []*AgentNetworkIface, e
 	}
 
 	return
-
 }
 
 func (v *VirtualMachine) WaitForAgent(seconds int) error {
@@ -574,6 +576,7 @@ func (v *VirtualMachine) NewSnapshot(name string) (task *Task, err error) {
 
 	return NewTask(upid, v.client), nil
 }
+
 func (v *VirtualMachine) Snapshots() (snapshots []*Snapshot, err error) {
 	err = v.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), &snapshots)
 	return
