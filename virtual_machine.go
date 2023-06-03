@@ -17,9 +17,9 @@ const (
 	StatusVirtualMachinePaused  = "paused"
 
 	UserDataISOFormat = "user-data-%d.iso"
+	TagCloudInit      = "cloud-init"
 
 	volumeIdentifier = "cidata"
-	fileMode         = 0700
 	blockSize        = 2048
 )
 
@@ -145,7 +145,7 @@ func (v *VirtualMachine) CloudInit(device, userdata, metadata, vendordata, netwo
 		return err
 	}
 
-	task, err = v.AddTag(MakeTag("cloud-init"))
+	task, err = v.AddTag(MakeTag(TagCloudInit))
 	if err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func (v *VirtualMachine) Reboot() (task *Task, err error) {
 }
 
 func (v *VirtualMachine) Delete() (task *Task, err error) {
-	if v.HasTag(MakeTag("cloud-init")) {
+	if v.HasTag(MakeTag(TagCloudInit)) {
 		node, err := v.client.Node(v.Node)
 		if err != nil {
 			return nil, err
@@ -328,7 +328,9 @@ func (v *VirtualMachine) Delete() (task *Task, err error) {
 		if err != nil {
 			return nil, err
 		}
-		iso, err := isoStorage.ISO(fmt.Sprintf(UserDataISOFormat, v.VMID))
+
+		var iso *ISO
+		iso, err = isoStorage.ISO(fmt.Sprintf(UserDataISOFormat, v.VMID))
 		if err != nil {
 			return nil, err
 		}
@@ -530,7 +532,8 @@ func (v *VirtualMachine) AgentOsInfo() (info *AgentOsInfo, err error) {
 		return
 	}
 
-	info, ok := results["result"]
+	var ok bool
+	info, ok = results["result"]
 	if !ok {
 		err = fmt.Errorf("result is empty")
 	}
