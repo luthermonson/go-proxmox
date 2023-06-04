@@ -1,6 +1,8 @@
 package pve7x
 
-import "github.com/luthermonson/go-proxmox/tests/mocks/types"
+import (
+	"github.com/h2non/gock"
+)
 
 func init() {
 	access()
@@ -8,11 +10,10 @@ func init() {
 }
 
 func access() {
-	r(types.Route{
-		Method: "GET",
-		Path:   "/access",
-		Reply:  200,
-		JSON: `
+	gock.New(config.TestURI).
+		Get("/access").
+		Reply(200).
+		JSON(`
 {
     "data": [
         {
@@ -43,16 +44,21 @@ func access() {
             "subdir": "password"
         }
     ]
-}`,
-	})
+}`)
+}
+
+func ticket() {
+	gock.New(config.TestURI).
+		Get("/access/ticket").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
 
 func user() {
-	r(types.Route{
-		Method: "GET",
-		Path:   "/access/user",
-		Reply:  200,
-		JSON: `
+	gock.New(config.TestURI).
+		Get("/access/user").
+		Reply(200).
+		JSON(`
 {
     "data": [
         {
@@ -83,6 +89,5 @@ func user() {
             "firstname": "first2"
         }
     ]
-}`,
-	})
+}`)
 }
