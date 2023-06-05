@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
-	"github.com/luthermonson/go-proxmox/tests/mocks/types"
+	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,21 +15,14 @@ const (
 	TestURI = "http://test.localhost"
 )
 
-var mockConfig = types.Config{
-	TestURI:        TestURI,
+var mockConfig = config.Config{
+	URI:            TestURI,
 	Node:           "test-node",
 	VirtualMachine: "test-vm",
 }
 
 func mockClient(options ...Option) *Client {
-	return NewClient(mockConfig.TestURI, options...)
-}
-
-// proxmox api returns everything in a { data: {} } key and thie just abstracts that so the gock JSON calls are cleaner
-func data(d map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"data": d,
-	}
+	return NewClient(mockConfig.URI, options...)
 }
 
 // options tested in options_test.go
@@ -74,12 +67,8 @@ func TestClient_authHeaders(t *testing.T) {
 }
 
 func TestClient_Version7(t *testing.T) {
-	mockConfig.Version = mocks.ProxmoxVE7x
-	mocks.On(mockConfig)
-	defer func() {
-		mockConfig.Version = nil
-		mocks.Off()
-	}()
+	mocks.ProxmoxVE7x(mockConfig)
+	defer mocks.Off()
 
 	v, err := mockClient().Version()
 	assert.Nil(t, err)
@@ -89,12 +78,8 @@ func TestClient_Version7(t *testing.T) {
 }
 
 func TestClient_Version6(t *testing.T) {
-	mockConfig.Version = mocks.ProxmoxVE6x
-	mocks.On(mockConfig)
-	defer func() {
-		mockConfig.Version = nil
-		mocks.Off()
-	}()
+	mocks.ProxmoxVE6x(mockConfig)
+	defer mocks.Off()
 
 	v, err := mockClient().Version()
 	assert.Nil(t, err)
@@ -109,22 +94,22 @@ func TestClientMethods(t *testing.T) {
 	client := mockClient()
 	var err error
 
-	var testData []map[string]string
-	err = client.Get("/", &testData)
+	var v Version
+	err = client.Get("/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, 6, len(testData))
+	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Post("/", struct{}{}, &testData)
+	err = client.Post("/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, 6, len(testData))
+	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Put("/", struct{}{}, &testData)
+	err = client.Put("/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, 6, len(testData))
+	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Delete("/", &testData)
+	err = client.Delete("/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, 6, len(testData))
+	assert.Equal(t, "7.7", v.Release)
 }
 
 func TestClient_handleResponse(t *testing.T) {
