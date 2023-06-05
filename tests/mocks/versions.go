@@ -7,9 +7,9 @@ import (
 )
 
 func ProxmoxVE7x(config types.Config) {
-	LoadRoutes(config, pve7x.Routes())
+	pve7x.Load(config)
 }
 
 func ProxmoxVE6x(config types.Config) {
-	LoadRoutes(config, pve6x.Routes())
+	pve6x.Load(config)
 }

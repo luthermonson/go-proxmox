@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/luthermonson/go-proxmox/tests/mocks/types"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +19,10 @@ var mockConfig = types.Config{
 	TestURI:        TestURI,
 	Node:           "test-node",
 	VirtualMachine: "test-vm",
+}
+
+func mockClient(options ...Option) *Client {
+	return NewClient(mockConfig.TestURI, options...)
 }
 
 // proxmox api returns everything in a { data: {} } key and thie just abstracts that so the gock JSON calls are cleaner
@@ -73,9 +76,12 @@ func TestClient_authHeaders(t *testing.T) {
 func TestClient_Version7(t *testing.T) {
 	mockConfig.Version = mocks.ProxmoxVE7x
 	mocks.On(mockConfig)
-	defer mocks.Off()
+	defer func() {
+		mockConfig.Version = nil
+		mocks.Off()
+	}()
 
-	v, err := NewClient(mockConfig.TestURI).Version()
+	v, err := mockClient().Version()
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7-7", v.Version)
 	assert.Equal(t, "777777", v.RepoID)
@@ -85,78 +91,40 @@ func TestClient_Version7(t *testing.T) {
 func TestClient_Version6(t *testing.T) {
 	mockConfig.Version = mocks.ProxmoxVE6x
 	mocks.On(mockConfig)
-	defer mocks.Off()
+	defer func() {
+		mockConfig.Version = nil
+		mocks.Off()
+	}()
 
-	v, err := NewClient(mockConfig.TestURI).Version()
+	v, err := mockClient().Version()
 	assert.Nil(t, err)
 	assert.Equal(t, "6.6-6", v.Version)
 	assert.Equal(t, "666666", v.RepoID)
 	assert.Equal(t, "6.6", v.Release)
 }
 
-func TestClient_Get(t *testing.T) {
-	defer gock.Off()
-	gock.New(TestURI).
-		Get("/test").
-		Reply(200).
-		JSON(data(map[string]interface{}{
-			"test": "data",
-		}))
+func TestClientMethods(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	var err error
 
-	var testData map[string]string
-	client := NewClient(TestURI)
-	err := client.Get("/test", &testData)
+	var testData []map[string]string
+	err = client.Get("/", &testData)
 	assert.Nil(t, err)
-	assert.Equal(t, "data", testData["test"])
-}
+	assert.Equal(t, 6, len(testData))
 
-func TestClient_Post(t *testing.T) {
-	defer gock.Off()
-	gock.New(TestURI).
-		Post("/test").
-		MatchType("json").
-		Reply(200).
-		JSON(data(map[string]interface{}{
-			"test": "data",
-		}))
-
-	client := NewClient(TestURI)
-	var testData map[string]string
-	err := client.Post("/test", map[string]string{"test": "data"}, &testData)
+	err = client.Post("/", struct{}{}, &testData)
 	assert.Nil(t, err)
-	assert.Equal(t, "data", testData["test"])
-}
+	assert.Equal(t, 6, len(testData))
 
-func TestClient_Put(t *testing.T) {
-	defer gock.Off()
-	gock.New(TestURI).
-		Put("/test").
-		Reply(200).
-		JSON(data(map[string]interface{}{
-			"test": "data",
-		}))
-
-	client := NewClient(TestURI)
-	var testData map[string]string
-	err := client.Put("/test", map[string]string{"test": "data"}, &testData)
+	err = client.Put("/", struct{}{}, &testData)
 	assert.Nil(t, err)
-	assert.Equal(t, "data", testData["test"])
-}
+	assert.Equal(t, 6, len(testData))
 
-func TestClient_Delete(t *testing.T) {
-	defer gock.Off()
-	gock.New(TestURI).
-		Delete("/test").
-		Reply(200).
-		JSON(data(map[string]interface{}{
-			"test": "data",
-		}))
-
-	client := NewClient(TestURI)
-	var testData map[string]string
-	err := client.Delete("/test", &testData)
+	err = client.Delete("/", &testData)
 	assert.Nil(t, err)
-	assert.Equal(t, "data", testData["test"])
+	assert.Equal(t, 6, len(testData))
 }
 
 func TestClient_handleResponse(t *testing.T) {
