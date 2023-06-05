@@ -339,7 +339,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 
 	send := make(chan string)
 	recv := make(chan string)
-	errors := make(chan error)
+	errs := make(chan error)
 	done := make(chan struct{})
 	ticker := time.NewTicker(30 * time.Second)
 	resize := make(chan size)
@@ -370,7 +370,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 		time.Sleep(1 * time.Second)
 		close(send)
 		close(recv)
-		close(errors)
+		close(errs)
 		ticker.Stop()
 
 		return conn.Close()
@@ -390,7 +390,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 					if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 						return
 					}
-					errors <- err
+					errs <- err
 				}
 				recv <- string(msg)
 			}
@@ -402,32 +402,32 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 			select {
 			case <-done:
 				if err := conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					errors <- err
+					errs <- err
 				}
 				return
 			case <-ticker.C:
 				c.log.Debugf("sending wss keep alive")
 				if err := conn.WriteMessage(websocket.BinaryMessage, []byte("2")); err != nil {
-					errors <- err
+					errs <- err
 				}
 			case resized := <-resize:
 				c.log.Debugf("resizing terminal window: %d x %d", resized.height, resized.width)
 				if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", resized.height, resized.width))); err != nil {
-					errors <- err
+					errs <- err
 				}
 			case msg := <-send:
 				c.log.Debugf("sending: %s", string(msg))
 				m := []byte(msg)
 				send := append([]byte(fmt.Sprintf("0:%d:", len(m))), m...)
 				if err := conn.WriteMessage(websocket.BinaryMessage, send); err != nil {
-					errors <- err
+					errs <- err
 				}
 				if err := conn.WriteMessage(websocket.BinaryMessage, []byte("0:1:\n")); err != nil {
-					errors <- err
+					errs <- err
 				}
 			}
 		}
 	}()
 
-	return send, recv, errors, closer, nil
+	return send, recv, errs, closer, nil
 }

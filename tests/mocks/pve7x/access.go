@@ -2,15 +2,11 @@ package pve7x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
-func init() {
-	access()
-	user()
-}
-
 func access() {
-	gock.New(config.TestURI).
+	gock.New(config.C.URI).
 		Get("/access").
 		Reply(200).
 		JSON(`
@@ -48,14 +44,14 @@ func access() {
 }
 
 func ticket() {
-	gock.New(config.TestURI).
+	gock.New(config.C.URI).
 		Get("/access/ticket").
 		Reply(200).
 		JSON(`{"data": null}`)
 }
 
 func user() {
-	gock.New(config.TestURI).
+	gock.New(config.C.URI).
 		Get("/access/user").
 		Reply(200).
 		JSON(`

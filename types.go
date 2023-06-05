@@ -144,6 +144,7 @@ type NodeStatus struct {
 
 	// from /nodes endpoint
 	Node           string  `json:",omitempty"`
+	Type           string  `json:",omitempty"`
 	MaxCPU         int     `json:",omitempty"`
 	MaxMem         uint64  `json:",omitempty"`
 	Disk           uint64  `json:",omitempty"`
