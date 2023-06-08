@@ -7,19 +7,17 @@ import (
 )
 
 func (c *Client) Cluster() (*Cluster, error) {
-	cluster := Cluster{
+	cluster := &Cluster{
 		client: c,
 	}
-	if err := c.Get("/cluster/status", &cluster); err != nil {
-		return nil, err
-	}
-
-	return &cluster, nil
+	return cluster, c.Get("/cluster/status", cluster)
 }
 
 func (cl *Cluster) NextID() (int, error) {
 	var ret string
-	cl.client.Get("/cluster/nextid", &ret)
+	if err := cl.client.Get("/cluster/nextid", &ret); err != nil {
+		return 0, err
+	}
 	return strconv.Atoi(ret)
 }
 

@@ -6,4 +6,5 @@ func Load() {
 	user()
 	ticket()
 	nodes()
+	cluster()
 }
