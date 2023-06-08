@@ -16,9 +16,7 @@ const (
 )
 
 var mockConfig = config.Config{
-	URI:            TestURI,
-	Node:           "test-node",
-	VirtualMachine: "test-vm",
+	URI: TestURI,
 }
 
 func mockClient(options ...Option) *Client {

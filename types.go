@@ -82,6 +82,7 @@ func (cl *Cluster) UnmarshalJSON(b []byte) error {
 		case "node":
 			ns := NodeStatus{
 				Status: "offline",
+				Type:   "node",
 			}
 			if v, ok := d["name"]; ok {
 				ns.Name = v.(string)

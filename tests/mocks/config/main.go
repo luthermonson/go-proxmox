@@ -1,9 +1,7 @@
 package config
 
 type Config struct {
-	URI            string
-	Node           string
-	VirtualMachine string
+	URI string
 }
 
 var C Config
