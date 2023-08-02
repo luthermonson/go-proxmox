@@ -283,13 +283,13 @@ type VirtualMachineConfig struct {
 	Acpi     int    `json:"acpi,omitempty"`
 
 	// Qemu CPU specs
-	Sockets  int    `json:"sockets,omitempty"`
-	Cores    int    `json:"cores,omitempty"`
-	CPU      string `json:"cpu,omitempty"`
-	CPULimit int    `json:"cpulimit,omitempty"`
-	CPUUnits int    `json:"cpuunits,omitempty"`
-	Vcpus    int    `json:"vcpus,omitempty"`
-	Affinity string `json:"affinity,omitempty"`
+	Sockets  int     `json:"sockets,omitempty"`
+	Cores    int     `json:"cores,omitempty"`
+	CPU      string  `json:"cpu,omitempty"`
+	CPULimit float32 `json:"cpulimit,omitempty"`
+	CPUUnits int     `json:"cpuunits,omitempty"`
+	Vcpus    int     `json:"vcpus,omitempty"`
+	Affinity string  `json:"affinity,omitempty"`
 
 	// Qemu memory specs
 	Numa      int    `json:"numa,omitempty"`
