@@ -18,6 +18,7 @@ const (
 
 	UserDataISOFormat = "user-data-%d.iso"
 	TagCloudInit      = "cloud-init"
+	TagSeperator      = ";"
 
 	volumeIdentifier = "cidata"
 	blockSize        = 2048
@@ -64,7 +65,7 @@ func (v *VirtualMachine) HasTag(value string) bool {
 
 func (v *VirtualMachine) AddTag(value string) (*Task, error) {
 	if v.HasTag(value) {
-		return nil, nil //noop
+		return nil, ErrNoop
 	}
 
 	if v.VirtualMachineConfig.TagsSlice == nil {
@@ -72,7 +73,7 @@ func (v *VirtualMachine) AddTag(value string) (*Task, error) {
 	}
 
 	v.VirtualMachineConfig.TagsSlice = append(v.VirtualMachineConfig.TagsSlice, value)
-	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, ";")
+	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, TagSeperator)
 
 	return v.Config(VirtualMachineOption{
 		Name:  "tags",
@@ -82,7 +83,7 @@ func (v *VirtualMachine) AddTag(value string) (*Task, error) {
 
 func (v *VirtualMachine) RemoveTag(value string) (*Task, error) {
 	if !v.HasTag(value) {
-		return nil, nil //noop
+		return nil, ErrNoop
 	}
 
 	if v.VirtualMachineConfig.TagsSlice == nil {
@@ -98,7 +99,7 @@ func (v *VirtualMachine) RemoveTag(value string) (*Task, error) {
 		}
 	}
 
-	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, ";")
+	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, TagSeperator)
 	return v.Config(VirtualMachineOption{
 		Name:  "tags",
 		Value: v.VirtualMachineConfig.Tags,
@@ -106,7 +107,7 @@ func (v *VirtualMachine) RemoveTag(value string) (*Task, error) {
 }
 
 func (v *VirtualMachine) SplitTags() {
-	v.VirtualMachineConfig.TagsSlice = strings.Split(v.VirtualMachineConfig.Tags, ";")
+	v.VirtualMachineConfig.TagsSlice = strings.Split(v.VirtualMachineConfig.Tags, TagSeperator)
 }
 
 // CloudInit takes four yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
@@ -145,12 +146,8 @@ func (v *VirtualMachine) CloudInit(device, userdata, metadata, vendordata, netwo
 		return err
 	}
 
-	task, err = v.AddTag(MakeTag(TagCloudInit))
-	if err != nil {
-		return err
-	}
-
-	if err := task.WaitFor(2); err != nil {
+	_, err = v.AddTag(MakeTag(TagCloudInit))
+	if err != nil && !IsErrNoop(err) {
 		return err
 	}
 

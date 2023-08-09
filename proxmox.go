@@ -41,6 +41,12 @@ func IsNotFound(err error) bool {
 	return err == ErrNotFound
 }
 
+var ErrNoop = errors.New("nothing to do")
+
+func IsErrNoop(err error) bool {
+	return err == ErrNoop
+}
+
 func MakeTag(v string) string {
 	return fmt.Sprintf(TagFormat, v)
 }
