@@ -2,6 +2,8 @@ package proxmox
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,7 +13,7 @@ import (
 )
 
 var (
-	numericRegex = regexp.MustCompile(`\d`)
+	isFloat = regexp.MustCompile(`^[0-9.]*$`)
 )
 
 type Credentials struct {
@@ -283,13 +285,13 @@ type VirtualMachineConfig struct {
 	Acpi     int    `json:"acpi,omitempty"`
 
 	// Qemu CPU specs
-	Sockets  int     `json:"sockets,omitempty"`
-	Cores    int     `json:"cores,omitempty"`
-	CPU      string  `json:"cpu,omitempty"`
-	CPULimit float32 `json:"cpulimit,omitempty"`
-	CPUUnits int     `json:"cpuunits,omitempty"`
-	Vcpus    int     `json:"vcpus,omitempty"`
-	Affinity string  `json:"affinity,omitempty"`
+	Sockets  int             `json:"sockets,omitempty"`
+	Cores    int             `json:"cores,omitempty"`
+	CPU      string          `json:"cpu,omitempty"`
+	CPULimit StringOrFloat64 `json:"cpulimit,omitempty"`
+	CPUUnits int             `json:"cpuunits,omitempty"`
+	Vcpus    int             `json:"vcpus,omitempty"`
+	Affinity string          `json:"affinity,omitempty"`
 
 	// Qemu memory specs
 	Numa      int    `json:"numa,omitempty"`
@@ -671,18 +673,21 @@ type StringOrInt int
 
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
-
-	numeric := numericRegex.MatchString(str)
-	if !numeric {
+	if str == "" {
 		*d = StringOrInt(0)
 		return nil
 	}
 
-	parsed, err := strconv.ParseUint(str, 0, 64)
+	if !isFloat.MatchString(str) {
+		return fmt.Errorf("failed to match %s: %s", isFloat.String(), str)
+	}
+
+	parsed, err := strconv.ParseFloat(str, 64)
 	if err != nil {
 		return err
 	}
-	*d = StringOrInt(parsed)
+
+	*d = StringOrInt(math.Trunc(parsed)) // truncate to make an int
 	return nil
 }
 
@@ -690,18 +695,43 @@ type StringOrUint64 uint64
 
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.Replace(string(b), "\"", "", -1)
-
-	numeric := numericRegex.MatchString(str)
-	if !numeric {
+	if str == "" {
 		*d = StringOrUint64(0)
 		return nil
 	}
 
-	parsed, err := strconv.ParseUint(str, 0, 64)
+	if !isFloat.MatchString(str) {
+		return fmt.Errorf("failed to match %s: %s", isFloat.String(), str)
+	}
+
+	parsed, err := strconv.ParseFloat(str, 64)
 	if err != nil {
 		return err
 	}
-	*d = StringOrUint64(parsed)
+
+	*d = StringOrUint64(math.Trunc(parsed)) // truncate to make an int
+
+	return nil
+}
+
+type StringOrFloat64 float64
+
+func (d *StringOrFloat64) UnmarshalJSON(b []byte) error {
+	str := strings.Replace(string(b), "\"", "", -1)
+	if str == "" {
+		*d = StringOrFloat64(0)
+		return nil
+	}
+
+	if !isFloat.MatchString(str) {
+		return fmt.Errorf("failed to match %s: %s", isFloat.String(), str)
+	}
+
+	parsed, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		return err
+	}
+	*d = StringOrFloat64(parsed)
 	return nil
 }
 
