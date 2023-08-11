@@ -6,21 +6,25 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+// run all unit tests
 func Unit() error {
 	fmt.Println("Running Tests...")
 	return sh.RunV("go", "test")
 }
 
+// run a test build to confirm no compilation errors
 func Build() error {
 	fmt.Println("Running Build...")
 	return sh.RunV("go", "build", "-tags", "test")
 }
 
+// run all unit tests and output coverage
 func Coverage() error {
 	fmt.Println("Running Tests with Coverage...")
 	return sh.RunV("go", "test", "-race", "-coverprofile=coverage.txt", "-covermode=atomic")
 }
 
+// run all integration tests against a pve node, see ./tests/integration
 func Integration() error {
 	fmt.Println("Running Integration Tests against a PVE Cluster...")
 	return sh.RunV("go", "test", "./tests/integration", "-tags", "nodes containers vms")
