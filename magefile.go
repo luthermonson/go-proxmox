@@ -38,23 +38,25 @@ var Aliases = map[string]interface{}{
 	"install": install.Dependencies,
 }
 
-// lint and run all tests against a proxmox server using env var config, see env for more details
+// run everything for ci process (install deps, lint, coverage, build)
 func Ci() error {
 	fmt.Println("Running Continuous Integration...")
 	mg.Deps(
 		install.Dependencies,
+		Lint,
 		test.Coverage,
 		test.Build)
 	return nil
 }
 
+// run the linter
 func Lint() error {
 	mg.Deps(install.Golangcilint)
 	fmt.Println("Running Linter...")
 	return sh.RunV("golangci-lint", "run")
 }
 
-// validate all env vars to run the testing suite
+// validate env vars to run the testing suite
 func Env() error {
 	for k, _ := range envConfig {
 		if strings.Contains(strings.ToLower(k), "password") || strings.Contains(strings.ToLower(k), "secret") {
