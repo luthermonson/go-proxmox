@@ -7,7 +7,7 @@ import (
 
 func access() {
 	gock.New(config.C.URI).
-		Get("/access").
+		Get("^/access$").
 		Reply(200).
 		JSON(`
 {
@@ -41,13 +41,455 @@ func access() {
         }
     ]
 }`)
+
+	// full access user with all paths
+	gock.New(config.C.URI).
+		Get("^/access/permissions$").
+		Reply(200).
+		JSON(`{
+  "data": {
+    "/pools": {
+      "VM.Audit": 1,
+      "VM.Config.CPU": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "VM.Config.Disk": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Realm.AllocateUser": 1,
+      "VM.Console": 1,
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "VM.PowerMgmt": 1,
+      "Datastore.Allocate": 1,
+      "Sys.PowerMgmt": 1,
+      "User.Modify": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "Sys.Modify": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "VM.Config.Network": 1,
+      "VM.Snapshot.Rollback": 1,
+      "Sys.Console": 1,
+      "SDN.Audit": 1,
+      "Pool.Audit": 1
+    },
+    "/storage": {
+      "VM.Audit": 1,
+      "VM.Config.CPU": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "VM.Config.Disk": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Realm.AllocateUser": 1,
+      "VM.Console": 1,
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "VM.PowerMgmt": 1,
+      "Datastore.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "Sys.Modify": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "VM.Config.Network": 1,
+      "VM.Snapshot.Rollback": 1,
+      "Sys.Console": 1,
+      "SDN.Audit": 1,
+      "Pool.Audit": 1
+    },
+    "/access": {
+      "Pool.Audit": 1,
+      "SDN.Audit": 1,
+      "Sys.Console": 1,
+      "VM.Snapshot.Rollback": 1,
+      "VM.Config.Network": 1,
+      "Sys.Syslog": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Modify": 1,
+      "Pool.Allocate": 1,
+      "VM.Allocate": 1,
+      "VM.Clone": 1,
+      "Realm.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "SDN.Allocate": 1,
+      "Sys.PowerMgmt": 1,
+      "User.Modify": 1,
+      "Datastore.Allocate": 1,
+      "VM.PowerMgmt": 1,
+      "VM.Config.Options": 1,
+      "Permissions.Modify": 1,
+      "VM.Snapshot": 1,
+      "VM.Migrate": 1,
+      "VM.Console": 1,
+      "Realm.AllocateUser": 1,
+      "Datastore.AllocateTemplate": 1,
+      "VM.Monitor": 1,
+      "Sys.Audit": 1,
+      "VM.Config.Disk": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "SDN.Use": 1,
+      "Group.Allocate": 1,
+      "VM.Config.CDROM": 1,
+      "Datastore.Audit": 1,
+      "VM.Audit": 1,
+      "VM.Config.CPU": 1
+    },
+    "/vms": {
+      "VM.Snapshot.Rollback": 1,
+      "VM.Config.Network": 1,
+      "Sys.Console": 1,
+      "SDN.Audit": 1,
+      "Pool.Audit": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "Sys.Modify": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "Datastore.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "VM.PowerMgmt": 1,
+      "VM.Console": 1,
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1,
+      "Realm.AllocateUser": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "VM.Config.Disk": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "VM.Config.CPU": 1,
+      "VM.Audit": 1
+    },
+    "/sdn": {
+      "VM.Console": 1,
+      "VM.Snapshot": 1,
+      "VM.Migrate": 1,
+      "Realm.AllocateUser": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "VM.Config.Disk": 1,
+      "SDN.Use": 1,
+      "Group.Allocate": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "VM.Config.CPU": 1,
+      "VM.Audit": 1,
+      "VM.Snapshot.Rollback": 1,
+      "VM.Config.Network": 1,
+      "Pool.Audit": 1,
+      "SDN.Audit": 1,
+      "Sys.Console": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "Pool.Allocate": 1,
+      "VM.Allocate": 1,
+      "Sys.Modify": 1,
+      "VM.Clone": 1,
+      "Realm.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "SDN.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1,
+      "Datastore.Allocate": 1,
+      "VM.Config.Options": 1,
+      "Permissions.Modify": 1,
+      "VM.PowerMgmt": 1
+    },
+    "/nodes": {
+      "Datastore.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "VM.PowerMgmt": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "Sys.Modify": 1,
+      "VM.Snapshot.Rollback": 1,
+      "VM.Config.Network": 1,
+      "Sys.Console": 1,
+      "SDN.Audit": 1,
+      "Pool.Audit": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "VM.Audit": 1,
+      "VM.Config.CPU": 1,
+      "VM.Config.HWType": 1,
+      "VM.Backup": 1,
+      "VM.Config.Memory": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Disk": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Realm.AllocateUser": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "VM.Console": 1,
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1
+    },
+    "/": {
+      "Realm.AllocateUser": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Sys.Audit": 1,
+      "VM.Monitor": 1,
+      "VM.Console": 1,
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1,
+      "Datastore.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "VM.Audit": 1,
+      "VM.Config.CPU": 1,
+      "VM.Backup": 1,
+      "VM.Config.HWType": 1,
+      "VM.Config.Disk": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Memory": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "Sys.Modify": 1,
+      "VM.Config.Network": 1,
+      "VM.Snapshot.Rollback": 1,
+      "SDN.Audit": 1,
+      "Sys.Console": 1,
+      "Pool.Audit": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Syslog": 1,
+      "Datastore.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "VM.PowerMgmt": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1
+    },
+    "/access/groups": {
+      "VM.Migrate": 1,
+      "VM.Snapshot": 1,
+      "VM.Console": 1,
+      "VM.Monitor": 1,
+      "Sys.Audit": 1,
+      "Realm.AllocateUser": 1,
+      "Datastore.AllocateTemplate": 1,
+      "Group.Allocate": 1,
+      "SDN.Use": 1,
+      "Sys.Incoming": 1,
+      "VM.Config.Disk": 1,
+      "VM.Config.Memory": 1,
+      "VM.Backup": 1,
+      "VM.Config.HWType": 1,
+      "VM.Config.CPU": 1,
+      "VM.Audit": 1,
+      "VM.Config.CDROM": 1,
+      "Datastore.Audit": 1,
+      "Sys.Syslog": 1,
+      "VM.Config.Cloudinit": 1,
+      "Sys.Console": 1,
+      "SDN.Audit": 1,
+      "Pool.Audit": 1,
+      "VM.Snapshot.Rollback": 1,
+      "VM.Config.Network": 1,
+      "Sys.Modify": 1,
+      "VM.Allocate": 1,
+      "Pool.Allocate": 1,
+      "SDN.Allocate": 1,
+      "Datastore.AllocateSpace": 1,
+      "Realm.Allocate": 1,
+      "VM.Clone": 1,
+      "VM.PowerMgmt": 1,
+      "Permissions.Modify": 1,
+      "VM.Config.Options": 1,
+      "Datastore.Allocate": 1,
+      "User.Modify": 1,
+      "Sys.PowerMgmt": 1
+    }
+  }
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/access/permissions$").
+		MatchParams(map[string]string{
+			"path": "path",
+		}).
+		Reply(200).
+		JSON(`{
+  "data": {
+    "path": {
+      "permission": 1
+    }
+  }
+}`)
+
+	// user with no access
+	gock.New(config.C.URI).
+		Get("^/access/permissions").
+		MatchParams(map[string]string{
+			"userid": "userid",
+		}).
+		Reply(200).
+		JSON(`{
+  "data": {
+    "path": {
+      "permission": 2
+    }
+  }
+}`)
+
+	// user with no access
+	gock.New(config.C.URI).
+		Get("^/access/permissions").
+		MatchParams(map[string]string{
+			"path":   "path",
+			"userid": "userid",
+		}).
+		Reply(200).
+		JSON(`{
+  "data": {
+    "path": {
+      "permission": 3
+    }
+  }
+}`)
 }
 
 func ticket() {
 	gock.New(config.C.URI).
-		Get("/access/ticket").
+		Get("^/access/ticket$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Post("^/access/ticket$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "username": "root@pam",
+        "CSRFPreventionToken": "64E10CBA:YDNz71IKnE0sWsm1SbV1PGwz3hAyprvygQ7SBkxHVtE",
+        "cap": {
+            "sdn": {
+                "SDN.Audit": 1,
+                "SDN.Allocate": 1,
+                "SDN.Use": 1,
+                "Permissions.Modify": 1
+            },
+            "access": {
+                "Group.Allocate": 1,
+                "User.Modify": 1,
+                "Permissions.Modify": 1
+            },
+            "dc": {
+                "SDN.Allocate": 1,
+                "SDN.Audit": 1,
+                "SDN.Use": 1,
+                "Sys.Audit": 1
+            },
+            "nodes": {
+                "Sys.Modify": 1,
+                "Sys.Syslog": 1,
+                "Sys.Audit": 1,
+                "Sys.Console": 1,
+                "Permissions.Modify": 1,
+                "Sys.Incoming": 1,
+                "Sys.PowerMgmt": 1
+            },
+            "storage": {
+                "Datastore.Allocate": 1,
+                "Datastore.Audit": 1,
+                "Datastore.AllocateTemplate": 1,
+                "Datastore.AllocateSpace": 1,
+                "Permissions.Modify": 1
+            },
+            "vms": {
+                "VM.Config.CPU": 1,
+                "VM.Config.HWType": 1,
+                "VM.Clone": 1,
+                "VM.Allocate": 1,
+                "Permissions.Modify": 1,
+                "VM.Config.Options": 1,
+                "VM.Config.Memory": 1,
+                "VM.Audit": 1,
+                "VM.Monitor": 1,
+                "VM.Snapshot.Rollback": 1,
+                "VM.Config.Network": 1,
+                "VM.Config.Cloudinit": 1,
+                "VM.Backup": 1,
+                "VM.Migrate": 1,
+                "VM.Config.Disk": 1,
+                "VM.PowerMgmt": 1,
+                "VM.Config.CDROM": 1,
+                "VM.Console": 1,
+                "VM.Snapshot": 1
+            }
+        },
+        "clustername": "pve-cluster",
+        "ticket": "PVE:root@pam:64E10CBA::yTMqV7BmOXUCzb0ODceFH7F+Uy3gQTlp3sepUzIicpL2KeJ4finWjuZ9SBZg/iTz7tACDGvnX0biv6JMZvYBuqzWu0S3eF6xrLX4A3YLahhWaMJJ4Dw8hIquSO5AMQr3Ea3xdN5CcLIuW8hPOLHrPFzDC2MDk6e6VtJ9lWF5htz8nq6ge+kcwZBgB80ZABc+lIwtcB1UcJ8NY5EYGS9czcEXSse2xmG1j2F1+gMfoF+4O7wiCV0iHGabG+8n3oEBZUE89jhzjQoVCGCzVpmxYpag+5I4+W+POZm8DzQCdvPmynH9fAT6bSD8Vu+le8aHGigoKz81xNMsFxIjd1Zr2g=="
+    }
+}`)
 }
 
 func user() {

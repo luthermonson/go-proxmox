@@ -19,17 +19,28 @@ var (
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Otp      string `json:"otp,omitempty"`
+	Otp      string `json:"otp,omitempty"` // One-time password for Two-factor authentication.
 	Path     string `json:"path,omitempty"`
 	Privs    string `json:"privs,omitempty"`
 	Realm    string `json:"realm,omitempty"`
 }
 
+type Permission map[string]int
+type Permissions map[string]Permission
+
+type PermissionsOptions struct {
+	Path   string // path to limit the return e.g. / or /nodes
+	UserID string // username e.g. root@pam or token
+}
+
 type Session struct {
 	Username            string `json:"username"`
-	CsrfPreventionToken string `json:"CSRFPreventionToken,omitempty"`
-	ClusterName         string `json:"clustername,omitempty"`
-	Ticket              string `json:"ticket,omitempty"`
+	CSRFPreventionToken string `json:"CSRFPreventionToken,omitempty"`
+
+	// Cap is being returned but not documented in the API docs, likely will get rewritten later with better types
+	Cap         map[string]map[string]int `json:"cap,omitempty"`
+	ClusterName string                    `json:"clustername,omitempty"`
+	Ticket      string                    `json:"ticket,omitempty"`
 }
 
 type Version struct {
