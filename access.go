@@ -41,3 +41,8 @@ func (c *Client) Permissions(o *PermissionsOptions) (permissions Permissions, er
 
 	return permissions, c.Get(u.String(), &permissions)
 }
+
+func (c *Client) Password(userid, password string) error {
+	var res string
+	return c.Post("/access/password", map[string]string{"userid": userid, "password": password}, &res)
+}

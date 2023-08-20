@@ -57,3 +57,11 @@ func TestPermissions(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 3, perms["path"]["permission"])
 }
+
+func TestPassword(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	assert.Nil(t, client.Password("userid", "password"))
+}
