@@ -27,7 +27,7 @@ around this library to make that easier.
 ## Usage
 Create a client and use the public methods to access Proxmox resources.
 
-### Basic usage with login credentials
+### Basic usage with login with a username and password credential
 ```go
 package main
 
@@ -37,15 +37,19 @@ import (
 )
 
 func main() {
-    client := proxmox.NewClient("https://localhost:8006/api2/json")
-    if err := client.Login("root@pam", "password"); err != nil {
-        panic(err)
+    credentials := proxmox.Credentials{
+		Username: "root@pam", 
+		Password: "12345",
     }
+    client := proxmox.NewClient("https://localhost:8006/api2/json",
+		proxmox.WithCredentials(&credentials),
+    )
+	
     version, err := client.Version()
     if err != nil {
         panic(err)
     }
-    fmt.Println(version.Release) // 6.3
+    fmt.Println(version.Release) // 7.4
 }
 ```
 
@@ -70,7 +74,7 @@ func main() {
     secret := "somegeneratedapitokenguidefromtheproxmoxui"
     
     client := proxmox.NewClient("https://localhost:8006/api2/json",
-        proxmox.WithClient(&insecureHTTPClient),
+        proxmox.WithHTTPClient(&insecureHTTPClient),
         proxmox.WithAPIToken(tokenID, secret),
     )
     

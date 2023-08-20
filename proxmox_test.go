@@ -23,6 +23,10 @@ func mockClient(options ...Option) *Client {
 	return NewClient(mockConfig.URI, options...)
 }
 
+func TestMakeTag(t *testing.T) {
+	assert.Equal(t, "go-proxmox+tagname", MakeTag("tagname"))
+}
+
 // options tested in options_test.go
 func TestNewClient(t *testing.T) {
 	v := NewClient(TestURI)

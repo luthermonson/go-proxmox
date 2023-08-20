@@ -238,7 +238,7 @@ func (c *Client) authHeaders(header *http.Header) {
 		header.Add("Authorization", "PVEAPIToken="+c.token)
 	} else if c.session != nil {
 		header.Add("Cookie", "PVEAuthCookie="+c.session.Ticket)
-		header.Add("CSRFPreventionToken", c.session.CsrfPreventionToken)
+		header.Add("CSRFPreventionToken", c.session.CSRFPreventionToken)
 	}
 }
 
