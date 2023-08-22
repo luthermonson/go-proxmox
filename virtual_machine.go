@@ -316,35 +316,45 @@ func (v *VirtualMachine) Reboot() (task *Task, err error) {
 }
 
 func (v *VirtualMachine) Delete() (task *Task, err error) {
-	if v.HasTag(MakeTag(TagCloudInit)) {
-		node, err := v.client.Node(v.Node)
-		if err != nil {
-			return nil, err
-		}
-		isoStorage, err := node.StorageISO()
-		if err != nil {
-			return nil, err
-		}
-
-		var iso *ISO
-		iso, err = isoStorage.ISO(fmt.Sprintf(UserDataISOFormat, v.VMID))
-		if err != nil {
-			return nil, err
-		}
-		task, err = iso.Delete()
-		if err != nil {
-			return nil, err
-		}
-		if err := task.WaitFor(5); err != nil {
-			return nil, err
-		}
+	if ok, err := v.deleteCloudInitISO(); err != nil || !ok {
+		return nil, err
 	}
+
 	var upid UPID
 	if err := v.client.Delete(fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &upid); err != nil {
 		return nil, err
 	}
 
 	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) deleteCloudInitISO() (ok bool, err error) {
+	if v.HasTag(MakeTag(TagCloudInit)) {
+		node, err := v.client.Node(v.Node)
+		if err != nil {
+			return false, err
+		}
+		isoStorage, err := node.StorageISO()
+		if err != nil {
+			return false, err
+		}
+
+		var iso *ISO
+		iso, err = isoStorage.ISO(fmt.Sprintf(UserDataISOFormat, v.VMID))
+		if err != nil {
+			// skipping, iso not found return no error.
+			return true, nil
+		}
+		task, err := iso.Delete()
+		if err != nil {
+			return false, err
+		}
+		if err := task.WaitFor(5); err != nil {
+			return false, err
+		}
+	}
+
+	return true, nil
 }
 
 func (v *VirtualMachine) Migrate(target, targetstorage string) (task *Task, err error) {
