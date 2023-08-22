@@ -1,7 +1,7 @@
 package proxmox
 
 import (
-	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -26,13 +26,15 @@ func (cl *Cluster) NextID() (int, error) {
 // to filter searched values.
 // It returns a list of ClusterResources.
 func (cl *Cluster) Resources(filters ...string) (rs ClusterResources, err error) {
-	url := "/cluster/resources"
+	u := url.URL{Path: "/cluster/resources"}
 
 	// filters are variadic because they're optional, munging everything passed into one big string to make
 	// a good request and the api will error out if there's an issue
 	if f := strings.Replace(strings.Join(filters, ""), " ", "", -1); f != "" {
-		url = fmt.Sprintf("%s?type=%s", url, f)
+		params := url.Values{}
+		params.Add("type", f)
+		u.RawQuery = params.Encode()
 	}
 
-	return rs, cl.client.Get(url, &rs)
+	return rs, cl.client.Get(u.String(), &rs)
 }
