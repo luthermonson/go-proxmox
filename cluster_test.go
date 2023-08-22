@@ -33,3 +33,20 @@ func TestNextID(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 100, nextid)
 }
+
+func TestCluster_Resources(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	cluster, err := client.Cluster()
+	assert.Nil(t, err)
+
+	// json unmarshall tests
+	rs, err := cluster.Resources()
+	assert.Equal(t, 20, len(rs))
+
+	// type param test
+	rs, err = cluster.Resources("node")
+	assert.Equal(t, 1, len(rs))
+}
