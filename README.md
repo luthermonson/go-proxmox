@@ -1,19 +1,23 @@
-# Proxmox API Client Go Package
-Join the community to discuss the client development, usage, the proxmox API or tooling in the [#go-proxmox](https://gophers.slack.com/archives/C05920LDDD3) channel on the Gophers Slack and see the [self generated docs](https://pkg.go.dev/github.com/luthermonson/go-proxmox) for more usage details.
 
-A Go package containing a client for [Proxmox VE](https://www.proxmox.com/). The client implements [/api2/json](https://pve.proxmox.com/pve-docs/api-viewer/index.html) and inspiration was drawn from the existing
-[Telmate](https://github.com/Telmate/proxmox-api-go/tree/master/proxmox) package but looking to improve
-in the following ways...
+# Proxmox API Client Go Package
+[![Continuous Integration](https://github.com/luthermonson/go-proxmox/actions/workflows/ci.yaml/badge.svg)](https://github.com/luthermonson/go-proxmox/actions/workflows/ci.yaml) [![codecov](https://codecov.io/gh/luthermonson/go-proxmox/graph/badge.svg?token=GQSSZ0ZHZ4)](https://codecov.io/gh/luthermonson/go-proxmox) [![Go Report Card](https://goreportcard.com/badge/github.com/luthermonson/go-proxmox)](https://goreportcard.com/report/github.com/luthermonson/go-proxmox) [![Go Reference](https://pkg.go.dev/badge/github.com/luthermonson/go-proxmox.svg)](https://pkg.go.dev/github.com/luthermonson/go-proxmox)
+
+Join the community to discuss ongoing client development usage, the proxmox API or tooling in the [#go-proxmox](https://gophers.slack.com/archives/C05920LDDD3) channel on the Gophers Slack and see the [self generated docs](https://pkg.go.dev/github.com/luthermonson/go-proxmox) for more usage details.
+
+[![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://gophers.slack.com/archives/C05920LDDD3)
+
+
+A go client for [Proxmox VE](https://www.proxmox.com/). The client implements [/api2/json](https://pve.proxmox.com/pve-docs/api-viewer/index.html) and inspiration was drawn from the existing [Telmate](https://github.com/Telmate/proxmox-api-go/tree/master/proxmox) package but looking to improve in the following ways...
 * Treated as a proper standalone go package
 * Types and JSON marshal/unmarshalling for all end points
-* Full Testing, unit testing and integration tests against an API endpoint
+* Full Testing, unit testing with mocks and integration tests against an API endpoint
 * Configuration options when creating a client for flexible usage
 * Client logging for debugging within your code
 * Added functionality for better go tooling built on this library, some things we'd like
   * Boot VM from qcow URL, inspiration: [Proxmox Linux Templates](https://www.phillipsj.net/posts/proxmox-linux-templates/)
   * Dynamic host targeting for VM, Proxmox lacks a scheduler when given VM params it will try and locate a host with resources to put it
   * cloud-init support via no-cloud ISOs uploaded to node data stores and auto-mounted before boot, inspiration [quiso](https://github.com/luthermonson/quiso)
-  * Unattend XML Support via ISOs similar to cloud-init ideas
+  * Unattended XML Support via ISOs similar to cloud-init ideas
   * node/vm/container shell command support via KVM proxy already built into proxmox
 
 Core developers are home lab enthusiasts working in the virtualization and kubernetes space. The common use case we have for
