@@ -157,6 +157,14 @@ func ClientFromToken() *proxmox.Client {
 	)
 }
 
+func ClientFromTicket() *proxmox.Client {
+	return proxmox.NewClient(os.Getenv("PROXMOX_URL"),
+		proxmox.WithHTTPClient(&insecureHTTPClient),
+		proxmox.WithAPIToken(td.tokenID, td.secret),
+		proxmox.WithLogger(&logger),
+	)
+}
+
 func TestVersion(t *testing.T) {
 	client := ClientFromLogins()
 	version, err := client.Version()

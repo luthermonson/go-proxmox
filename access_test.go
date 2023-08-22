@@ -3,9 +3,8 @@ package proxmox
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTicket(t *testing.T) {

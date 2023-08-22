@@ -58,7 +58,7 @@ func Lint() error {
 
 // validate env vars to run the testing suite
 func Env() error {
-	for k, _ := range envConfig {
+	for k := range envConfig {
 		if strings.Contains(strings.ToLower(k), "password") || strings.Contains(strings.ToLower(k), "secret") {
 			fmt.Printf("%s: %s\n", k, strings.Repeat("*", len(os.Getenv(k))))
 		} else {

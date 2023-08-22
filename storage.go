@@ -7,8 +7,8 @@ import (
 )
 
 var validContent = map[string]struct{}{
-	"iso":    struct{}{},
-	"vztmpl": struct{}{},
+	"iso":    {},
+	"vztmpl": {},
 }
 
 func (s *Storage) Upload(content, file string) (*Task, error) {
