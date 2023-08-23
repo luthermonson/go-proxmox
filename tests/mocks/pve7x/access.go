@@ -7,6 +7,57 @@ import (
 
 func access() {
 	gock.New(config.C.URI).
+		Get("^/access/domains$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "type": "pve",
+            "realm": "pve",
+            "comment": "Proxmox VE authentication server"
+        },
+        {
+            "type": "pam",
+            "realm": "pam",
+            "comment": "Linux PAM standard authentication"
+        },
+        {
+            "realm": "test",
+            "type": "ldap",
+            "tfa": "oath",
+            "comment": "comment comment comment"
+        }
+    ]
+}`)
+	gock.New(config.C.URI).
+		Get("^/access/domains/test$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "user_attr": "userattribute",
+        "sync-defaults-options": "remove-vanished=acl;entry;properties,scope=users",
+        "port": 1234,
+        "server1": "server1",
+        "user_classes": "userclasses",
+        "tfa": "digits=8,step=1234,type=oath",
+        "comment": "comment comment comment",
+        "group_name_attr": "groupnameattr",
+        "digest": "b84e9112ebbb173fc8f5af76a057b38178f1047c",
+        "secure": 1,
+        "default": 0,
+        "sync_attributes": "email=email@attribute.com",
+        "base_dn": "CN=Users",
+        "type": "ldap",
+        "bind_dn": "CN=Users",
+        "group_filter": "groupfilter",
+        "group_classes": "groupclasses",
+        "verify": 1,
+        "filter": "userfilter",
+        "server2": "server2"
+    }
+}`)
+
+	gock.New(config.C.URI).
 		Get("^/access$").
 		Reply(200).
 		JSON(`
@@ -395,7 +446,7 @@ func access() {
 		JSON(`{
   "data": {
     "path": {
-      "permission": 2
+      "permission": 1
     }
   }
 }`)
@@ -411,7 +462,7 @@ func access() {
 		JSON(`{
   "data": {
     "path": {
-      "permission": 3
+      "permission": 1
     }
   }
 }`)

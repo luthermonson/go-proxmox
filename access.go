@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 )
@@ -45,4 +46,46 @@ func (c *Client) Permissions(o *PermissionsOptions) (permissions Permissions, er
 func (c *Client) Password(userid, password string) error {
 	var res string
 	return c.Post("/access/password", map[string]string{"userid": userid, "password": password}, &res)
+}
+
+func (c *Client) Domains() (domains Domains, err error) {
+	err = c.Get("/access/domains", &domains)
+	if nil == err {
+		for _, d := range domains {
+			d.client = c
+		}
+	}
+	return
+}
+
+func (c *Client) Domain(realm string) (domain *Domain, err error) {
+	err = c.Get(fmt.Sprintf("/access/domains/%s", realm), &domain)
+	if nil == err {
+		domain.Realm = realm
+		domain.client = c
+	}
+	return
+}
+
+func (d *Domain) Update() error {
+	if d.Realm == "" {
+		return errors.New("realm can not be empty")
+	}
+	return d.client.Put(fmt.Sprintf("/access/domains/%s", d.Realm), d, nil)
+}
+
+func (d *Domain) Delete() error {
+	if d.Realm == "" {
+		return errors.New("realm can not be empty")
+	}
+	var ret string
+	return d.client.Delete(fmt.Sprintf("/access/domains/%s", d.Realm), &ret)
+}
+
+func (d *Domain) Sync(options DomainSyncOptions) error {
+	if d.Realm == "" {
+		return errors.New("realm can not be empty")
+	}
+	var ret string
+	return d.client.Post(fmt.Sprintf("/access/domains/%s", d.Realm), options, &ret)
 }
