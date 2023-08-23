@@ -25,7 +25,7 @@ type Credentials struct {
 	Realm    string `json:"realm,omitempty"`
 }
 
-type Permission map[string]int
+type Permission map[string]IntOrBool
 type Permissions map[string]Permission
 
 type PermissionsOptions struct {
@@ -266,6 +266,8 @@ type Time struct {
 	Time      uint64
 	Localtime uint64
 }
+
+// VirtualMachineOptions
 type VirtualMachineOptions []*VirtualMachineOption
 type VirtualMachineOption struct {
 	Name  string
@@ -759,6 +761,24 @@ func (d *StringOrFloat64) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type IntOrBool bool
+
+func (b *IntOrBool) UnmarshalJSON(i []byte) error {
+	parsed, err := strconv.ParseBool(string(i))
+	if err != nil {
+		return err
+	}
+	*b = IntOrBool(parsed)
+	return nil
+}
+
+func (b *IntOrBool) MarshalJSON() ([]byte, error) {
+	if *b == true {
+		return []byte("1"), nil
+	}
+	return []byte("0"), nil
+}
+
 type NodeNetworks []*NodeNetwork
 type NodeNetwork struct {
 	client  *Client `json:"-"`
@@ -893,4 +913,57 @@ type Snapshot struct {
 	Snaptime    int64
 	Parent      string
 	Snapstate   string
+}
+
+type Domains []*Domain
+type Domain struct {
+	client *Client
+	Realm  string `json:",omitempty"`
+	Type   string `json:",omitempty"`
+
+	// options https://pve.proxmox.com/pve-docs/api-viewer/#/access/domains
+	ACRValues      string    `json:"acr-values,omitempty"`
+	AutoCreate     IntOrBool `json:"autocreate,omitempty"`
+	BaseDN         string    `json:"base_dn,omitempty"`
+	BindDN         string    `json:"bind_dn,omitempty"`
+	CAPath         string    `json:"capath,omitempty"`
+	CaseSensitive  IntOrBool `json:"case-sensitive,omitempty"`
+	Cert           string    `json:"cert,omitempty"`
+	CertKey        string    `json:"certkey,omitempty"`
+	ClientID       string    `json:"client-id,omitempty"`
+	ClientKey      string    `json:"client-key,omitempty"`
+	Comment        string    `json:"comment,omitempty"`
+	Default        IntOrBool `json:"default,omitempty"`
+	DeleteList     string    `json:"delete,omitempty"` // a list of settings you want to delete?
+	Digest         string    `json:"digest,omitempty"`
+	Domain         string    `json:"domain,omitempty"`
+	Filter         string    `json:"filter,omitempty"`
+	GroupClasses   string    `json:"group_classes,omitempty"`
+	GroupDN        string    `json:"group_dn,omitempty"`
+	GroupFilter    string    `json:"group_filter,omitempty"`
+	GroupName      string    `json:"group_name,omitempty"`
+	IssuerURL      string    `json:"issuer-url,omitempty"`
+	Mode           string    `json:"mode,omitempty"` //ldap, ldaps,ldap+starttls
+	Password       string    `json:"password,omitempty"`
+	Port           int       `json:"port,omitempty"`
+	Prompt         string    `json:"prompt,omitempty"`
+	Scopes         string    `json:"scopes,omitempty"`
+	Secure         IntOrBool `json:"secure,omitempty"`
+	Server1        string    `json:"server1,omitempty"`
+	Server2        string    `json:"server2,omitempty"`
+	SSLVersion     string    `json:"sslversion,omitempty"`
+	SyncDefaults   string    `json:"sync-defaults,omitempty"`
+	SyncAttributes string    `json:"sync_attributes,omitempty"`
+	TFA            string    `json:"tfa,omitempty"`
+	UserAttr       string    `json:"user_attr,omitempty"`
+	UserClasses    string    `json:"user_classes,omitempty"`
+	Verify         IntOrBool `json:"verify,omitempty"`
+}
+
+// DomainSyncOptions see details https://pve.proxmox.com/pve-docs/api-viewer/#/access/domains/{realm}/sync
+type DomainSyncOptions struct {
+	DryRun         bool   `json:"dry-run,omitempty"`
+	EnableNew      bool   `json:"enable-new,omitempty"`
+	RemoveVanished string `json:"remove-vanished,omitempty"`
+	Scope          string `json:"scope,omitempty"` // users, groups, both
 }

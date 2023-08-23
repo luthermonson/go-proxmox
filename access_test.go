@@ -32,21 +32,21 @@ func TestPermissions(t *testing.T) {
 	perms, err := client.Permissions(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(perms))
-	assert.Equal(t, 1, perms["/"]["Datastore.Allocate"])
+	assert.Equal(t, IntOrBool(true), perms["/"]["Datastore.Allocate"])
 
 	// test path option
 	perms, err = client.Permissions(&PermissionsOptions{
 		Path: "path",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, 1, perms["path"]["permission"])
+	assert.Equal(t, IntOrBool(true), perms["path"]["permission"])
 
 	// test userid
 	perms, err = client.Permissions(&PermissionsOptions{
 		UserID: "userid",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, 2, perms["path"]["permission"])
+	assert.Equal(t, IntOrBool(true), perms["path"]["permission"])
 
 	// test both path and userid
 	perms, err = client.Permissions(&PermissionsOptions{
@@ -54,7 +54,7 @@ func TestPermissions(t *testing.T) {
 		Path:   "path",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, 3, perms["path"]["permission"])
+	assert.Equal(t, IntOrBool(true), perms["path"]["permission"])
 }
 
 func TestPassword(t *testing.T) {
@@ -63,4 +63,25 @@ func TestPassword(t *testing.T) {
 	client := mockClient()
 
 	assert.Nil(t, client.Password("userid", "password"))
+}
+
+func TestDomains(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	ds, err := client.Domains()
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(ds))
+}
+
+func TestDomain(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	d, err := client.Domain("test")
+	assert.Nil(t, err)
+	assert.Equal(t, d.Realm, "test")
+	assert.False(t, bool(d.AutoCreate))
 }
