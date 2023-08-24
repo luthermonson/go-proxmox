@@ -916,6 +916,33 @@ type Snapshot struct {
 	Snapstate   string
 }
 
+type PoolAPI struct {
+	client *Client
+}
+
+type Pools []*Pool
+type Pool struct {
+	client  *Client
+	PoolID  string            `json:"poolid,omitempty"`
+	Comment string            `json:"comment,omitempty"`
+	Members []ClusterResource `json:"members,omitempty"`
+}
+
+type PoolCreateOption struct {
+	PoolID  string `json:"poolid"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type PoolUpdateOption struct {
+	Comment string `json:"comment,omitempty"`
+	// Delete objects rather than adding them
+	Delete bool `json:"delete,omitempty"`
+	// Add or delete storage objects
+	Storage string `json:"storage,omitempty"`
+	// Add or delete virtual machine objects
+	VirtualMachines string `json:"vms,omitempty"`
+}
+
 type Domains []*Domain
 type Domain struct {
 	client *Client

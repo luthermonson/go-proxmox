@@ -7,4 +7,5 @@ func Load() {
 	ticket()
 	nodes()
 	cluster()
+	pool()
 }
