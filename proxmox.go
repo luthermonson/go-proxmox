@@ -26,25 +26,25 @@ const (
 var ErrNotAuthorized = errors.New("not authorized to access endpoint")
 
 func IsNotAuthorized(err error) bool {
-	return err == ErrNotAuthorized
+	return errors.Is(err, ErrNotAuthorized)
 }
 
 var ErrTimeout = errors.New("the operation has timed out")
 
 func IsTimeout(err error) bool {
-	return err == ErrTimeout
+	return errors.Is(err, ErrTimeout)
 }
 
 var ErrNotFound = errors.New("unable to find the item you are looking for")
 
 func IsNotFound(err error) bool {
-	return err == ErrNotFound
+	return errors.Is(err, ErrNotFound)
 }
 
 var ErrNoop = errors.New("nothing to do")
 
 func IsErrNoop(err error) bool {
-	return err == ErrNoop
+	return errors.Is(err, ErrNoop)
 }
 
 func MakeTag(v string) string {
@@ -94,7 +94,7 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	var body io.Reader
 	if data != nil {
 		if path != (c.baseURL + "/access/ticket") {
-			// dont show passwords in the logs
+			// don't show passwords in the logs
 			if len(data) < 2048 {
 				c.log.Debugf("DATA: %s", string(data))
 			} else {
@@ -257,7 +257,7 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 
 	if res.Request != nil && res.Request.URL != nil {
 		if res.Request.URL.String() != (c.baseURL + "/access/ticket") {
-			// dont show tokens out of the logs
+			// don't show tokens out of the logs
 			c.log.Debugf("BODY: %s", string(body))
 		}
 	}
@@ -422,7 +422,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 					errs <- err
 				}
 			case msg := <-send:
-				c.log.Debugf("sending: %s", string(msg))
+				c.log.Debugf("sending: %s", msg)
 				m := []byte(msg)
 				send := append([]byte(fmt.Sprintf("0:%d:", len(m))), m...)
 				if err := conn.WriteMessage(websocket.BinaryMessage, send); err != nil {

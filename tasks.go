@@ -142,7 +142,10 @@ func (t *Task) WaitFor(seconds int) error {
 
 func (t *Task) Wait(interval, max time.Duration) error {
 	// ping it quick to fill in all the details we need in case they're not there
-	t.Ping()
+	err := t.Ping()
+	if err != nil {
+		return err
+	}
 	t.client.log.Debugf("waiting for %s, checking every %fs for %fs", t.UPID, interval.Seconds(), max.Seconds())
 
 	timeout := time.After(max)
@@ -152,7 +155,7 @@ func (t *Task) Wait(interval, max time.Duration) error {
 			t.client.log.Debugf("timed out waiting for task %s for %fs", t.UPID, max.Seconds())
 			return ErrTimeout
 		default:
-			if err := t.Ping(); err != nil {
+			if err = t.Ping(); err != nil {
 				return err
 			}
 

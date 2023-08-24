@@ -111,7 +111,7 @@ func (v *VirtualMachine) SplitTags() {
 }
 
 // CloudInit takes four yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
-// mount it as a CDROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
+// mount it as a CD-ROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
 // which can be found here: https://pve.proxmox.com/wiki/Cloud-Init_Support#:~:text=and%20meta.-,Cloud%2DInit%20specific%20Options,-cicustom%3A%20%5Bmeta
 // If you want to use the proxmox implementation you'll need to use the cloudinit APIs https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/cloudinit
 func (v *VirtualMachine) CloudInit(device, userdata, metadata, vendordata, networkconfig string) error {
@@ -219,7 +219,7 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 
 // VNCWebSocket copy/paste when calling to get the channel names right
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
-// for this to work you need to first setup a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
+// for this to work you need to first set up a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
 func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
 		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))

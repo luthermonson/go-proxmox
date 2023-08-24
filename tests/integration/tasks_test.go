@@ -58,7 +58,7 @@ func TestTask_JsonUnmarshalWithEndTime(t *testing.T) {
 
 // TestTask will start a download of a large iso, tail the logs and cancel it
 func TestTask(t *testing.T) {
-	// download ubuntu iso for long running task to test against
+	// download ubuntu iso for long-running task to test against
 	isoName := nameGenerator(12) + ".iso"
 	task, err := td.storage.DownloadURL("iso", isoName, ubuntuURL)
 	assert.Nil(t, err)

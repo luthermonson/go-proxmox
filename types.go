@@ -267,7 +267,8 @@ type Time struct {
 	Localtime uint64
 }
 
-// VirtualMachineOptions
+// VirtualMachineOptions A key/value pair used to modify a virtual machine config
+// Refer to https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config for a list of valid values
 type VirtualMachineOptions []*VirtualMachineOption
 type VirtualMachineOption struct {
 	Name  string
@@ -781,9 +782,9 @@ func (b *IntOrBool) MarshalJSON() ([]byte, error) {
 
 type NodeNetworks []*NodeNetwork
 type NodeNetwork struct {
-	client  *Client `json:"-"`
-	Node    string  `json:"-"`
-	NodeAPI *Node   `json:"-"`
+	client  *Client
+	Node    string `json:"-"`
+	NodeAPI *Node  `json:"-"`
 
 	Iface    string `json:"iface,omitempty"`
 	BondMode string `json:"bond_mode,omitempty"`

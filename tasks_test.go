@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewTask(t *testing.T) {
-	upid := NewTask(UPID(""), &Client{})
+	upid := NewTask("", &Client{})
 	assert.Nil(t, upid)
 
 	task := NewTask(UPID("UPID:nodename:00388B23:02D69651:63C4F6AF:tasktype:100:root@pam:"), &Client{})
