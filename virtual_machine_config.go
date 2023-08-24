@@ -7,7 +7,7 @@ import (
 )
 
 func (vmc *VirtualMachineConfig) mergeIndexedDevices(prefix string) map[string]string {
-	deviceMap := make(map[string]string, 0)
+	deviceMap := make(map[string]string)
 	t := reflect.TypeOf(*vmc)
 	v := reflect.ValueOf(*vmc)
 	count := v.NumField()

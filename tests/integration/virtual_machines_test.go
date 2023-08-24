@@ -117,7 +117,7 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	send <- "hostname"
 	time.Sleep(2 * time.Second)
 
-	// Reboot disabled for now doesnt work great w/o the guest agent installed so will uncomment when that's done
+	// Reboot disabled for now doesn't work great w/o the guest agent installed so will uncomment when that's done
 	//task, err = vm.Reboot()
 	//assert.NoError(t, err)
 	//assert.NoError(t, task.Wait(1*time.Second, 60*time.Second))
