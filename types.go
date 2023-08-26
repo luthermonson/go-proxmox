@@ -995,3 +995,12 @@ type DomainSyncOptions struct {
 	RemoveVanished string `json:"remove-vanished,omitempty"`
 	Scope          string `json:"scope,omitempty"` // users, groups, both
 }
+
+type Groups []*Group
+type Group struct {
+	client  *Client
+	GroupID string   `json:"groupid,omitempty"`
+	Comment string   `json:"comment,omitempty"`
+	Users   string   `json:"users,omitempty"`   // only populated via Groups lister
+	Members []string `json:"members,omitempty"` // only populated via Group read
+}

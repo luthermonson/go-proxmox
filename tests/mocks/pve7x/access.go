@@ -438,7 +438,7 @@ func access() {
 
 	// user with no access
 	gock.New(config.C.URI).
-		Get("^/access/permissions").
+		Get("^/access/permissions$").
 		MatchParams(map[string]string{
 			"userid": "userid",
 		}).
@@ -453,7 +453,7 @@ func access() {
 
 	// user with no access
 	gock.New(config.C.URI).
-		Get("^/access/permissions").
+		Get("^/access/permissions$").
 		MatchParams(map[string]string{
 			"path":   "path",
 			"userid": "userid",
@@ -468,12 +468,10 @@ func access() {
 }`)
 
 	gock.New(config.C.URI).
-		Post("^/access/password").
+		Post("^/access/password$").
 		Reply(200).
 		JSON(`{"success":1,"data":null}`)
-}
 
-func ticket() {
 	gock.New(config.C.URI).
 		Get("^/access/ticket$").
 		Reply(200).
@@ -546,11 +544,8 @@ func ticket() {
         "ticket": "PVE:root@pam:64E10CBA::yTMqV7BmOXUCzb0ODceFH7F+Uy3gQTlp3sepUzIicpL2KeJ4finWjuZ9SBZg/iTz7tACDGvnX0biv6JMZvYBuqzWu0S3eF6xrLX4A3YLahhWaMJJ4Dw8hIquSO5AMQr3Ea3xdN5CcLIuW8hPOLHrPFzDC2MDk6e6VtJ9lWF5htz8nq6ge+kcwZBgB80ZABc+lIwtcB1UcJ8NY5EYGS9czcEXSse2xmG1j2F1+gMfoF+4O7wiCV0iHGabG+8n3oEBZUE89jhzjQoVCGCzVpmxYpag+5I4+W+POZm8DzQCdvPmynH9fAT6bSD8Vu+le8aHGigoKz81xNMsFxIjd1Zr2g=="
     }
 }`)
-}
-
-func user() {
 	gock.New(config.C.URI).
-		Get("/access/user").
+		Get("^/access/user$").
 		Reply(200).
 		JSON(`
 {
@@ -584,4 +579,32 @@ func user() {
         }
     ]
 }`)
+
+	gock.New(config.C.URI).
+		Get("^/access/groups$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "groupid": "cloud-init",
+            "users": "root@pam,user1@pve"
+        },
+        {
+            "groupid": "test",
+            "users": "root@pam,user2@pve"
+        }
+    ]
+}`)
+	gock.New(config.C.URI).
+		Get("^/access/groups/test$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "members": [
+            "user2@pve",
+            "root@pam"
+        ]
+    }
+}`)
+
 }

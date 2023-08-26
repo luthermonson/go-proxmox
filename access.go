@@ -44,8 +44,28 @@ func (c *Client) Permissions(o *PermissionsOptions) (permissions Permissions, er
 }
 
 func (c *Client) Password(userid, password string) error {
-	var res string
-	return c.Post("/access/password", map[string]string{"userid": userid, "password": password}, &res)
+	return c.Post("/access/password", map[string]string{
+		"userid":   userid,
+		"password": password,
+	}, nil)
+}
+
+// NewDomain create a new domain with the required two parameters pull it and use domain.Update to configure
+// t is an enum: ad, ldap, openid, pam, pve
+func (c *Client) NewDomain(realm, t string) error {
+	return c.Post("/access/domains", map[string]string{
+		"realm": realm,
+		"type":  t,
+	}, nil)
+}
+
+func (c *Client) Domain(realm string) (domain *Domain, err error) {
+	err = c.Get(fmt.Sprintf("/access/domains/%s", realm), &domain)
+	if nil == err {
+		domain.Realm = realm
+		domain.client = c
+	}
+	return
 }
 
 func (c *Client) Domains() (domains Domains, err error) {
@@ -54,15 +74,6 @@ func (c *Client) Domains() (domains Domains, err error) {
 		for _, d := range domains {
 			d.client = c
 		}
-	}
-	return
-}
-
-func (c *Client) Domain(realm string) (domain *Domain, err error) {
-	err = c.Get(fmt.Sprintf("/access/domains/%s", realm), &domain)
-	if nil == err {
-		domain.Realm = realm
-		domain.client = c
 	}
 	return
 }
@@ -78,14 +89,47 @@ func (d *Domain) Delete() error {
 	if d.Realm == "" {
 		return errors.New("realm can not be empty")
 	}
-	var ret string
-	return d.client.Delete(fmt.Sprintf("/access/domains/%s", d.Realm), &ret)
+	return d.client.Delete(fmt.Sprintf("/access/domains/%s", d.Realm), nil)
 }
 
 func (d *Domain) Sync(options DomainSyncOptions) error {
 	if d.Realm == "" {
 		return errors.New("realm can not be empty")
 	}
-	var ret string
-	return d.client.Post(fmt.Sprintf("/access/domains/%s", d.Realm), options, &ret)
+	return d.client.Post(fmt.Sprintf("/access/domains/%s", d.Realm), options, nil)
+}
+
+// NewGroup makes a new group, comment is option and can be left empty
+func (c *Client) NewGroup(groupid, comment string) error {
+	return c.Post("/access/groups", map[string]string{
+		"groupid": groupid,
+		"comment": comment,
+	}, nil)
+}
+
+func (c *Client) Group(groupid string) (group *Group, err error) {
+	err = c.Get(fmt.Sprintf("/access/groups/%s", groupid), &group)
+	if nil == err {
+		group.GroupID = groupid
+		group.client = c
+	}
+	return
+}
+
+func (c *Client) Groups() (groups Groups, err error) {
+	err = c.Get("/access/groups", &groups)
+	if nil == err {
+		for _, g := range groups {
+			g.client = c
+		}
+	}
+	return
+}
+
+func (g *Group) Update() error {
+	return g.client.Put(fmt.Sprintf("/access/groups/%s", g.GroupID), g, nil)
+}
+
+func (g *Group) Delete() error {
+	return g.client.Delete(fmt.Sprintf("/access/groups/%s", g.GroupID), nil)
 }
