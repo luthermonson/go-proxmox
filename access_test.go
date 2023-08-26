@@ -110,3 +110,23 @@ func TestGroups(t *testing.T) {
 		assert.NotEmpty(t, g.Users)
 	}
 }
+
+func TestUser(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	u, err := client.User("root@pam")
+	assert.Nil(t, err)
+	assert.Equal(t, u.UserID, "root@pam")
+}
+
+func TestUsers(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	users, err := client.Users()
+	assert.Nil(t, err)
+	assert.Len(t, users, 4)
+}
