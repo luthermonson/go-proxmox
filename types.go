@@ -916,10 +916,6 @@ type Snapshot struct {
 	Snapstate   string
 }
 
-type PoolAPI struct {
-	client *Client
-}
-
 type Pools []*Pool
 type Pool struct {
 	client  *Client
@@ -928,18 +924,13 @@ type Pool struct {
 	Members []ClusterResource `json:"members,omitempty"`
 }
 
-type PoolCreateOption struct {
-	PoolID  string `json:"poolid"`
-	Comment string `json:"comment,omitempty"`
-}
-
 type PoolUpdateOption struct {
 	Comment string `json:"comment,omitempty"`
 	// Delete objects rather than adding them
 	Delete bool `json:"delete,omitempty"`
-	// Add or delete storage objects
+	// Comma separated lists of Storage names to add/delete to the pool
 	Storage string `json:"storage,omitempty"`
-	// Add or delete virtual machine objects
+	// Comma separated lists of Virtual Machine IDs to add/delete to the pool
 	VirtualMachines string `json:"vms,omitempty"`
 }
 

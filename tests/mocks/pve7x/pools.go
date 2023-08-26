@@ -62,7 +62,19 @@ func pool() {
         "vmid": 106,
         "maxdisk": 10737418240,
         "maxmem": 2147483648
-      }
+      },
+	  {
+		"node": "node1",
+		"maxdisk": 948340654080,
+		"type": "storage",
+		"id": "storage/node1/local",
+		"status": "available",
+		"storage": "local",
+		"content": "backup,vztmpl,iso",
+		"plugintype": "dir",
+		"disk": 10486939648,
+		"shared": 0
+	  }
     ]
   }
 }`)

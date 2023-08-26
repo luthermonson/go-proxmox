@@ -1,34 +1,45 @@
 package proxmox
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+	"strings"
+)
 
-func (c *Client) Pools() *PoolAPI {
-	poolapi := &PoolAPI{
-		client: c,
-	}
-	return poolapi
+func (c *Client) NewPool(poolid, comment string) error {
+	return c.Post("/pools", map[string]string{
+		"poolid":  poolid,
+		"comment": comment,
+	}, nil)
 }
 
-func (p *PoolAPI) List() (pools Pools, err error) {
-	err = p.client.Get("/pools", &pools)
+func (c *Client) Pools() (pools Pools, err error) {
+	err = c.Get("/pools", &pools)
 	for _, pool := range pools {
-		pool.client = p.client
+		pool.client = c
 	}
 	return
 }
 
-func (p *PoolAPI) Get(name string) (pool *Pool, err error) {
-	if err = p.client.Get(fmt.Sprintf("/pools/%s", name), &pool); err != nil {
+// Pool optional filter of cluster resources by type, enum can be "qemu", "lxc", "storage".
+func (c *Client) Pool(poolid string, filters ...string) (pool *Pool, err error) {
+	u := url.URL{Path: fmt.Sprintf("/pools/%s", poolid)}
+
+	// filters are variadic because they're optional, munging everything passed into one big string to make
+	// a good request and the api will error out if there's an issue
+	if f := strings.Replace(strings.Join(filters, ""), " ", "", -1); f != "" {
+		params := url.Values{}
+		params.Add("type", f)
+		u.RawQuery = params.Encode()
+	}
+
+	if err = c.Get(u.String(), &pool); err != nil {
 		return nil, err
 	}
-	pool.PoolID = name
-	pool.client = p.client
+	pool.PoolID = poolid
+	pool.client = c
 
 	return
-}
-
-func (p *PoolAPI) Create(opt *PoolCreateOption) error {
-	return p.client.Post("/pools", opt, nil)
 }
 
 func (p *Pool) Update(opt *PoolUpdateOption) error {
