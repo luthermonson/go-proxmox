@@ -85,3 +85,28 @@ func TestDomain(t *testing.T) {
 	assert.Equal(t, d.Realm, "test")
 	assert.False(t, bool(d.AutoCreate))
 }
+
+func TestGroup(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	g, err := client.Group("test")
+	assert.Nil(t, err)
+	assert.Equal(t, g.GroupID, "test")
+	assert.Len(t, g.Members, 2)
+}
+
+func TestGroups(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	gs, err := client.Groups()
+	assert.Nil(t, err)
+	assert.Len(t, gs, 2)
+	for _, g := range gs {
+		assert.Len(t, g.Members, 0) // empty from lister
+		assert.NotEmpty(t, g.Users)
+	}
+}
