@@ -606,5 +606,72 @@ func access() {
         ]
     }
 }`)
+	gock.New(config.C.URI).
+		Get("^/access/users$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "expire": 0,
+            "lastname": "pamlast",
+            "enable": 1,
+            "firstname": "pamfirst",
+            "userid": "pam@pam",
+            "realm-type": "pam"
+        },
+        {
+            "expire": 0,
+            "realm-type": "pam",
+            "email": "root@email.com",
+            "userid": "root@pam",
+            "enable": 1
+        },
+        {
+            "expire": 0,
+            "lastname": "last1",
+            "email": "first1.last1@email.com",
+            "enable": 1,
+            "firstname": "first1",
+            "realm-type": "pve",
+            "userid": "user1@pve"
+        },
+        {
+            "userid": "user2@pve",
+            "realm-type": "pve",
+            "firstname": "first2",
+            "email": "first2.last2@email.com",
+            "enable": 1,
+            "lastname": "last2",
+            "expire": 0
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/access/users/root@pam$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "groups": [
+            "cloud-init",
+            "test"
+        ],
+        "expire": 0,
+        "email": "root@email.com",
+        "enable": 1,
+		"firstname": "firstname",
+		"lastname": "lastname",
+        "tokens": {
+            "token1": {
+                "privsep": 0,
+                "expire": 1000
+            },
+            "token2": {
+                "expire": 2000,
+                "privsep": 1
+            }
+        }
+    }
+}`)
 
 }

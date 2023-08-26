@@ -133,3 +133,30 @@ func (g *Group) Update() error {
 func (g *Group) Delete() error {
 	return g.client.Delete(fmt.Sprintf("/access/groups/%s", g.GroupID), nil)
 }
+
+func (c *Client) User(userid string) (user *User, err error) {
+	err = c.Get(fmt.Sprintf("/access/users/%s", userid), &user)
+	if nil == err {
+		user.UserID = userid
+		user.client = c
+	}
+	return
+}
+
+func (c *Client) Users() (users Users, err error) {
+	err = c.Get("/access/users", &users)
+	if nil == err {
+		for _, g := range users {
+			g.client = c
+		}
+	}
+	return
+}
+
+func (u *User) Update() error {
+	return u.client.Put(fmt.Sprintf("/access/users/%s", u.UserID), u, nil)
+}
+
+func (u *User) Delete() error {
+	return u.client.Delete(fmt.Sprintf("/access/users/%s", u.UserID), nil)
+}

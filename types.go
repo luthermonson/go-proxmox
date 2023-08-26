@@ -1004,3 +1004,29 @@ type Group struct {
 	Users   string   `json:"users,omitempty"`   // only populated via Groups lister
 	Members []string `json:"members,omitempty"` // only populated via Group read
 }
+
+type Users []*User
+type User struct {
+	client         *Client
+	UserID         string           `json:"userid,omitempty"`
+	Comment        string           `json:"comment,omitempty"`
+	Email          string           `json:"email,omitempty"`
+	Enable         IntOrBool        `json:"enable,omitempty"`
+	Expire         int              `json:"expire,omitempty"`
+	Firstname      string           `json:"firstname,omitempty"`
+	Lastname       string           `json:"lastname,omitempty"`
+	Groups         []string         `json:"groups,omitempty"`
+	Keys           string           `json:"keys,omitempty"`
+	Tokens         map[string]Token `json:"tokens,omitempty"`
+	RealmType      string           `json:"realm-type,omitempty"`
+	TFALockedUntil string           `json:"tfa-locked-until,omitempty"`
+	TOTPLocked     IntOrBool        `json:"totp-locked,omitempty"`
+}
+
+type Tokens []*Token
+type Token struct {
+	TokenID string    `json:"tokenid,omitempty"`
+	Comment string    `json:"comment,omitempty"`
+	Expire  int       `json:"expire,omitempty"`
+	Privsep IntOrBool `json:"privsep,omitempty"`
+}
