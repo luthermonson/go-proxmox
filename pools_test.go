@@ -1,18 +1,20 @@
 package proxmox
 
 import (
+	"testing"
+
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
-func TestPoolList(t *testing.T) {
+func TestPools(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
 
-	_, err := client.Pools().List()
+	pools, err := client.Pools()
 	assert.Nil(t, err)
+	assert.Len(t, pools, 1)
 }
 
 func TestPoolGet(t *testing.T) {
@@ -20,13 +22,13 @@ func TestPoolGet(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	pool, err := client.Pools().Get("test-pool")
+	pool, err := client.Pool("test-pool")
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
 	if pool != nil {
 		assert.Equal(t, "test-pool", pool.PoolID)
 		assert.Equal(t, "Test pool", pool.Comment)
-		assert.Len(t, pool.Members, 2)
+		assert.Len(t, pool.Members, 3)
 	}
 }
 
@@ -35,10 +37,7 @@ func TestPoolCreate(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	err := client.Pools().Create(&PoolCreateOption{
-		PoolID:  "test-pool",
-		Comment: "Test pool",
-	})
+	err := client.NewPool("test-pool", "Test pool")
 	assert.Nil(t, err)
 }
 
@@ -47,7 +46,7 @@ func TestPoolUpdate(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	pool, err := client.Pools().Get("test-pool")
+	pool, err := client.Pool("test-pool")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
@@ -67,7 +66,7 @@ func TestPoolDelete(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	pool, err := client.Pools().Get("test-pool")
+	pool, err := client.Pool("test-pool")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
