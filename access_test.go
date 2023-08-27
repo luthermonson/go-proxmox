@@ -130,3 +130,28 @@ func TestUsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, users, 4)
 }
+
+func TestRole(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	u, err := client.Role("Administrator")
+	assert.Nil(t, err)
+	assert.Contains(t, u, "SDN.Allocate")
+	assert.Len(t, u, 38)
+
+	u, err = client.Role("NoAccess")
+	assert.Nil(t, err)
+	assert.Len(t, u, 0)
+}
+
+func TestRoles(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	roles, err := client.Roles()
+	assert.Nil(t, err)
+	assert.Len(t, roles, 16)
+}

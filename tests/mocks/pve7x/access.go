@@ -674,4 +674,145 @@ func access() {
     }
 }`)
 
+	gock.New(config.C.URI).
+		Get("^/access/roles/Administrator$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "SDN.Allocate": 1,
+        "Datastore.AllocateSpace": 1,
+        "Permissions.Modify": 1,
+        "VM.Audit": 1,
+        "VM.Snapshot": 1,
+        "Datastore.Audit": 1,
+        "VM.Config.Network": 1,
+        "Pool.Audit": 1,
+        "SDN.Use": 1,
+        "Datastore.Allocate": 1,
+        "VM.Allocate": 1,
+        "VM.Snapshot.Rollback": 1,
+        "Sys.Syslog": 1,
+        "VM.Config.Disk": 1,
+        "VM.Console": 1,
+        "VM.Config.CDROM": 1,
+        "Realm.AllocateUser": 1,
+        "Sys.Audit": 1,
+        "Sys.PowerMgmt": 1,
+        "Sys.Modify": 1,
+        "VM.Monitor": 1,
+        "VM.Config.Memory": 1,
+        "VM.Backup": 1,
+        "Sys.Incoming": 1,
+        "VM.Migrate": 1,
+        "Realm.Allocate": 1,
+        "VM.Config.CPU": 1,
+        "User.Modify": 1,
+        "VM.Config.HWType": 1,
+        "VM.Clone": 1,
+        "SDN.Audit": 1,
+        "VM.Config.Cloudinit": 1,
+        "Group.Allocate": 1,
+        "VM.PowerMgmt": 1,
+        "Sys.Console": 1,
+        "Datastore.AllocateTemplate": 1,
+        "Pool.Allocate": 1,
+        "VM.Config.Options": 1
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/access/roles/NoAccess").
+		Reply(200).
+		JSON(`{
+    "data": {}
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/access/roles$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "roleid": "PVEVMAdmin",
+            "privs": "VM.Allocate,VM.Audit,VM.Backup,VM.Clone,VM.Config.CDROM,VM.Config.CPU,VM.Config.Cloudinit,VM.Config.Disk,VM.Config.HWType,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.Console,VM.Migrate,VM.Monitor,VM.PowerMgmt,VM.Snapshot,VM.Snapshot.Rollback",
+            "special": 1
+        },
+        {
+            "roleid": "PVEDatastoreAdmin",
+            "special": 1,
+            "privs": "Datastore.Allocate,Datastore.AllocateSpace,Datastore.AllocateTemplate,Datastore.Audit"
+        },
+        {
+            "roleid": "PVEPoolUser",
+            "privs": "Pool.Audit",
+            "special": 1
+        },
+        {
+            "special": 1,
+            "privs": "",
+            "roleid": "NoAccess"
+        },
+        {
+            "roleid": "PVEAuditor",
+            "privs": "Datastore.Audit,Pool.Audit,SDN.Audit,Sys.Audit,VM.Audit",
+            "special": 1
+        },
+        {
+            "privs": "Permissions.Modify,Sys.Audit,Sys.Console,Sys.Syslog",
+            "special": 1,
+            "roleid": "PVESysAdmin"
+        },
+        {
+            "special": 1,
+            "privs": "Datastore.AllocateSpace,Datastore.Audit",
+            "roleid": "PVEDatastoreUser"
+        },
+        {
+            "roleid": "Administrator",
+            "special": 1,
+            "privs": "Datastore.Allocate,Datastore.AllocateSpace,Datastore.AllocateTemplate,Datastore.Audit,Group.Allocate,Permissions.Modify,Pool.Allocate,Pool.Audit,Realm.Allocate,Realm.AllocateUser,SDN.Allocate,SDN.Audit,SDN.Use,Sys.Audit,Sys.Console,Sys.Incoming,Sys.Modify,Sys.PowerMgmt,Sys.Syslog,User.Modify,VM.Allocate,VM.Audit,VM.Backup,VM.Clone,VM.Config.CDROM,VM.Config.CPU,VM.Config.Cloudinit,VM.Config.Disk,VM.Config.HWType,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.Console,VM.Migrate,VM.Monitor,VM.PowerMgmt,VM.Snapshot,VM.Snapshot.Rollback"
+        },
+        {
+            "roleid": "PVETemplateUser",
+            "privs": "VM.Audit,VM.Clone",
+            "special": 1
+        },
+        {
+            "privs": "SDN.Audit,SDN.Use",
+            "special": 1,
+            "roleid": "PVESDNUser"
+        },
+        {
+            "special": 1,
+            "privs": "Datastore.Allocate,Datastore.AllocateSpace,Datastore.AllocateTemplate,Datastore.Audit,Group.Allocate,Permissions.Modify,Pool.Allocate,Pool.Audit,Realm.AllocateUser,SDN.Allocate,SDN.Audit,SDN.Use,Sys.Audit,Sys.Console,Sys.Syslog,User.Modify,VM.Allocate,VM.Audit,VM.Backup,VM.Clone,VM.Config.CDROM,VM.Config.CPU,VM.Config.Cloudinit,VM.Config.Disk,VM.Config.HWType,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.Console,VM.Migrate,VM.Monitor,VM.PowerMgmt,VM.Snapshot,VM.Snapshot.Rollback",
+            "roleid": "PVEAdmin"
+        },
+        {
+            "roleid": "test",
+            "privs": "Pool.Audit",
+            "special": 0
+        },
+        {
+            "special": 1,
+            "privs": "VM.Audit,VM.Backup,VM.Config.CDROM,VM.Config.Cloudinit,VM.Console,VM.PowerMgmt",
+            "roleid": "PVEVMUser"
+        },
+        {
+            "special": 1,
+            "privs": "SDN.Allocate,SDN.Audit,SDN.Use",
+            "roleid": "PVESDNAdmin"
+        },
+        {
+            "roleid": "PVEUserAdmin",
+            "privs": "Group.Allocate,Realm.AllocateUser,User.Modify",
+            "special": 1
+        },
+        {
+            "privs": "Pool.Allocate,Pool.Audit",
+            "special": 1,
+            "roleid": "PVEPoolAdmin"
+        }
+    ]
+}`)
+
 }

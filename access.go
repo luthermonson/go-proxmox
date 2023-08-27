@@ -160,3 +160,26 @@ func (u *User) Update() error {
 func (u *User) Delete() error {
 	return u.client.Delete(fmt.Sprintf("/access/users/%s", u.UserID), nil)
 }
+
+func (c *Client) Role(roleid string) (role Permission, err error) {
+	err = c.Get(fmt.Sprintf("/access/roles/%s", roleid), &role)
+	return
+}
+
+func (c *Client) Roles() (roles Roles, err error) {
+	err = c.Get("/access/roles", &roles)
+	if nil == err {
+		for _, g := range roles {
+			g.client = c
+		}
+	}
+	return
+}
+
+func (r *Role) Update() error {
+	return r.client.Put(fmt.Sprintf("/access/roles/%s", r.RoleID), r, nil)
+}
+
+func (r *Role) Delete() error {
+	return r.client.Delete(fmt.Sprintf("/access/roles/%s", r.RoleID), nil)
+}
