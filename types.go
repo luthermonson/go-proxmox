@@ -1021,3 +1021,11 @@ type Token struct {
 	Expire  int       `json:"expire,omitempty"`
 	Privsep IntOrBool `json:"privsep,omitempty"`
 }
+
+type Roles []*Role
+type Role struct {
+	client  *Client
+	RoleID  string    `json:"roleid,omitempty"`
+	Privs   string    `json:"privs,omitempty"`
+	Special IntOrBool `json:"special,omitempty"`
+}
