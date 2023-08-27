@@ -207,26 +207,31 @@ type VirtualMachine struct {
 	client               *Client
 	VirtualMachineConfig *VirtualMachineConfig
 
-	Name      string
-	Node      string
-	NetIn     uint64
-	CPUs      int
-	DiskWrite uint64
-	Status    string
-	Lock      string `json:",omitempty"`
-	VMID      StringOrUint64
-	PID       StringOrUint64
-	Netout    uint64
-	Disk      uint64
-	Uptime    uint64
-	Mem       uint64
-	CPU       float64
-	MaxMem    uint64
-	MaxDisk   uint64
-	DiskRead  uint64
-	QMPStatus string     `json:"qmpstatus,omitempty"`
-	Template  IsTemplate // empty str if a vm, int 1 if a template
-	HA        HA         `json:",omitempty"`
+	Name string
+	Node string
+
+	Agent          IntOrBool
+	NetIn          uint64
+	CPUs           int
+	DiskWrite      uint64
+	Status         string
+	Lock           string `json:",omitempty"`
+	VMID           StringOrUint64
+	PID            StringOrUint64
+	Netout         uint64
+	Disk           uint64
+	Mem            uint64
+	CPU            float64
+	MaxMem         uint64
+	MaxDisk        uint64
+	DiskRead       uint64
+	QMPStatus      string `json:"qmpstatus,omitempty"`
+	RunningMachine string `json:"running-machine,omitempty"`
+	RunningQemu    string `json:"running-qemu,omitempty"`
+	Tags           string `json:"tags,omitempty"`
+	Uptime         uint64
+	Template       IsTemplate // empty str if a vm, int 1 if a template
+	HA             HA         `json:",omitempty"`
 }
 
 type HA struct {
@@ -265,6 +270,31 @@ type Time struct {
 	Timezone  string
 	Time      uint64
 	Localtime uint64
+}
+
+type Timeframe string
+
+const (
+	HOUR  = Timeframe("hour")
+	DAY   = Timeframe("day")
+	WEEK  = Timeframe("week")
+	MONTH = Timeframe("month")
+	YEAR  = Timeframe("year")
+)
+
+type ConsolidationFunction string
+
+const (
+	AVERAGE = ConsolidationFunction("AVERAGE")
+	MAX     = ConsolidationFunction("MAX")
+)
+
+type RRDData struct {
+	MaxCPU  int
+	MaxMem  uint64
+	Disk    int
+	MaxDisk uint64
+	Time    uint64
 }
 
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
