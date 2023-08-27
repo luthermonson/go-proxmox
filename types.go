@@ -340,11 +340,21 @@ const (
 )
 
 type RRDData struct {
-	MaxCPU  int
-	MaxMem  uint64
-	Disk    int
-	MaxDisk uint64
-	Time    uint64
+	Maxcpu    uint64  `json:"maxcpu"`
+	Cpu       float64 `json:"cpu"`
+	Disk      uint64  `json:"disk"`
+	Netin     float64 `json:"netin"`
+	Netout    float64 `json:"netout"`
+	Maxmem    uint64  `json:"maxmem"`
+	Mem       float64 `json:"mem"`
+	Diskread  float64 `json:"diskread"`
+	Maxdisk   uint64  `json:"maxdisk"`
+	Diskwrite float64 `json:"diskwrite"`
+	Time      int64   `json:"time"`
+}
+
+func (r RRDData) Timestamp() time.Time {
+	return time.Unix(r.Time, 0)
 }
 
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
