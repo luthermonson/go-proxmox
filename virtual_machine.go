@@ -600,3 +600,26 @@ func (v *VirtualMachine) SnapshotRollback(name string) (task *Task, err error) {
 
 	return NewTask(upid, v.client), nil
 }
+
+// RRDData takes a timeframe enum and an optional consolidation function
+// usage: vm.RRDData(HOURLY) or vm.RRDData(HOURLY, AVERAGE)
+func (v *VirtualMachine) RRDData(timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrddata", v.Node, v.VMID)}
+
+	// consolidation functions are variadic because they're optional, putting everything into one string and sending that
+	params := url.Values{}
+	if len(consolidationFunction) > 0 {
+
+		f := ""
+		for _, cf := range consolidationFunction {
+			f = f + string(cf)
+		}
+		params.Add("cf", f)
+	}
+
+	params.Add("timeframe", string(timeframe))
+	u.RawQuery = params.Encode()
+
+	err = v.client.Get(u.String(), &rrddata)
+	return
+}

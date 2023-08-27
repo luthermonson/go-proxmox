@@ -8,6 +8,508 @@ import (
 func nodes() {
 	gock.New(config.C.URI).
 		Persist().
+		Get("^/nodes/node1/qemu/101/rrddata").
+		MatchParams(map[string]string{
+			"timeframe": "hour",
+		}).
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693110660,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693110720,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693110780,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "time": 1693110840,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693110900
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693110960
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693111020,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "time": 1693111080,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693111140,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "time": 1693111200,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693111260,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693111320,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693111380,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693111440
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693111500,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693111560,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693111620,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693111680
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693111740,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693111800,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693111860,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693111920,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693111980,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693112040,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "time": 1693112100,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693112160,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693112220,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "time": 1693112280,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "time": 1693112340,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693112400,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693112460
+        },
+        {
+            "time": 1693112520,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693112580,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693112640
+        },
+        {
+            "time": 1693112700,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693112760,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693112820,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693112880,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693112940
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693113000,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113060,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693113120,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113180
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113240,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "time": 1693113300,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113360
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113420,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "time": 1693113480,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113540,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693113600,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693113660,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693113720,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113780
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693113840
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693113900
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693113960,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693114020,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693114080,
+            "maxcpu": 4,
+            "maxmem": 16777216000
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693114140,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693114200
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "time": 1693114260
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693114320,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "time": 1693114380,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "time": 1693114440,
+            "disk": 0,
+            "maxdisk": 68719476736,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693114500,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693114560,
+            "maxdisk": 68719476736,
+            "disk": 0
+        },
+        {
+            "maxmem": 16777216000,
+            "maxcpu": 4,
+            "time": 1693114620,
+            "disk": 0,
+            "maxdisk": 68719476736
+        },
+        {
+            "time": 1693114680,
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxdisk": 68719476736,
+            "disk": 0,
+            "time": 1693114740,
+            "maxmem": 16777216000,
+            "maxcpu": 4
+        },
+        {
+            "maxcpu": 4,
+            "maxmem": 16777216000,
+            "time": 1693114800,
+            "disk": 0,
+            "maxdisk": 68719476736
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
 		Get("/nodes").
 		Reply(200).
 		JSON(`{
