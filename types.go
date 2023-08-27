@@ -227,6 +227,7 @@ type VirtualMachine struct {
 	MaxDisk        uint64
 	DiskRead       uint64
 	Nics           map[string]Nic
+	BlockStat      map[string]BlockStat
 	QMPStatus      string `json:"qmpstatus,omitempty"`
 	RunningMachine string `json:"running-machine,omitempty"`
 	RunningQemu    string `json:"running-qemu,omitempty"`
