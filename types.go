@@ -223,8 +223,10 @@ type VirtualMachine struct {
 	Mem            uint64
 	CPU            float64
 	MaxMem         uint64
+	BalloonInfo    BalloonInfo
 	MaxDisk        uint64
 	DiskRead       uint64
+	Nics           map[string]Nic
 	QMPStatus      string `json:"qmpstatus,omitempty"`
 	RunningMachine string `json:"running-machine,omitempty"`
 	RunningQemu    string `json:"running-qemu,omitempty"`
@@ -232,6 +234,53 @@ type VirtualMachine struct {
 	Uptime         uint64
 	Template       IsTemplate // empty str if a vm, int 1 if a template
 	HA             HA         `json:",omitempty"`
+}
+
+type Nic struct {
+	NetOut uint64
+	NetIn  uint64
+}
+
+type BalloonInfo struct {
+	TotalMem        uint64 `json:"total_mem"`
+	MemSwappedIn    uint64 `json:"mem_swapped_in"`
+	LastUpdate      uint64 `json:"last_update"`
+	MinorPageFaults uint64 `json:"minor_page_faults"`
+	MajorPageFaults uint64 `json:"major_page_faults"`
+	MemSwappedOut   uint64 `json:"mem_swapped_out"`
+	FreeMem         uint64 `json:"free_mem"`
+	Actual          uint64 `json:"actual"`
+	MaxMem          uint64 `json:"max_mem"`
+}
+
+type BlockStat struct {
+	WrOperations           uint64 `json:"wr_operations"`
+	InvalidUnmapOperations uint64 `json:"invalid_unmap_operations"`
+	RdOperations           uint64 `json:"rd_operations"`
+	UnmapOperations        uint64 `json:"unmap_operations"`
+	FailedUnmapOperations  uint64 `json:"failed_unmap_operations"`
+	FailedWrOperations     uint64 `json:"failed_wr_operations"`
+	AccountFailed          bool   `json:"account_failed"`
+	FailedRdOperations     uint64 `json:"failed_rd_operations"`
+	RdBytes                uint64 `json:"rd_bytes"`
+	WrBytes                uint64 `json:"wr_bytes"`
+	RdTotalTimeNs          uint64 `json:"rd_total_time_ns"`
+	WrTotalTimeNs          uint64 `json:"wr_total_time_ns"`
+	FlushTotalTimeNs       uint64 `json:"flush_total_time_ns"`
+	WrHighestOffset        uint64 `json:"wr_highest_offset"`
+	InvalidRdOperations    uint64 `json:"invalid_rd_operations"`
+	FlushOperations        uint64 `json:"flush_operations"`
+	RdMerged               uint64 `json:"rd_merged"`
+	WrMerged               uint64 `json:"wr_merged"`
+	UnmapBytes             uint64 `json:"unmap_bytes"`
+	InvalidFlushOperations uint64 `json:"invalid_flush_operations"`
+	TimedStats             []any  `json:"timed_stats"`
+	UnmapMerged            uint64 `json:"unmap_merged"`
+	IdleTimeNs             uint64 `json:"idle_time_ns"`
+	AccountInvalid         bool   `json:"account_invalid"`
+	UnmapTotalTimeNs       uint64 `json:"unmap_total_time_ns"`
+	FailedFlushOperations  uint64 `json:"failed_flush_operations"`
+	InvalidWrOperations    uint64 `json:"invalid_wr_operations"`
 }
 
 type HA struct {
