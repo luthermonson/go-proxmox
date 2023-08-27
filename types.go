@@ -816,25 +816,36 @@ type NodeNetwork struct {
 	Node    string `json:"-"`
 	NodeAPI *Node  `json:"-"`
 
-	Iface    string `json:"iface,omitempty"`
-	BondMode string `json:"bond_mode,omitempty"`
+	Iface     string `json:"iface,omitempty"`
+	Autostart int    `json:"autostart,omitempty"`
 
-	Autostart int `json:"autostart,omitempty"`
+	CIDR               string `json:"cidr,omitempty"`
+	CIDR6              string `json:"cidr6,omitempty"`
+	Gateway            string `json:"gateway,omitempty"`
+	Gateway6           string `json:"gateway6,omitempty"`
+	MTU                int    `json:"mtu,omitempty"`
+	Netmask            string `json:"netmask,omitempty"`
+	Netmask6           string `json:"netmask6,omitempty"`
+	VLANID             int    `json:"vlan-id,omitempty"`
+	VLANRawDevice      string `json:"vlan-raw-device,omitempty"`
+	BridgeVLANAware    bool   `json:"bridge_vlan_aware,omitempty"`
+	BridgePorts        string `json:"bridge_ports,omitempty"`
+	BridgeStp          string `json:"bridge_stp,omitempty"` // not in current docs, deprecated?
+	BridgeFd           string `json:"bridge_fd,omitempty"`  // not in current docs, deprecated?
+	Comments           string `json:"comments,omitempty"`
+	Comments6          string `json:"comments6,omitempty"`
+	BondPrimary        string `json:"bond-primary,omitempty"`
+	BondMode           string `json:"bond_mode,omitempty"`
+	BondXmit           string `json:"bond_xmit,omitempty"`
+	BondXmitHashPolicy string `json:"bond_xmit_hash_policy,omitempty"`
 
-	CIDR            string `json:"cidr,omitempty"`
-	CIDR6           string `json:"cidr6,omitempty"`
-	Gateway         string `json:"gateway,omitempty"`
-	Gateway6        string `json:"gateway6,omitempty"`
-	Netmask         string `json:"netmask,omitempty"`
-	Netmask6        string `json:"netmask6,omitempty"`
-	BridgeVlanAware bool   `json:"bridge_vlan_aware,omitempty"`
-	BridgePorts     string `json:"bridge_ports,omitempty"`
-	Comments        string `json:"comments,omitempty"`
-	Comments6       string `json:"comments6,omitempty"`
-	BridgeStp       string `json:"bridge_stp,omitempty"`
-	BridgeFd        string `json:"bridge_fd,omitempty"`
-	BondPrimary     string `json:"bond-primary,omitempty"`
+	OVSBonds   string `json:"ovs_bonds,omitempty"`
+	OVSBridge  string `json:"ovs_bridge,omitempty"`
+	OVSOptions string `json:"ovs_options,omitempty"`
+	OVSPorts   string `json:"ovs_ports,omitempty"`
+	OVSTags    string `json:"ovs_tag,omitempty"`
 
+	Slaves   string `json:"slaves,omitempty"`
 	Address  string `json:"address,omitempty"`
 	Address6 string `json:"address6,omitempty"`
 	Type     string `json:"type,omitempty"`

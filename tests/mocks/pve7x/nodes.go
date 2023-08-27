@@ -8,7 +8,7 @@ import (
 func nodes() {
 	gock.New(config.C.URI).
 		Persist().
-		Get("^/nodes/node1/qemu/101/rrddata").
+		Get("^/nodes/node1/qemu/101/rrddata$").
 		MatchParams(map[string]string{
 			"timeframe": "hour",
 		}).
@@ -510,7 +510,7 @@ func nodes() {
 
 	gock.New(config.C.URI).
 		Persist().
-		Get("/nodes").
+		Get("^/nodes$").
 		Reply(200).
 		JSON(`{
   "data": [
@@ -575,6 +575,70 @@ func nodes() {
       "status": "online"
     }
   ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/network$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "priority": 3,
+            "method6": "manual",
+            "exists": 1,
+            "method": "manual",
+            "active": 1,
+            "families": [
+                "inet"
+            ],
+            "type": "eth",
+            "iface": "enp0s31f6"
+        },
+        {
+            "priority": 4,
+            "cidr": "192.168.5.1/24",
+            "active": 1,
+            "netmask": "24",
+            "bridge_ports": "enp0s31f6",
+            "method6": "manual",
+            "autostart": 1,
+            "bridge_fd": "0",
+            "method": "static",
+            "gateway": "192.168.1.1",
+            "iface": "vmbr0",
+            "type": "bridge",
+            "families": [
+                "inet"
+            ],
+            "address": "192.168.5.1",
+            "bridge_stp": "off"
+        }
+    ]
+}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/network/vmbr0$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "method6": "manual",
+        "autostart": 1,
+        "method": "static",
+        "bridge_fd": "0",
+        "gateway": "192.168.1.1",
+        "type": "bridge",
+        "address": "192.168.5.1",
+        "bridge_stp": "off",
+        "families": [
+            "inet"
+        ],
+        "cidr": "192.168.5.1/24",
+        "priority": 4,
+        "netmask": "24",
+        "active": 1,
+        "bridge_ports": "enp0s31f6"
+    }
 }`)
 
 }
