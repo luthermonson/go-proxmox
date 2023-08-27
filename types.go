@@ -226,7 +226,7 @@ type VirtualMachine struct {
 	BalloonInfo    BalloonInfo
 	MaxDisk        uint64
 	DiskRead       uint64
-	Nics           map[string]Nic
+	NICs           map[string]NIC
 	BlockStat      map[string]BlockStat
 	QMPStatus      string `json:"qmpstatus,omitempty"`
 	RunningMachine string `json:"running-machine,omitempty"`
@@ -237,7 +237,7 @@ type VirtualMachine struct {
 	HA             HA         `json:",omitempty"`
 }
 
-type Nic struct {
+type NIC struct {
 	NetOut uint64
 	NetIn  uint64
 }
@@ -340,8 +340,8 @@ const (
 )
 
 type RRDData struct {
-	Maxcpu    uint64  `json:"maxcpu"`
-	Cpu       float64 `json:"cpu"`
+	MaxCPU    uint64  `json:"maxcpu"`
+	CPU       float64 `json:"cpu"`
 	Disk      uint64  `json:"disk"`
 	Netin     float64 `json:"netin"`
 	Netout    float64 `json:"netout"`
