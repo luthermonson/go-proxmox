@@ -210,59 +210,6 @@ func (n *Node) findStorageByContent(content string) (storage *Storage, err error
 	return nil, ErrNotFound
 }
 
-func (n *Node) Networks() (networks NodeNetworks, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, v := range networks {
-		v.client = n.client
-		v.Node = n.Name
-		v.NodeAPI = n
-	}
-
-	return
-}
-
-func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/network/%s", n.Name, iface), &network)
-	if err != nil {
-		return nil, err
-	}
-
-	if nil != network {
-		network.client = n.client
-		network.Node = n.Name
-		network.NodeAPI = n
-		network.Iface = iface
-	}
-
-	return network, nil
-}
-
-func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
-	err = n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
-	if nil != err {
-		return
-	}
-
-	network.client = n.client
-	network.Node = n.Name
-	network.NodeAPI = n
-	return n.NetworkReload()
-}
-
-func (n *Node) NetworkReload() (*Task, error) {
-	var upid UPID
-	err := n.client.Put(fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewTask(upid, n.client), nil
-}
-
 func (n *Node) FirewallOptionGet() (firewallOption *FirewallNodeOption, err error) {
 	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
 	return
