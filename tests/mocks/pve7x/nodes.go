@@ -7,6 +7,126 @@ import (
 
 func nodes() {
 	gock.New(config.C.URI).
+		Get("^/nodes/node1/qemu/101/status/current$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "pid": 1563102,
+        "shares": 1000,
+        "agent": 1,
+        "diskwrite": 1515457024,
+        "cpus": 8,
+        "ha": {
+            "managed": 0
+        },
+        "maxmem": 2097152000,
+        "blockstat": {
+            "scsi0": {
+                "rd_total_time_ns": 7089432813,
+                "flush_total_time_ns": 7442045713,
+                "wr_total_time_ns": 65889619830,
+                "failed_rd_operations": 0,
+                "rd_bytes": 649448960,
+                "wr_bytes": 1515457024,
+                "unmap_operations": 469,
+                "failed_unmap_operations": 0,
+                "failed_wr_operations": 0,
+                "account_failed": true,
+                "invalid_unmap_operations": 0,
+                "wr_operations": 157514,
+                "rd_operations": 15582,
+                "failed_flush_operations": 0,
+                "invalid_wr_operations": 0,
+                "account_invalid": true,
+                "unmap_total_time_ns": 9514953,
+                "unmap_merged": 0,
+                "timed_stats": [],
+                "unmap_bytes": 15973687808,
+                "invalid_flush_operations": 0,
+                "idle_time_ns": 4427685914,
+                "flush_operations": 15494,
+                "invalid_rd_operations": 0,
+                "wr_highest_offset": 2808696832,
+                "rd_merged": 0,
+                "wr_merged": 0
+            },
+            "ide2": {
+                "unmap_merged": 0,
+                "timed_stats": [],
+                "unmap_bytes": 0,
+                "invalid_flush_operations": 0,
+                "idle_time_ns": 170803536780303,
+                "flush_operations": 0,
+                "invalid_rd_operations": 0,
+                "wr_highest_offset": 0,
+                "rd_merged": 0,
+                "wr_merged": 0,
+                "failed_flush_operations": 0,
+                "invalid_wr_operations": 0,
+                "account_invalid": true,
+                "unmap_total_time_ns": 0,
+                "unmap_operations": 0,
+                "failed_unmap_operations": 0,
+                "failed_wr_operations": 0,
+                "account_failed": true,
+                "invalid_unmap_operations": 0,
+                "wr_operations": 0,
+                "rd_operations": 98,
+                "rd_total_time_ns": 10689186,
+                "flush_total_time_ns": 0,
+                "wr_total_time_ns": 0,
+                "failed_rd_operations": 0,
+                "rd_bytes": 344348,
+                "wr_bytes": 0
+            }
+        },
+        "uptime": 170815,
+        "cpu": 0.0112815646165076,
+        "running-machine": "pc-i440fx-8.0+pve0",
+        "balloon": 2097152000,
+        "qmpstatus": "running",
+        "status": "running",
+        "maxdisk": 18467520512,
+        "diskread": 649793308,
+        "freemem": 887222272,
+        "ballooninfo": {
+            "actual": 2097152000,
+            "max_mem": 2097152000,
+            "free_mem": 887222272,
+            "major_page_faults": 1811,
+            "minor_page_faults": 3803793,
+            "mem_swapped_out": 0,
+            "mem_swapped_in": 0,
+            "total_mem": 2015014912,
+            "last_update": 1693252591
+        },
+        "vmid": 101,
+        "balloon_min": 2097152000,
+        "mem": 1127792640,
+        "proxmox-support": {
+            "pbs-dirty-bitmap-savevm": true,
+            "pbs-dirty-bitmap": true,
+            "query-bitmap-info": true,
+            "pbs-masterkey": true,
+            "backup-max-workers": true,
+            "pbs-dirty-bitmap-migration": true,
+            "pbs-library-version": "1.4.0 (UNKNOWN)"
+        },
+        "running-qemu": "8.0.2",
+        "name": "matt",
+        "netout": 14139344,
+        "netin": 547369168,
+        "nics": {
+            "tap1001i0": {
+                "netout": 14139344,
+                "netin": 547369168
+            }
+        },
+        "disk": 0
+    }
+}`)
+
+	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/qemu/101/rrddata$").
 		MatchParams(map[string]string{
