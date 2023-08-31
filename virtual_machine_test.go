@@ -32,7 +32,7 @@ func TestVirtualMachine_RRDData(t *testing.T) {
 		Node:   "node1",
 	}
 
-	rdddata, err := vm.RRDData(HOUR)
+	rdddata, err := vm.RRDData(TimeframeHour)
 	assert.Nil(t, err)
 	assert.Len(t, rdddata, 70)
 }

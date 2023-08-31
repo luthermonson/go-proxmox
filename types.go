@@ -275,11 +275,11 @@ type Time struct {
 type Timeframe string
 
 const (
-	HOUR  = Timeframe("hour")
-	DAY   = Timeframe("day")
-	WEEK  = Timeframe("week")
-	MONTH = Timeframe("month")
-	YEAR  = Timeframe("year")
+	TimeframeHour  = Timeframe("hour")
+	TimeframeDay   = Timeframe("day")
+	TimeframeWeek  = Timeframe("week")
+	TimeframeMonth = Timeframe("month")
+	TimeframeYear  = Timeframe("year")
 )
 
 type ConsolidationFunction string
@@ -974,6 +974,16 @@ type PoolUpdateOption struct {
 	// Comma separated lists of Virtual Machine IDs to add/delete to the pool
 	VirtualMachines string `json:"vms,omitempty"`
 }
+
+type DomainType string
+
+const (
+	DomainTypeAD     = DomainType("ad")
+	DomainTypeLDAP   = DomainType("ldap")
+	DomainTypeOpenID = DomainType("openid")
+	DomainTypePam    = DomainType("pam")
+	DomainTypePVE    = DomainType("pve")
+)
 
 type Domains []*Domain
 type Domain struct {

@@ -59,11 +59,10 @@ func (c *Client) Password(userid, password string) error {
 }
 
 // NewDomain create a new domain with the required two parameters pull it and use domain.Update to configure
-// t is an enum: ad, ldap, openid, pam, pve
-func (c *Client) NewDomain(realm, t string) error {
+func (c *Client) NewDomain(realm string, domainType DomainType) error {
 	return c.Post("/access/domains", map[string]string{
 		"realm": realm,
-		"type":  t,
+		"type":  string(domainType),
 	}, nil)
 }
 
