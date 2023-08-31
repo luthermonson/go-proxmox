@@ -7,6 +7,21 @@ import (
 
 func access() {
 	gock.New(config.C.URI).
+		Get("^/access/acl").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "propagate": 1,
+            "path": "/",
+            "roleid": "PVEAdmin",
+            "ugid": "cloud-init",
+            "type": "group"
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
 		Get("^/access/domains$").
 		Reply(200).
 		JSON(`{

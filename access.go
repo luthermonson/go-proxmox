@@ -25,6 +25,14 @@ func (c *Client) Ticket(credentials *Credentials) (*Session, error) {
 	return c.session, c.Post("/access/ticket", credentials, &c.session)
 }
 
+func (c *Client) ACL() (acl ACLs, err error) {
+	return acl, c.Get("/access/acl", &acl)
+}
+
+func (c *Client) UpdateACL(acl ACL) error {
+	return c.Put("/access/acl", &acl, nil)
+}
+
 // Permissions get permissions for the current user for the client which passes no params, use Permission
 func (c *Client) Permissions(o *PermissionsOptions) (permissions Permissions, err error) {
 	u := url.URL{Path: "/access/permissions"}
