@@ -165,3 +165,56 @@ func TestACL(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, acls, 1)
 }
+
+func TestNewDomain(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	assert.Nil(t, client.NewDomain("test", "t"))
+}
+
+func TestDomain_Update(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	// no realm name
+	domain := Domain{
+		client: client,
+	}
+
+	assert.Error(t, domain.Update())
+	domain.Realm = "test"
+	assert.Nil(t, domain.Update())
+}
+
+func TestDomain_Delete(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	// no realm name
+	domain := Domain{
+		client: client,
+	}
+
+	assert.Error(t, domain.Delete())
+	domain.Realm = "test"
+	assert.Nil(t, domain.Delete())
+}
+
+func TestDomain_Sync(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	// no realm name
+	domain := Domain{
+		client: client,
+	}
+
+	assert.Error(t, domain.Sync(DomainSyncOptions{}))
+	domain.Realm = "test"
+	assert.Nil(t, domain.Sync(DomainSyncOptions{}))
+}

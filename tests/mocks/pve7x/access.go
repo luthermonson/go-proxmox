@@ -830,4 +830,23 @@ func access() {
     ]
 }`)
 
+	gock.New(config.C.URI).
+		Post("^/access/domains").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Put("^/access/domains/test$").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Delete("^/access/domains/test$").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Post("^/access/domains/test$").
+		Reply(200).
+		JSON(``)
 }

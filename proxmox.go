@@ -275,6 +275,10 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 		return fmt.Errorf("bad request: %s - %s", res.Status, string(body))
 	}
 
+	// if nil passed dont bother to do any unmarshalling
+	if nil == v {
+		return nil
+	}
 	// account for everything being in a data key
 	var datakey map[string]json.RawMessage
 	if err := json.Unmarshal(body, &datakey); err != nil {
