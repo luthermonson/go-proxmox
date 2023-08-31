@@ -155,3 +155,13 @@ func TestRoles(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, roles, 16)
 }
+
+func TestACL(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	acls, err := client.ACL()
+	assert.Nil(t, err)
+	assert.Len(t, acls, 1)
+}

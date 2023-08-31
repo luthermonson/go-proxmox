@@ -1070,3 +1070,22 @@ type Role struct {
 	Privs   string    `json:"privs,omitempty"`
 	Special IntOrBool `json:"special,omitempty"`
 }
+
+type ACLs []*ACL
+type ACL struct {
+	Path      string    `json:",omitempty"`
+	RoleID    string    `json:",omitempty"`
+	Type      string    `json:",omitempty"`
+	UGID      string    `json:",omitempty"`
+	Propagate IntOrBool `json:",omitempty"`
+}
+
+type ACLOptions struct {
+	Path      string    `json:",omitempty"`
+	Roles     string    `json:",omitempty"`
+	Groups    string    `json:",omitempty"`
+	Users     string    `json:",omitempty"`
+	Tokens    string    `json:",omitempty"`
+	Propagate IntOrBool `json:",omitempty"`
+	Delete    IntOrBool `json:",omitempty"` // true to delete the ACL
+}
