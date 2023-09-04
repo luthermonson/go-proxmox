@@ -849,4 +849,24 @@ func access() {
 		Post("^/access/domains/test$").
 		Reply(200).
 		JSON(``)
+
+	gock.New(config.C.URI).
+		Post("^/access/groups").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Put("^/access/groups/groupid").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Delete("^/access/groups/groupid").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Post("^/access/groups/groupid").
+		Reply(200).
+		JSON(``)
 }

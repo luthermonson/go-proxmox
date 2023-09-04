@@ -86,6 +86,14 @@ func TestDomain(t *testing.T) {
 	assert.False(t, bool(d.AutoCreate))
 }
 
+func TestNewGroup(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+
+	assert.Nil(t, client.NewGroup("groupid", "comment"))
+}
+
 func TestGroup(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -109,6 +117,31 @@ func TestGroups(t *testing.T) {
 		assert.Len(t, g.Members, 0) // empty from lister
 		assert.NotEmpty(t, g.Users)
 	}
+}
+
+func TestGroup_Update(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	group := Group{
+		client: client,
+	}
+	assert.Error(t, group.Update()) // no groupid
+	group.GroupID = "groupid"
+	assert.Nil(t, group.Update())
+}
+
+func TestGroup_Delete(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	group := Group{
+		client: client,
+	}
+
+	assert.Error(t, group.Delete())
+	group.GroupID = "groupid"
+	assert.Nil(t, group.Delete())
 }
 
 func TestUser(t *testing.T) {
