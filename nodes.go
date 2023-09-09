@@ -10,19 +10,18 @@ func (c *Client) Nodes() (ns NodeStatuses, err error) {
 	return ns, c.Get("/nodes", &ns)
 }
 
-func (c *Client) Node(name string) (*Node, error) {
-	var node Node
+func (c *Client) Node(name string) (node *Node, err error) {
 	if err := c.Get(fmt.Sprintf("/nodes/%s/status", name), &node); err != nil {
 		return nil, err
 	}
 	node.Name = name
 	node.client = c
 
-	return &node, nil
+	return
 }
 
 func (n *Node) Version() (version *Version, err error) {
-	return version, n.client.Get("/nodes/%s/version", &version)
+	return version, n.client.Get(fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
 
 func (n *Node) TermProxy() (vnc *VNC, err error) {

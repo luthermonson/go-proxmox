@@ -15,22 +15,22 @@ func version() {
     }
 }`
 	gock.New(config.C.URI).
-		Get("/version").
+		Get("^/version$").
 		Reply(200).
 		JSON(versionJSON)
 
 	gock.New(config.C.URI).
-		Post("/version"). // fake to test client Post method
+		Post("^/version$"). // fake to test client Post method
 		Reply(200).
 		JSON(versionJSON)
 
 	gock.New(config.C.URI).
-		Put("/version"). // fake to test client Put method
+		Put("^/version$"). // fake to test client Put method
 		Reply(200).
 		JSON(versionJSON)
 
 	gock.New(config.C.URI).
-		Delete("/version"). // fake to test client Delete method
+		Delete("^/version$"). // fake to test client Delete method
 		Reply(200).
 		JSON(versionJSON)
 }
