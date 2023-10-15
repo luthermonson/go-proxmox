@@ -21,7 +21,7 @@ func TestNetwork(t *testing.T) {
 	assert.Equal(t, network.Iface, "vmbr0")
 }
 
-func TestNetworks(t *testing.T) {
+func TestNode1Networks(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -33,4 +33,32 @@ func TestNetworks(t *testing.T) {
 	networks, err := node.Networks()
 	assert.Nil(t, err)
 	assert.Len(t, networks, 2)
+}
+
+func TestNode2Networks(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	node := Node{
+		client: client,
+		Name:   "node2",
+	}
+
+	networks, err := node.Networks()
+	assert.Nil(t, err)
+	assert.Len(t, networks, 2)
+}
+
+func TestNetworksPve8(t *testing.T) {
+	mocks.ProxmoxVE8x(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	node := Node{
+		client: client,
+		Name:   "node1",
+	}
+
+	networks, err := node.Networks()
+	assert.Nil(t, err)
+	assert.Len(t, networks, 5)
 }

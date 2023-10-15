@@ -823,12 +823,12 @@ type NodeNetwork struct {
 	CIDR6              string `json:"cidr6,omitempty"`
 	Gateway            string `json:"gateway,omitempty"`
 	Gateway6           string `json:"gateway6,omitempty"`
-	MTU                int    `json:"mtu,omitempty"`
+	MTU                string `json:"mtu,omitempty"`
 	Netmask            string `json:"netmask,omitempty"`
 	Netmask6           string `json:"netmask6,omitempty"`
-	VLANID             int    `json:"vlan-id,omitempty"`
+	VLANID             string `json:"vlan-id,omitempty"`
 	VLANRawDevice      string `json:"vlan-raw-device,omitempty"`
-	BridgeVLANAware    bool   `json:"bridge_vlan_aware,omitempty"`
+	BridgeVLANAware    int    `json:"bridge_vlan_aware,omitempty"`
 	BridgePorts        string `json:"bridge_ports,omitempty"`
 	BridgeStp          string `json:"bridge_stp,omitempty"` // not in current docs, deprecated?
 	BridgeFd           string `json:"bridge_fd,omitempty"`  // not in current docs, deprecated?
