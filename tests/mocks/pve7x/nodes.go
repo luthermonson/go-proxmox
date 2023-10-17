@@ -830,4 +830,62 @@ func nodes() {
     }
 }`)
 
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node2/network$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "bridge_vlan_aware": 1,
+            "method6": "static",
+            "bridge_vids": "2-4094",
+            "address": "192.168.1.10",
+            "bridge_stp": "off",
+            "families": [
+                "inet",
+                "inet6"
+            ],
+            "mtu": "1500",
+            "bridge_ports": "enp8s0",
+            "iface": "vmbr2",
+            "netmask": "24",
+            "method": "static",
+            "type": "bridge",
+            "bridge_fd": "0",
+            "cidr6": "fd66:5ac3:eeaf:3200::10/64",
+            "active": 1,
+            "cidr": "192.168.1.10/24",
+            "address6": "fd66:5ac3:eeaf:3200::10",
+            "comments": "comment\n",
+            "autostart": 1,
+            "priority": 9,
+            "netmask6": "64"
+        },
+        {
+            "active": 1,
+            "cidr6": "fd66:5ac3:eeaf::10/64",
+            "address6": "fd66:5ac3:eeaf::10",
+            "comments": "comment\n",
+            "autostart": 1,
+            "priority": 11,
+            "cidr": "192.168.0.10/24",
+            "netmask6": "64",
+            "vlan-raw-device": "vmbr0",
+            "exists": null,
+            "method6": "static",
+            "address": "192.168.0.10",
+            "families": [
+                "inet",
+                "inet6"
+            ],
+            "iface": "vmbr0.2",
+            "netmask": "24",
+            "method": "static",
+            "vlan-id": "2",
+            "type": "vlan"
+        }
+    ]
+}`)
+
 }
