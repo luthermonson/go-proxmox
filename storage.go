@@ -12,6 +12,30 @@ var validContent = map[string]struct{}{
 }
 
 func (s *Storage) Upload(content, file string) (*Task, error) {
+	return s.upload(content, file, nil)
+}
+
+func (s *Storage) UploadWithName(content, file string, storageFilename string) (*Task, error) {
+	return s.upload(content, file, &map[string]string{"filename": storageFilename})
+}
+
+func (s *Storage) UploadWithHash(content, file string, storageFilename *string, checksum, checksumAlgorithm string) (*Task, error) {
+	extraArgs := map[string]string{
+		"checksum":           checksum,
+		"checksum-algorithm": checksumAlgorithm,
+	}
+	if storageFilename != nil {
+		extraArgs["filename"] = *storageFilename
+	}
+
+	if storageFilename != nil {
+		return s.upload(content, file, &map[string]string{"filename": *storageFilename})
+	}
+
+	return s.upload(content, file, nil)
+}
+
+func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
 		return nil, fmt.Errorf("only iso and vztmpl allowed")
 	}
@@ -32,8 +56,15 @@ func (s *Storage) Upload(content, file string) (*Task, error) {
 	defer f.Close()
 
 	var upid UPID
+	data := map[string]string{"content": content}
+	if extraArgs != nil {
+		for k, v := range *extraArgs {
+			data[k] = v
+		}
+	}
+
 	if err := s.client.Upload(fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
-		map[string]string{"content": content}, f, &upid); err != nil {
+		data, f, &upid); err != nil {
 		return nil, err
 	}
 
@@ -41,16 +72,34 @@ func (s *Storage) Upload(content, file string) (*Task, error) {
 }
 
 func (s *Storage) DownloadURL(content, filename, url string) (*Task, error) {
+	return s.downloadURL(content, filename, url, nil)
+}
+
+func (s *Storage) DownloadURLWithHash(content, filename, url string, checksum, checksumAlgorithm string) (*Task, error) {
+	return s.downloadURL(content, filename, url, &map[string]string{
+		"checksum":           checksum,
+		"checksum-algorithm": checksumAlgorithm,
+	})
+}
+
+func (s *Storage) downloadURL(content, filename, url string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
 		return nil, fmt.Errorf("only iso and vztmpl allowed")
 	}
 
 	var upid UPID
-	err := s.client.Post(fmt.Sprintf("/nodes/%s/storage/%s/download-url", s.Node, s.Name), map[string]string{
+	data := map[string]string{
 		"content":  content,
 		"filename": filename,
 		"url":      url,
-	}, &upid)
+	}
+
+	if extraArgs != nil {
+		for k, v := range *extraArgs {
+			data[k] = v
+		}
+	}
+	err := s.client.Post(fmt.Sprintf("/nodes/%s/storage/%s/download-url", s.Node, s.Name), data, &upid)
 	if err != nil {
 		return nil, err
 	}
