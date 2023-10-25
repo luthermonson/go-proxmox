@@ -1,17 +1,18 @@
 package proxmox
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
 )
 
-func (c *Client) Nodes() (ns NodeStatuses, err error) {
-	return ns, c.Get("/nodes", &ns)
+func (c *Client) Nodes(ctx context.Context) (ns NodeStatuses, err error) {
+	return ns, c.Get(ctx, "/nodes", &ns)
 }
 
-func (c *Client) Node(name string) (node *Node, err error) {
-	if err := c.Get(fmt.Sprintf("/nodes/%s/status", name), &node); err != nil {
+func (c *Client) Node(ctx context.Context, name string) (node *Node, err error) {
+	if err = c.Get(ctx, fmt.Sprintf("/nodes/%s/status", name), &node); err != nil {
 		return nil, err
 	}
 	node.Name = name
@@ -20,12 +21,12 @@ func (c *Client) Node(name string) (node *Node, err error) {
 	return
 }
 
-func (n *Node) Version() (version *Version, err error) {
-	return version, n.client.Get(fmt.Sprintf("/nodes/%s/version", n.Name), &version)
+func (n *Node) Version(ctx context.Context) (version *Version, err error) {
+	return version, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
 
-func (n *Node) TermProxy() (vnc *VNC, err error) {
-	return vnc, n.client.Post(fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &vnc)
+func (n *Node) TermProxy(ctx context.Context) (vnc *VNC, err error) {
+	return vnc, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &vnc)
 }
 
 // VNCWebSocket send, recv, errors, closer, error
@@ -36,8 +37,8 @@ func (n *Node) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, fun
 	return n.client.VNCWebSocket(p, vnc)
 }
 
-func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu", n.Name), &vms); err != nil {
+func (n *Node) VirtualMachines(ctx context.Context) (vms VirtualMachines, err error) {
+	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu", n.Name), &vms); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +50,7 @@ func (n *Node) VirtualMachines() (vms VirtualMachines, err error) {
 	return vms, nil
 }
 
-func (n *Node) NewVirtualMachine(vmid int, options ...VirtualMachineOption) (*Task, error) {
+func (n *Node) NewVirtualMachine(ctx context.Context, vmid int, options ...VirtualMachineOption) (*Task, error) {
 	var upid UPID
 	data := make(map[string]interface{})
 	data["vmid"] = vmid
@@ -58,29 +59,29 @@ func (n *Node) NewVirtualMachine(vmid int, options ...VirtualMachineOption) (*Ta
 		data[option.Name] = option.Value
 	}
 
-	err := n.client.Post(fmt.Sprintf("/nodes/%s/qemu", n.Name), data, &upid)
+	err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu", n.Name), data, &upid)
 	return NewTask(upid, n.client), err
 }
 
-func (n *Node) VirtualMachine(vmid int) (*VirtualMachine, error) {
+func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, error) {
 	vm := &VirtualMachine{
 		client: n.client,
 		Node:   n.Name,
 	}
 
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm); nil != err {
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/current", n.Name, vmid), &vm); nil != err {
 		return nil, err
 	}
 
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vm.VirtualMachineConfig); err != nil {
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", n.Name, vmid), &vm.VirtualMachineConfig); err != nil {
 		return nil, err
 	}
 
 	return vm, nil
 }
 
-func (n *Node) Containers() (c Containers, err error) {
-	if err = n.client.Get(fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
+func (n *Node) Containers(ctx context.Context) (c Containers, err error) {
+	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
 		return
 	}
 
@@ -92,9 +93,9 @@ func (n *Node) Containers() (c Containers, err error) {
 	return
 }
 
-func (n *Node) Container(vmid int) (*Container, error) {
+func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
 	var c Container
-	if err := n.client.Get(fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c); err != nil {
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c); err != nil {
 		return nil, err
 	}
 	c.client = n.client
@@ -103,8 +104,8 @@ func (n *Node) Container(vmid int) (*Container, error) {
 	return &c, nil
 }
 
-func (n *Node) Appliances() (appliances Appliances, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &appliances)
+func (n *Node) Appliances(ctx context.Context) (appliances Appliances, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &appliances)
 	if err != nil {
 		return appliances, err
 	}
@@ -117,19 +118,19 @@ func (n *Node) Appliances() (appliances Appliances, err error) {
 	return appliances, nil
 }
 
-func (n *Node) DownloadAppliance(template, storage string) (ret string, err error) {
-	return ret, n.client.Post(fmt.Sprintf("/nodes/%s/aplinfo", n.Name), map[string]string{
+func (n *Node) DownloadAppliance(ctx context.Context, template, storage string) (ret string, err error) {
+	return ret, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/aplinfo", n.Name), map[string]string{
 		"template": template,
 		"storage":  storage,
 	}, &ret)
 }
 
-func (n *Node) VzTmpls(storage string) (templates VzTmpls, err error) {
-	return templates, n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
+func (n *Node) VzTmpls(ctx context.Context, storage string) (templates VzTmpls, err error) {
+	return templates, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
 }
 
-func (n *Node) VzTmpl(template, storage string) (*VzTmpl, error) {
-	templates, err := n.VzTmpls(storage)
+func (n *Node) VzTmpl(ctx context.Context, template, storage string) (*VzTmpl, error) {
+	templates, err := n.VzTmpls(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
@@ -144,8 +145,8 @@ func (n *Node) VzTmpl(template, storage string) (*VzTmpl, error) {
 	return nil, fmt.Errorf("could not find vztmpl: %s", template)
 }
 
-func (n *Node) Storages() (storages Storages, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/storage", n.Name), &storages)
+func (n *Node) Storages(ctx context.Context) (storages Storages, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage", n.Name), &storages)
 	if err != nil {
 		return
 	}
@@ -158,8 +159,8 @@ func (n *Node) Storages() (storages Storages, err error) {
 	return
 }
 
-func (n *Node) Storage(name string) (storage *Storage, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/status", n.Name, name), &storage)
+func (n *Node) Storage(ctx context.Context, name string) (storage *Storage, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/status", n.Name, name), &storage)
 	if err != nil {
 		return
 	}
@@ -171,29 +172,29 @@ func (n *Node) Storage(name string) (storage *Storage, err error) {
 	return
 }
 
-func (n *Node) StorageISO() (*Storage, error) {
-	return n.findStorageByContent("iso")
+func (n *Node) StorageISO(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "iso")
 }
 
-func (n *Node) StorageVZTmpl() (*Storage, error) {
-	return n.findStorageByContent("vztmpl")
+func (n *Node) StorageVZTmpl(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "vztmpl")
 }
 
-func (n *Node) StorageBackup() (*Storage, error) {
-	return n.findStorageByContent("backup")
+func (n *Node) StorageBackup(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "backup")
 }
 
-func (n *Node) StorageRootDir() (*Storage, error) {
-	return n.findStorageByContent("rootdir")
+func (n *Node) StorageRootDir(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "rootdir")
 }
 
-func (n *Node) StorageImages() (*Storage, error) {
-	return n.findStorageByContent("images")
+func (n *Node) StorageImages(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "images")
 }
 
 // findStorageByContent takes iso/backup/vztmpl/rootdir/images and returns the storage that type of content should be on
-func (n *Node) findStorageByContent(content string) (storage *Storage, err error) {
-	storages, err := n.Storages()
+func (n *Node) findStorageByContent(ctx context.Context, content string) (storage *Storage, err error) {
+	storages, err := n.Storages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -209,28 +210,28 @@ func (n *Node) findStorageByContent(content string) (storage *Storage, err error
 	return nil, ErrNotFound
 }
 
-func (n *Node) FirewallOptionGet() (firewallOption *FirewallNodeOption, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
+func (n *Node) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallNodeOption, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
 	return
 }
 
-func (n *Node) FirewallOptionSet(firewallOption *FirewallNodeOption) error {
-	return n.client.Put(fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
+func (n *Node) FirewallOptionSet(ctx context.Context, firewallOption *FirewallNodeOption) error {
+	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
 }
 
-func (n *Node) FirewallGetRules() (rules []*FirewallRule, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), &rules)
+func (n *Node) FirewallGetRules(ctx context.Context) (rules []*FirewallRule, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), &rules)
 	return
 }
 
-func (n *Node) FirewallRulesCreate(rule *FirewallRule) error {
-	return n.client.Post(fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
+func (n *Node) FirewallRulesCreate(ctx context.Context, rule *FirewallRule) error {
+	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
 }
 
-func (n *Node) FirewallRulesUpdate(rule *FirewallRule) error {
-	return n.client.Put(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
+func (n *Node) FirewallRulesUpdate(ctx context.Context, rule *FirewallRule) error {
+	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
 }
 
-func (n *Node) FirewallRulesDelete(rulePos int) error {
-	return n.client.Delete(fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
+func (n *Node) FirewallRulesDelete(ctx context.Context, rulePos int) error {
+	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
 }

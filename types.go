@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -960,6 +961,7 @@ type Snapshot struct {
 type Pools []*Pool
 type Pool struct {
 	client  *Client
+	context context.Context
 	PoolID  string            `json:"poolid,omitempty"`
 	Comment string            `json:"comment,omitempty"`
 	Members []ClusterResource `json:"members,omitempty"`

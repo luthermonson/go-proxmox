@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -10,17 +11,19 @@ import (
 
 func TestClient_Cluster(t *testing.T) {
 	client := ClientFromLogins()
-	cluster, err := client.Cluster()
+	ctx := context.Background()
+	cluster, err := client.Cluster(ctx)
 	assert.NoError(t, err)
 	fmt.Println(cluster)
 }
 
 func TestClusterResources(t *testing.T) {
 	client := ClientFromLogins()
+	ctx := context.Background()
 
 	// Check a call without parameters
-	cluster, err := client.Cluster()
-	rs, err := cluster.Resources()
+	cluster, err := client.Cluster(ctx)
+	rs, err := cluster.Resources(ctx)
 	assert.Nil(t, err)
 	assert.GreaterOrEqual(t, len(rs), 1)
 
@@ -32,7 +35,7 @@ func TestClusterResources(t *testing.T) {
 
 	// Check a call with all the valid filter values
 	for _, rsType := range []string{"vm", "storage", "node", "sdn"} {
-		rs, err = cluster.Resources(rsType)
+		rs, err = cluster.Resources(ctx, rsType)
 		assert.Nil(t, err)
 
 		// vm and sdn may be empty as it is absolutely not mandatory
@@ -57,17 +60,17 @@ func TestClusterResources(t *testing.T) {
 	}
 
 	// Check a call with more than one parameter
-	rs, err = cluster.Resources("bad", "call")
+	rs, err = cluster.Resources(ctx, "bad", "call")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "value 'badcall' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is not a single word
-	rs, err = cluster.Resources("bad filter")
+	rs, err = cluster.Resources(ctx, "bad filter")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "value 'badfilter' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is a word
-	rs, err = cluster.Resources("unknownword")
+	rs, err = cluster.Resources(ctx, "unknownword")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "bad request: 400 Parameter verification failed")
 }

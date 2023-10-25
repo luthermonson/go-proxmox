@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -80,11 +81,11 @@ func NewClient(baseURL string, opts ...Option) *Client {
 	return c
 }
 
-func (c *Client) Version() (*Version, error) {
-	return c.version, c.Get("/version", &c.version)
+func (c *Client) Version(ctx context.Context) (*Version, error) {
+	return c.version, c.Get(ctx, "/version", &c.version)
 }
 
-func (c *Client) Req(method, path string, data []byte, v interface{}) error {
+func (c *Client) Req(ctx context.Context, method, path string, data []byte, v interface{}) error {
 	if strings.HasPrefix(path, "/") {
 		path = c.baseURL + path
 	}
@@ -105,7 +106,7 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 		body = bytes.NewBuffer(data)
 	}
 
-	req, err := http.NewRequest(method, path, body)
+	req, err := http.NewRequestWithContext(ctx, method, path, body)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
 		if path == (c.baseURL + "/access/ticket") {
@@ -129,10 +130,10 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 
 		if c.credentials != nil && c.session == nil {
 			// credentials passed but no session started, try a login and retry the request
-			if _, err := c.Ticket(c.credentials); err != nil {
+			if _, err = c.Ticket(ctx, c.credentials); err != nil {
 				return err
 			}
-			return c.Req(method, path, data, v)
+			return c.Req(ctx, method, path, data, v)
 		}
 		return ErrNotAuthorized
 	}
@@ -141,11 +142,11 @@ func (c *Client) Req(method, path string, data []byte, v interface{}) error {
 
 }
 
-func (c *Client) Get(p string, v interface{}) error {
-	return c.Req(http.MethodGet, p, nil, v)
+func (c *Client) Get(ctx context.Context, p string, v interface{}) error {
+	return c.Req(ctx, http.MethodGet, p, nil, v)
 }
 
-func (c *Client) Post(p string, d interface{}, v interface{}) error {
+func (c *Client) Post(ctx context.Context, p string, d interface{}, v interface{}) error {
 	var data []byte
 	if d != nil {
 		var err error
@@ -155,10 +156,10 @@ func (c *Client) Post(p string, d interface{}, v interface{}) error {
 		}
 	}
 
-	return c.Req(http.MethodPost, p, data, v)
+	return c.Req(ctx, http.MethodPost, p, data, v)
 }
 
-func (c *Client) Put(p string, d interface{}, v interface{}) error {
+func (c *Client) Put(ctx context.Context, p string, d interface{}, v interface{}) error {
 	var data []byte
 	if d != nil {
 		var err error
@@ -168,11 +169,11 @@ func (c *Client) Put(p string, d interface{}, v interface{}) error {
 		}
 	}
 
-	return c.Req(http.MethodPut, p, data, v)
+	return c.Req(ctx, http.MethodPut, p, data, v)
 }
 
-func (c *Client) Delete(p string, v interface{}) error {
-	return c.Req(http.MethodDelete, p, nil, v)
+func (c *Client) Delete(ctx context.Context, p string, v interface{}) error {
+	return c.Req(ctx, http.MethodDelete, p, nil, v)
 }
 
 // Upload - There is some weird 16kb limit hardcoded in proxmox for the max POST size, hopefully in the future we make
@@ -226,7 +227,7 @@ func (c *Client) Upload(path string, fields map[string]string, file *os.File, v 
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	return c.handleResponse(res, &v)
 }
@@ -275,7 +276,7 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 		return fmt.Errorf("bad request: %s - %s", res.Status, string(body))
 	}
 
-	// if nil passed dont bother to do any unmarshalling
+	// if nil passed don't bother to do any unmarshalling
 	if nil == v {
 		return nil
 	}

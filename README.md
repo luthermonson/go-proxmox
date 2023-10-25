@@ -38,7 +38,9 @@ Create a client and use the public methods to access Proxmox resources.
 package main
 
 import (
+	"context"
 	"fmt"
+	
 	"github.com/luthermonson/go-proxmox"
 )
 
@@ -51,7 +53,7 @@ func main() {
 		proxmox.WithCredentials(&credentials),
     )
 	
-    version, err := client.Version()
+    version, err := client.Version(context.Background())
     if err != nil {
         panic(err)
     }
@@ -64,7 +66,11 @@ func main() {
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
+	
 	"github.com/luthermonson/go-proxmox"
 )
 
@@ -84,7 +90,7 @@ func main() {
         proxmox.WithAPIToken(tokenID, secret),
     )
     
-    version, err := client.Version()
+    version, err := client.Version(context.Background())
     if err != nil {
         panic(err)
     }

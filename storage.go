@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,7 +54,7 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var upid UPID
 	data := map[string]string{"content": content}
@@ -71,18 +72,18 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	return NewTask(upid, s.client), nil
 }
 
-func (s *Storage) DownloadURL(content, filename, url string) (*Task, error) {
-	return s.downloadURL(content, filename, url, nil)
+func (s *Storage) DownloadURL(ctx context.Context, content, filename, url string) (*Task, error) {
+	return s.downloadURL(ctx, content, filename, url, nil)
 }
 
-func (s *Storage) DownloadURLWithHash(content, filename, url string, checksum, checksumAlgorithm string) (*Task, error) {
-	return s.downloadURL(content, filename, url, &map[string]string{
+func (s *Storage) DownloadURLWithHash(ctx context.Context, content, filename, url string, checksum, checksumAlgorithm string) (*Task, error) {
+	return s.downloadURL(ctx, content, filename, url, &map[string]string{
 		"checksum":           checksum,
 		"checksum-algorithm": checksumAlgorithm,
 	})
 }
 
-func (s *Storage) downloadURL(content, filename, url string, extraArgs *map[string]string) (*Task, error) {
+func (s *Storage) downloadURL(ctx context.Context, content, filename, url string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
 		return nil, fmt.Errorf("only iso and vztmpl allowed")
 	}
@@ -99,15 +100,15 @@ func (s *Storage) downloadURL(content, filename, url string, extraArgs *map[stri
 			data[k] = v
 		}
 	}
-	err := s.client.Post(fmt.Sprintf("/nodes/%s/storage/%s/download-url", s.Node, s.Name), data, &upid)
+	err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/storage/%s/download-url", s.Node, s.Name), data, &upid)
 	if err != nil {
 		return nil, err
 	}
 	return NewTask(upid, s.client), nil
 }
 
-func (s *Storage) ISO(name string) (iso *ISO, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
+func (s *Storage) ISO(ctx context.Context, name string) (iso *ISO, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +122,8 @@ func (s *Storage) ISO(name string) (iso *ISO, err error) {
 	return
 }
 
-func (s *Storage) VzTmpl(name string) (vztmpl *VzTmpl, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "vztmpl", name), &vztmpl)
+func (s *Storage) VzTmpl(ctx context.Context, name string) (vztmpl *VzTmpl, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "vztmpl", name), &vztmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +137,8 @@ func (s *Storage) VzTmpl(name string) (vztmpl *VzTmpl, err error) {
 	return
 }
 
-func (s *Storage) Backup(name string) (backup *Backup, err error) {
-	err = s.client.Get(fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "backup", name), &backup)
+func (s *Storage) Backup(ctx context.Context, name string) (backup *Backup, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "backup", name), &backup)
 	if err != nil {
 		return nil, err
 	}
@@ -148,19 +149,19 @@ func (s *Storage) Backup(name string) (backup *Backup, err error) {
 	return
 }
 
-func (v *VzTmpl) Delete() (*Task, error) {
-	return deleteVolume(v.client, v.Node, v.Storage, v.VolID, v.Path, "vztmpl")
+func (v *VzTmpl) Delete(ctx context.Context) (*Task, error) {
+	return deleteVolume(ctx, v.client, v.Node, v.Storage, v.VolID, v.Path, "vztmpl")
 }
 
-func (b *Backup) Delete() (*Task, error) {
-	return deleteVolume(b.client, b.Node, b.Storage, b.VolID, b.Path, "backup")
+func (b *Backup) Delete(ctx context.Context) (*Task, error) {
+	return deleteVolume(ctx, b.client, b.Node, b.Storage, b.VolID, b.Path, "backup")
 }
 
-func (i *ISO) Delete() (*Task, error) {
-	return deleteVolume(i.client, i.Node, i.Storage, i.VolID, i.Path, "iso")
+func (i *ISO) Delete(ctx context.Context) (*Task, error) {
+	return deleteVolume(ctx, i.client, i.Node, i.Storage, i.VolID, i.Path, "iso")
 }
 
-func deleteVolume(c *Client, n, s, v, p, t string) (*Task, error) {
+func deleteVolume(ctx context.Context, c *Client, n, s, v, p, t string) (*Task, error) {
 	var upid UPID
 	if v == "" && p == "" {
 		return nil, fmt.Errorf("volid or path required for a delete")
@@ -171,6 +172,6 @@ func deleteVolume(c *Client, n, s, v, p, t string) (*Task, error) {
 		v = fmt.Sprintf("%s:%s/%s", s, t, filepath.Base(p))
 	}
 
-	err := c.Delete(fmt.Sprintf("/nodes/%s/storage/%s/content/%s", n, s, v), &upid)
+	err := c.Delete(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s", n, s, v), &upid)
 	return NewTask(upid, c), err
 }

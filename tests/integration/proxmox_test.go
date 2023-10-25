@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -66,13 +67,15 @@ func init() {
 	}
 
 	td.client = ClientFromLogins()
+	ctx := context.Background()
 	var err error
-	td.node, err = td.client.Node(td.nodeName)
+
+	td.node, err = td.client.Node(ctx, td.nodeName)
 	if err != nil {
 		panic(err)
 	}
 
-	td.storage, err = td.node.Storage(td.nodeStorage)
+	td.storage, err = td.node.Storage(ctx, td.nodeStorage)
 	if err != nil {
 		panic(err)
 	}
@@ -91,13 +94,13 @@ func downloadFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	resp, err := http.Get(src)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
@@ -114,7 +117,7 @@ func createTestISO(file string) error {
 	if err != nil {
 		return err
 	}
-	defer iso.Close()
+	defer func() { _ = iso.Close() }()
 
 	fs, err := iso9660.Create(iso, 0, 0, blocksize, "")
 	if err != nil {
@@ -167,7 +170,8 @@ func ClientFromTicket() *proxmox.Client {
 
 func TestVersion(t *testing.T) {
 	client := ClientFromLogins()
-	version, err := client.Version()
+	ctx := context.Background()
+	version, err := client.Version(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, version.Version)
 }
