@@ -647,6 +647,18 @@ type Container struct {
 	MaxSwap uint64
 }
 
+type ContainerCloneOptions struct {
+	NewID       int    `json:"newid"`
+	BWLimit     uint64 `json:"bwlimit,omitempty"`
+	Description string `json:"description,omitempty"`
+	Full        uint8  `json:"full,omitempty"`
+	Hostname    string `json:"hostname,omitempty"`
+	Pool        string `json:"pool,omitempty"`
+	SnapName    string `json:"snapname,omitempty"`
+	Storage     string `json:"storage,omitempty"`
+	Target      string `json:"target,omitempty"`
+}
+
 type ContainerStatuses []*ContainerStatus
 type ContainerStatus struct {
 	Data string `json:",omitempty"`

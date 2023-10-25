@@ -6,6 +6,29 @@ import (
 	"net/url"
 )
 
+func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (newid int, task *Task, err error) {
+	var upid UPID
+
+	if params == nil {
+		params = &ContainerCloneOptions{}
+	}
+	if params.NewID == 0 {
+		cluster, err := c.client.Cluster(ctx)
+		if err != nil {
+			return newid, nil, err
+		}
+		newid, err := cluster.NextID(ctx)
+		if err != nil {
+			return newid, nil, err
+		}
+		params.NewID = newid
+	}
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/clone", c.Node, c.VMID), params, &upid); err != nil {
+		return newid, nil, err
+	}
+	return newid, NewTask(upid, c.client), nil
+}
+
 func (c *Container) Start(ctx context.Context) (status string, err error) {
 	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.Node, c.VMID), nil, &status)
 }
