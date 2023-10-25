@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
@@ -12,7 +13,7 @@ func TestPools(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	pools, err := client.Pools()
+	pools, err := client.Pools(context.Background())
 	assert.Nil(t, err)
 	assert.Len(t, pools, 1)
 }
@@ -22,7 +23,7 @@ func TestPoolGet(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	pool, err := client.Pool("test-pool")
+	pool, err := client.Pool(context.Background(), "test-pool")
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
 	if pool != nil {
@@ -37,7 +38,7 @@ func TestPoolCreate(t *testing.T) {
 	defer mocks.Off()
 	client := mockClient()
 
-	err := client.NewPool("test-pool", "Test pool")
+	err := client.NewPool(context.Background(), "test-pool", "Test pool")
 	assert.Nil(t, err)
 }
 
@@ -45,13 +46,14 @@ func TestPoolUpdate(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
+	ctx := context.Background()
 
-	pool, err := client.Pool("test-pool")
+	pool, err := client.Pool(ctx, "test-pool")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
 	if pool != nil {
-		err = pool.Update(&PoolUpdateOption{
+		err = pool.Update(ctx, &PoolUpdateOption{
 			Comment:         "Test pool updated",
 			Delete:          true,
 			Storage:         "local-zfs",
@@ -65,13 +67,14 @@ func TestPoolDelete(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
+	ctx := context.Background()
 
-	pool, err := client.Pool("test-pool")
+	pool, err := client.Pool(ctx, "test-pool")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, pool)
 	if pool != nil {
-		err = pool.Delete()
+		err = pool.Delete(ctx)
 		assert.Nil(t, err)
 	}
 }

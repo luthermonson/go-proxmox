@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -72,7 +73,7 @@ func TestClient_Version7(t *testing.T) {
 	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
 
-	v, err := mockClient().Version()
+	v, err := mockClient().Version(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7-7", v.Version)
 	assert.Equal(t, "777777", v.RepoID)
@@ -83,7 +84,7 @@ func TestClient_Version6(t *testing.T) {
 	mocks.ProxmoxVE6x(mockConfig)
 	defer mocks.Off()
 
-	v, err := mockClient().Version()
+	v, err := mockClient().Version(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "6.6-6", v.Version)
 	assert.Equal(t, "666666", v.RepoID)
@@ -94,22 +95,23 @@ func TestClientMethods(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
+	ctx := context.Background()
 	var err error
 
 	var v Version
-	err = client.Get("/version", &v)
+	err = client.Get(ctx, "/version", &v)
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Post("/version", struct{}{}, &v)
+	err = client.Post(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Put("/version", struct{}{}, &v)
+	err = client.Put(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7", v.Release)
 
-	err = client.Delete("/version", &v)
+	err = client.Delete(ctx, "/version", &v)
 	assert.Nil(t, err)
 	assert.Equal(t, "7.7", v.Release)
 }

@@ -1,9 +1,12 @@
 package proxmox
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
-	err = n.client.Post(fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
+func (n *Node) NewNetwork(ctx context.Context, network *NodeNetwork) (task *Task, err error) {
+	err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/network", n.Name), network, network)
 	if nil != err {
 		return
 	}
@@ -11,11 +14,11 @@ func (n *Node) NewNetwork(network *NodeNetwork) (task *Task, err error) {
 	network.client = n.client
 	network.Node = n.Name
 	network.NodeAPI = n
-	return n.NetworkReload()
+	return n.NetworkReload(ctx)
 }
 
-func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/network/%s", n.Name, iface), &network)
+func (n *Node) Network(ctx context.Context, iface string) (network *NodeNetwork, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network/%s", n.Name, iface), &network)
 	if err != nil {
 		return
 	}
@@ -30,8 +33,8 @@ func (n *Node) Network(iface string) (network *NodeNetwork, err error) {
 	return
 }
 
-func (n *Node) Networks() (networks NodeNetworks, err error) {
-	err = n.client.Get(fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
+func (n *Node) Networks(ctx context.Context) (networks NodeNetworks, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +48,9 @@ func (n *Node) Networks() (networks NodeNetworks, err error) {
 	return
 }
 
-func (n *Node) NetworkReload() (*Task, error) {
+func (n *Node) NetworkReload(ctx context.Context) (*Task, error) {
 	var upid UPID
-	err := n.client.Put(fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)
+	err := n.client.Put(ctx, fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)
 	if err != nil {
 		return nil, err
 	}
@@ -55,22 +58,22 @@ func (n *Node) NetworkReload() (*Task, error) {
 	return NewTask(upid, n.client), nil
 }
 
-func (nw *NodeNetwork) Update() error {
+func (nw *NodeNetwork) Update(ctx context.Context) error {
 	if "" == nw.Iface {
 		return nil
 	}
-	return nw.client.Put(fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), nw, nil)
+	return nw.client.Put(ctx, fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), nw, nil)
 }
 
-func (nw *NodeNetwork) Delete() (task *Task, err error) {
+func (nw *NodeNetwork) Delete(ctx context.Context) (task *Task, err error) {
 	var upid UPID
 	if "" == nw.Iface {
 		return
 	}
-	err = nw.client.Delete(fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), &upid)
+	err = nw.client.Delete(ctx, fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), &upid)
 	if err != nil {
 		return
 	}
 
-	return nw.NodeAPI.NetworkReload()
+	return nw.NodeAPI.NetworkReload(ctx)
 }
