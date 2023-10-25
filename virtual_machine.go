@@ -491,13 +491,14 @@ func (v *VirtualMachine) WaitForAgent(seconds int) error {
 }
 
 func (v *VirtualMachine) AgentExec(command, inputData string) (pid int, err error) {
+	tmpdata := map[string]interface{}{}
 	err = v.client.Post(fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
 		map[string]string{
 			"command":    command,
 			"input-data": inputData,
 		},
-		&pid)
-
+		&tmpdata)
+	pid = int(tmpdata["pid"].(float64))
 	return
 }
 
