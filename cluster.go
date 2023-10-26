@@ -11,7 +11,17 @@ func (c *Client) Cluster(ctx context.Context) (*Cluster, error) {
 	cluster := &Cluster{
 		client: c,
 	}
-	return cluster, c.Get(ctx, "/cluster/status", cluster)
+
+	// requires (/, Sys.Audit), do not error out if no access to still get the cluster
+	if err := cluster.Status(ctx); !IsNotAuthorized(err) {
+		return cluster, err
+	}
+
+	return cluster, nil
+}
+
+func (cl *Cluster) Status(ctx context.Context) error {
+	return cl.client.Get(ctx, "/cluster/status", cl)
 }
 
 func (cl *Cluster) NextID(ctx context.Context) (int, error) {
