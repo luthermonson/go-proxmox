@@ -12,7 +12,7 @@ func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (n
 	if params == nil {
 		params = &ContainerCloneOptions{}
 	}
-	if params.NewID == 0 {
+	if params.NewID <= 0 {
 		cluster, err := c.client.Cluster(ctx)
 		if err != nil {
 			return newid, nil, err
@@ -24,7 +24,7 @@ func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (n
 		params.NewID = newid
 	}
 	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/clone", c.Node, c.VMID), params, &upid); err != nil {
-		return newid, nil, err
+		return 0, nil, err
 	}
 	return newid, NewTask(upid, c.client), nil
 }
