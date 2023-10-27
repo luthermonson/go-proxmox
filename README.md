@@ -15,6 +15,7 @@ A go client for [Proxmox VE](https://www.proxmox.com/). The client implements [/
 * Full Testing, unit testing with mocks and integration tests against an API endpoint
 * Configuration options when creating a client for flexible usage
 * Client logging for debugging within your code
+* Context support
 * Added functionality for better go tooling built on this library, some things we'd like
   * Boot VM from qcow URL, inspiration: [Proxmox Linux Templates](https://www.phillipsj.net/posts/proxmox-linux-templates/)
   * Dynamic host targeting for VM, Proxmox lacks a scheduler when given VM params it will try and locate a host with resources to put it
