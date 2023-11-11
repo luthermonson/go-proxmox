@@ -29,6 +29,15 @@ func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (n
 	return newid, NewTask(upid, c.client), nil
 }
 
+func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d", c.Node, c.VMID), &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, c.client), nil
+}
+
 func (c *Container) Start(ctx context.Context) (status string, err error) {
 	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.Node, c.VMID), nil, &status)
 }
