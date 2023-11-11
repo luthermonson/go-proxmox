@@ -645,6 +645,7 @@ type Container struct {
 	MaxMem  uint64
 	MaxDisk uint64
 	MaxSwap uint64
+	Tags    string
 }
 
 type ContainerCloneOptions struct {
