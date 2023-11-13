@@ -38,6 +38,16 @@ func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
 	return NewTask(upid, c.client), nil
 }
 
+func (c *Container) Config(ctx context.Context, options ...ContainerOption) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+	err := c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/config", c.Node, c.VMID), data, &upid)
+	return NewTask(upid, c.client), err
+}
+
 func (c *Container) Start(ctx context.Context) (status string, err error) {
 	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.Node, c.VMID), nil, &status)
 }

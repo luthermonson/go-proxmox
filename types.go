@@ -665,6 +665,14 @@ type ContainerStatus struct {
 	Data string `json:",omitempty"`
 }
 
+// ContainerOptions A key/value pair used to modify a container(LXC) config
+// Refer to https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/lxc/{vmid}/config for a list of valid values
+type ContainerOptions []*ContainerOption
+type ContainerOption struct {
+	Name  string
+	Value interface{}
+}
+
 type Appliances []*Appliance
 type Appliance struct {
 	client       *Client
