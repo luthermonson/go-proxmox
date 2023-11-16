@@ -352,10 +352,10 @@ type VirtualMachineConfig struct {
 	Affinity string          `json:"affinity,omitempty"`
 
 	// Qemu memory specs
-	Numa      int    `json:"numa,omitempty"`
-	Memory    int    `json:"memory,omitempty"`
-	Hugepages string `json:"hugepages,omitempty"`
-	Balloon   int    `json:"balloon,omitempty"`
+	Numa      int         `json:"numa,omitempty"`
+	Memory    StringOrInt `json:"memory,omitempty"` // See commit 7f8c808772979f274cdfac1dc7264771a3b7a7ae on qemu-server
+	Hugepages string      `json:"hugepages,omitempty"`
+	Balloon   int         `json:"balloon,omitempty"`
 
 	// Other Qemu devices
 	VGA       string `json:"vga,omitempty"`
