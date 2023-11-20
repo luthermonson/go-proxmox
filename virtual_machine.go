@@ -361,7 +361,9 @@ func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err e
 func (v *VirtualMachine) Migrate(ctx context.Context, target, targetstorage string) (task *Task, err error) {
 	var upid UPID
 	params := map[string]string{
-		"target": target,
+		"target":           target,
+		"online":           "1",
+		"with-local-disks": "1",
 	}
 	if targetstorage != "" {
 		params["targetstorage"] = targetstorage
