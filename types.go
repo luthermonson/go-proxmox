@@ -535,6 +535,17 @@ type VirtualMachineConfig struct {
 	IPConfig9 string            `json:"ipconfig9,omitempty"`
 }
 
+type VirtualMachineMigrateOptions struct {
+	Target           string    `json:"target"`
+	BWLimit          uint64    `json:"bwlimit,omitempty"`
+	Force            IntOrBool `json:"force,omitempty"`
+	MigrationNetwork string    `json:"migration_network,omitempty"`
+	MigrationType    string    `json:"migration_type,omitempty"`
+	Online           IntOrBool `json:"online,omitempty"`
+	TargetStorage    string    `json:"targetstorage,omitempty"`
+	WithLocalDisks   IntOrBool `json:"with-local-disks,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`
