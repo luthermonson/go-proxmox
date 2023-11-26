@@ -358,15 +358,17 @@ func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err e
 	return true, nil
 }
 
-func (v *VirtualMachine) Migrate(ctx context.Context, target, targetstorage string) (task *Task, err error) {
+func (v *VirtualMachine) Migrate(
+	ctx context.Context,
+	params *VirtualMachineMigrateOptions,
+) (task *Task, err error) {
 	var upid UPID
-	params := map[string]string{
-		"target": target,
+
+	if params == nil {
+		params = &VirtualMachineMigrateOptions{}
 	}
-	if targetstorage != "" {
-		params["targetstorage"] = targetstorage
-	}
-	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/migrate", v.Node, v.VMID), params, &upid); err != nil {
+
+	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/migrate", v.Node, v.VMID), params, &upid); err != nil {
 		return nil, err
 	}
 
