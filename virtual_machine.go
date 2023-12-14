@@ -46,6 +46,10 @@ func (v *VirtualMachine) TermProxy(ctx context.Context) (vnc *VNC, err error) {
 	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &vnc)
 }
 
+func (v *VirtualMachine) VNCProxy(ctx context.Context) (vnc *VNC, err error) {
+	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", v.Node, v.VMID), nil, &vnc)
+}
+
 func (v *VirtualMachine) HasTag(value string) bool {
 	if v.VirtualMachineConfig.Tags == "" {
 		return false
