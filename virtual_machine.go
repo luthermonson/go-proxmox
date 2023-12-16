@@ -23,6 +23,9 @@ const (
 
 	volumeIdentifier = "cidata"
 	blockSize        = 2048
+
+	BootOrderPfx        = "order="
+	BootDeviceSeparator = ";"
 )
 
 // DefaultAgentWaitInterval is the polling interval when waiting for agent exec commands
@@ -80,10 +83,12 @@ func (v *VirtualMachine) AddTag(ctx context.Context, value string) (*Task, error
 	v.VirtualMachineConfig.TagsSlice = append(v.VirtualMachineConfig.TagsSlice, value)
 	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, TagSeperator)
 
-	return v.Config(ctx, VirtualMachineOption{
-		Name:  "tags",
-		Value: v.VirtualMachineConfig.Tags,
-	})
+	return v.Config(
+		ctx, VirtualMachineOption{
+			Name:  "tags",
+			Value: v.VirtualMachineConfig.Tags,
+		},
+	)
 }
 
 func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, error) {
@@ -105,10 +110,12 @@ func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, er
 	}
 
 	v.VirtualMachineConfig.Tags = strings.Join(v.VirtualMachineConfig.TagsSlice, TagSeperator)
-	return v.Config(ctx, VirtualMachineOption{
-		Name:  "tags",
-		Value: v.VirtualMachineConfig.Tags,
-	})
+	return v.Config(
+		ctx, VirtualMachineOption{
+			Name:  "tags",
+			Value: v.VirtualMachineConfig.Tags,
+		},
+	)
 }
 
 func (v *VirtualMachine) SplitTags() {
@@ -119,7 +126,10 @@ func (v *VirtualMachine) SplitTags() {
 // mount it as a CD-ROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
 // which can be found here: https://pve.proxmox.com/wiki/Cloud-Init_Support#:~:text=and%20meta.-,Cloud%2DInit%20specific%20Options,-cicustom%3A%20%5Bmeta
 // If you want to use the proxmox implementation you'll need to use the cloudinit APIs https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/cloudinit
-func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string) error {
+func (v *VirtualMachine) CloudInit(
+	ctx context.Context,
+	device, userdata, metadata, vendordata, networkconfig string,
+) error {
 	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
 	// create userdata iso file on the local fs
 	iso, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
@@ -156,19 +166,74 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	task, err = v.Config(ctx, VirtualMachineOption{
-		Name:  device,
-		Value: fmt.Sprintf("%s:iso/%s,media=cdrom", storage.Name, isoName),
-	}, VirtualMachineOption{
-		Name:  "boot",
-		Value: fmt.Sprintf("%s;%s", v.VirtualMachineConfig.Boot, device),
-	})
+	task, err = v.Config(
+		ctx, VirtualMachineOption{
+			Name:  device,
+			Value: fmt.Sprintf("%s:iso/%s,media=cdrom", storage.Name, isoName),
+		}, VirtualMachineOption{
+			Name:  "boot",
+			Value: RemoveDeviceFromBootString(v.VirtualMachineConfig.Boot, device),
+		},
+	)
 
 	if err != nil {
 		return err
 	}
 
 	return task.WaitFor(ctx, 2)
+}
+
+// MakeBootString takes a list of boot devices and returns a string of the format, "order=firstDevice;secondDevice"
+func MakeBootString(devices ...string) string {
+	var bootS string
+	for _, device := range devices {
+		bootS = bootS + ";" + device
+	}
+	bootS = strings.Trim(bootS, BootDeviceSeparator)
+	if bootS != "" {
+		bootS = BootOrderPfx + bootS
+	}
+	return bootS
+}
+
+// ParseBootString takes a boot string of the format, "order=firstDevice;secondDevice", and returns a slice of strings
+// representing the boot devices in order.
+func ParseBootString(bootS string) []string {
+	trimmed := strings.TrimLeft(bootS, BootOrderPfx) // sata0;scsi1;ide0
+	return strings.Split(trimmed, BootDeviceSeparator)
+}
+
+// AppendDeviceToBootString adds a device to the end of the boot string.
+func AppendDeviceToBootString(bootS, device string) string {
+	devices := ParseBootString(bootS)
+	devices = append(devices, device)
+	return MakeBootString(devices...)
+}
+
+// remove element from string slice by value
+func remove(s []string, r string) []string {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
+// RemoveDeviceFromBootString takes a boot string and returns a boot string minus a given device.
+// If the given device is already not present in the boot order, this is basically a no-op.
+func RemoveDeviceFromBootString(bootS, device string) string {
+	devices := ParseBootString(bootS)
+	devices = remove(devices, device)
+	return MakeBootString(devices...)
+}
+
+// MoveDeviceToEndOfBootString moves a device to the end of the boot order.
+// If the given device is not present in the boot order, this adds it at the end.
+func MoveDeviceToEndOfBootString(bootS, device string) string {
+	bootS = RemoveDeviceFromBootString(bootS, device)
+	bootS = AppendDeviceToBootString(bootS, device)
+	return bootS
 }
 
 func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (iso *os.File, err error) {
@@ -212,10 +277,12 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		}
 	}
 
-	if err = fs.Finalize(iso9660.FinalizeOptions{
-		RockRidge:        true,
-		VolumeIdentifier: volumeIdentifier,
-	}); err != nil {
+	if err = fs.Finalize(
+		iso9660.FinalizeOptions{
+			RockRidge:        true,
+			VolumeIdentifier: volumeIdentifier,
+		},
+	); err != nil {
 		return nil, err
 	}
 
@@ -226,8 +293,10 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
 // for this to work you need to first set up a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
 func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
-	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
-		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
+	p := fmt.Sprintf(
+		"/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket),
+	)
 
 	return v.client.VNCWebSocket(p, vnc)
 }
@@ -260,7 +329,12 @@ func (v *VirtualMachine) Reset(ctx context.Context) (task *Task, err error) {
 
 func (v *VirtualMachine) Shutdown(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/shutdown", v.Node, v.VMID), nil, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/status/shutdown", v.Node, v.VMID),
+		nil,
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -282,7 +356,12 @@ func (v *VirtualMachine) IsPaused() bool {
 
 func (v *VirtualMachine) Pause(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/suspend", v.Node, v.VMID), nil, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/status/suspend", v.Node, v.VMID),
+		nil,
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -295,7 +374,12 @@ func (v *VirtualMachine) IsHibernated() bool {
 
 func (v *VirtualMachine) Hibernate(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/suspend", v.Node, v.VMID), map[string]string{"todisk": "1"}, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/status/suspend", v.Node, v.VMID),
+		map[string]string{"todisk": "1"},
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -304,7 +388,12 @@ func (v *VirtualMachine) Hibernate(ctx context.Context) (task *Task, err error) 
 
 func (v *VirtualMachine) Resume(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/resume", v.Node, v.VMID), nil, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/status/resume", v.Node, v.VMID),
+		nil,
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -313,7 +402,12 @@ func (v *VirtualMachine) Resume(ctx context.Context) (task *Task, err error) {
 
 func (v *VirtualMachine) Reboot(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/reboot", v.Node, v.VMID), nil, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/status/reboot", v.Node, v.VMID),
+		nil,
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -379,7 +473,11 @@ func (v *VirtualMachine) Migrate(
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneOptions) (newid int, task *Task, err error) {
+func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneOptions) (
+	newid int,
+	task *Task,
+	err error,
+) {
 	var upid UPID
 
 	if params == nil {
@@ -407,10 +505,12 @@ func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneO
 }
 
 func (v *VirtualMachine) ResizeDisk(ctx context.Context, disk, size string) (err error) {
-	err = v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
-		"disk": disk,
-		"size": size,
-	}, nil)
+	err = v.client.Put(
+		ctx, fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
+			"disk": disk,
+			"size": size,
+		}, nil,
+	)
 	if err != nil {
 		return
 	}
@@ -433,7 +533,10 @@ func (v *VirtualMachine) UnlinkDisk(ctx context.Context, diskID string, force bo
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) MoveDisk(ctx context.Context, disk string, params *VirtualMachineMoveDiskOptions) (task *Task, err error) {
+func (v *VirtualMachine) MoveDisk(ctx context.Context, disk string, params *VirtualMachineMoveDiskOptions) (
+	task *Task,
+	err error,
+) {
 	var upid UPID
 
 	if params == nil {
@@ -499,12 +602,14 @@ func (v *VirtualMachine) WaitForAgent(ctx context.Context, seconds int) error {
 
 func (v *VirtualMachine) AgentExec(ctx context.Context, command, inputData string) (pid int, err error) {
 	tmpdata := map[string]interface{}{}
-	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
+	err = v.client.Post(
+		ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
 		map[string]string{
 			"command":    command,
 			"input-data": inputData,
 		},
-		&tmpdata)
+		&tmpdata,
+	)
 	pid = int(tmpdata["pid"].(float64))
 	return
 }
@@ -557,10 +662,18 @@ func (v *VirtualMachine) AgentOsInfo(ctx context.Context) (info *AgentOsInfo, er
 }
 
 func (v *VirtualMachine) AgentSetUserPassword(ctx context.Context, password string, username string) error {
-	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
+	return v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID),
+		map[string]string{"password": password, "username": username},
+		nil,
+	)
 }
 
-func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallVirtualMachineOption, err error) {
+func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (
+	firewallOption *FirewallVirtualMachineOption,
+	err error,
+) {
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
 	return
 }
@@ -588,7 +701,12 @@ func (v *VirtualMachine) FirewallRulesDelete(ctx context.Context, rulePos int) e
 
 func (v *VirtualMachine) NewSnapshot(ctx context.Context, name string) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), map[string]string{"snapname": name}, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID),
+		map[string]string{"snapname": name},
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -602,7 +720,12 @@ func (v *VirtualMachine) Snapshots(ctx context.Context) (snapshots []*Snapshot, 
 
 func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (task *Task, err error) {
 	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/rollback", v.Node, v.VMID, name), nil, &upid); err != nil {
+	if err = v.client.Post(
+		ctx,
+		fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/rollback", v.Node, v.VMID, name),
+		nil,
+		&upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -611,7 +734,11 @@ func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (tas
 
 // RRDData takes a timeframe enum and an optional consolidation function
 // usage: vm.RRDData(HOURLY) or vm.RRDData(HOURLY, AVERAGE)
-func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
+func (v *VirtualMachine) RRDData(
+	ctx context.Context,
+	timeframe Timeframe,
+	consolidationFunction ...ConsolidationFunction,
+) (rrddata []*RRDData, err error) {
 	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrddata", v.Node, v.VMID)}
 
 	// consolidation functions are variadic because they're optional, putting everything into one string and sending that
