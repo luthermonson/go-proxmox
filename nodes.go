@@ -172,14 +172,9 @@ func (n *Node) Storage(ctx context.Context, name string) (storage *Storage, err 
 	return
 }
 
-func (n *Node) StorageDownloadObject(ctx context.Context, storage, filename, content, url string) (ret string, err error) {
-	return ret, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/storage/%s/download-url", n.Name, storage), map[string]string{
-		"content":  content,
-		"filename": filename,
-		"node":     n.Name,
-		"storage":  storage,
-		"url":      url,
-	}, &ret)
+func (n *Node) StorageDownloadURL(ctx context.Context, StorageDownloadURLOptions *StorageDownloadURLOptions) (ret string, err error) {
+	err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/storage/%s/download-url", n.Name, StorageDownloadURLOptions.Storage), StorageDownloadURLOptions, &ret)
+	return ret, err
 }
 
 func (n *Node) StorageISO(ctx context.Context) (*Storage, error) {
