@@ -1133,3 +1133,15 @@ type ACLOptions struct {
 	Propagate IntOrBool `json:",omitempty"`
 	Delete    IntOrBool `json:",omitempty"` // true to delete the ACL
 }
+
+type StorageDownloadURLOptions struct {
+	Content            string    `json:"content,omitempty"`
+	Filename           string    `json:"filename,omitempty"`
+	Node               string    `json:"node,omitempty"`
+	Storage            string    `json:"storage,omitempty"`
+	URL                string    `json:"url,omitempty"`
+	Checksum           string    `json:"checksum,omitempty"`
+	ChecksumAlgorithm  string    `json:"checksum-algorithm,omitempty"`
+	Compression        string    `json:"compression,omitempty"`
+	VerifyCertificates IntOrBool `json:"verify-certificates,omitempty"`
+}
