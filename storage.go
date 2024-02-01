@@ -108,7 +108,7 @@ func (s *Storage) downloadURL(ctx context.Context, content, filename, url string
 }
 
 func (s *Storage) GetContent(ctx context.Context) (content *StorageContent, err error) {
-	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content", s, s.Name), &content)
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content", s.Node, s.Name), &content)
 	return content, err
 }
 
