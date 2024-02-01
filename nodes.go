@@ -177,11 +177,6 @@ func (n *Node) StorageDownloadURL(ctx context.Context, StorageDownloadURLOptions
 	return ret, err
 }
 
-func StorageContentGet(ctx context.Context, storage *Storage) (content *StorageContent, err error) {
-	err = storage.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content", storage.Node, storage.Name), &content)
-	return content, err
-}
-
 func (n *Node) StorageISO(ctx context.Context) (*Storage, error) {
 	return n.findStorageByContent(ctx, "iso")
 }
