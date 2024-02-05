@@ -107,6 +107,11 @@ func (s *Storage) downloadURL(ctx context.Context, content, filename, url string
 	return NewTask(upid, s.client), nil
 }
 
+func (s *Storage) GetContent(ctx context.Context) (content *StorageContent, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content", s.Node, s.Name), &content)
+	return content, err
+}
+
 func (s *Storage) ISO(ctx context.Context, name string) (iso *ISO, err error) {
 	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
