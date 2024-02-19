@@ -1159,3 +1159,25 @@ type StorageContent struct {
 	Verification string `json:"verification,omitempty"`
 	VMID         uint64 `json:"vmid,omitempty"`
 }
+
+type NodeCertificates []*NodeCertificate
+
+type NodeCertificate struct {
+	Filename      string   `json:"filename,omitempty"`
+	Fingerprint   string   `json:"fingerprint,omitempty"`
+	Issuer        string   `json:"issuer,omitempty"`
+	NotAfter      string   `json:"not-after,omitempty"`
+	NotBefore     string   `json:"not-before,omitempty"`
+	Pem           string   `json:"pem,omitempty"`
+	PublicKeyBits int      `json:"public-key-bits,omitempty"`
+	PublicKeyType string   `json:"public-key-type,omitempty"`
+	San           []string `json:"san,omitempty"`
+	Subject       string   `json:"subject,omitempty"`
+}
+
+type CustomCertificate struct {
+	Certificates string `json:"certificates,omitempty"` // PEM encoded certificate (chain)
+	Force        bool   `json:"force,omitempty"`        // overwrite existing certificate
+	Key          string `json:"key,omitempty"`          // PEM encoded private key
+	Restart      bool   `json:"restart,omitempty"`      // restart pveproxy
+}
