@@ -240,3 +240,16 @@ func (n *Node) FirewallRulesUpdate(ctx context.Context, rule *FirewallRule) erro
 func (n *Node) FirewallRulesDelete(ctx context.Context, rulePos int) error {
 	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
 }
+
+func (n *Node) UploadCustomCertificate(ctx context.Context, cert *CustomCertificate) error {
+	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/certificates/custom", n.Name), cert, nil)
+}
+
+func (n *Node) DeleteCustomCertificate(ctx context.Context) error {
+	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/certificates/custom", n.Name), nil)
+}
+
+func (n *Node) GetCustomCertificates(ctx context.Context) (certs *NodeCertificates, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/certificates/info", n.Name), &certs)
+	return
+}
