@@ -112,6 +112,15 @@ func (s *Storage) GetContent(ctx context.Context) (content []*StorageContent, er
 	return content, err
 }
 
+func (s *Storage) DeleteContent(ctx context.Context, content string) (*Task, error) {
+	var upid UPID
+	err := s.client.Delete(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s", s.Node, s.Name, content), &upid)
+	if err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
 func (s *Storage) ISO(ctx context.Context, name string) (iso *ISO, err error) {
 	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
