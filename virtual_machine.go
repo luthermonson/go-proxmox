@@ -51,6 +51,10 @@ func (v *VirtualMachine) VNCProxy(ctx context.Context) (vnc *VNC, err error) {
 }
 
 func (v *VirtualMachine) HasTag(value string) bool {
+	if v.VirtualMachineConfig == nil {
+		return false
+	}
+
 	if v.VirtualMachineConfig.Tags == "" {
 		return false
 	}
