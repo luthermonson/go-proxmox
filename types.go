@@ -913,10 +913,10 @@ type AgentOsInfo struct {
 }
 
 type AgentExecStatus struct {
-	Exited       bool   `json:"exited"`
+	Exited       int   `json:"exited"`
 	ErrData      string `json:"err-data"`
 	ErrTruncated bool   `json:"err-truncated"`
-	ExitCode     int    `json:"exit-code"`
+	ExitCode     int    `json:"exitcode"`
 	OutData      string `json:"out-data"`
 	OutTruncated string `json:"out-truncated"`
 	Signal       bool   `json:"signal"`
