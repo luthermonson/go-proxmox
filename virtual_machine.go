@@ -532,7 +532,7 @@ func (v *VirtualMachine) WaitForAgentExecExit(ctx context.Context, pid, seconds 
 		if err != nil {
 			return nil, err
 		}
-		if status.Exited {
+		if status.Exited != 0 {
 			return status, nil
 		}
 
