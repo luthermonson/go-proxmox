@@ -271,3 +271,139 @@ func TestDomain_Sync(t *testing.T) {
 	domain.Realm = "test"
 	assert.Nil(t, domain.Sync(ctx, DomainSyncOptions{}))
 }
+
+func TestNewUser(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	user := NewUser{
+		UserID: "test",
+	}
+	assert.Nil(t, client.NewUser(ctx, &user))
+
+}
+
+func TestAPITokens(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	user := &User{
+		client: client,
+		UserID: "test",
+	}
+
+	apitokens, err := user.GetAPITokens(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, apitokens, 2)
+}
+
+func TestAPIToken(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	User := &User{
+		client: client,
+		UserID: "root@pam",
+	}
+	token, err := User.APIToken(ctx, "test")
+	assert.Nil(t, err)
+	assert.NotNil(t, token)
+
+}
+
+func TestUpdateAPIToken(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	User := &User{
+		client: client,
+		UserID: "userid",
+	}
+	token, err := User.UpdateAPIToken(ctx, "tokenid")
+	assert.Nil(t, err)
+	assert.NotNil(t, token)
+}
+
+// func TestNewAPIToken(t *testing.T) {
+// mocks.On(mockConfig)
+// defer mocks.Off()
+// client := mockClient()
+// ctx := context.Background()
+
+// // Users
+// user := &User{
+// client: client,
+// UserID: "userid",
+// }
+
+// token := &Token{
+// TokenID: "test",
+// Comment: "test",
+// Expire:  0,
+// }
+
+// newToken, err := user.NewAPIToken(ctx, *token)
+// assert.Nil(t, err)
+// // Check if newToken.Value is not empty
+// assert.NotEmpty(t, newToken.Value)
+// // Check if fullTokenid = userid!tokenid
+// assert.Equal(t, "userid!test", newToken.FullTokenID)
+// }
+
+func TestDeleteAPIToken(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	User := &User{
+		client: client,
+		UserID: "root@pam",
+	}
+	assert.Nil(t, User.DeleteAPIToken(ctx, "test"))
+}
+
+func TestNewRole(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	assert.Nil(t, client.NewRole(ctx, "test", "test"))
+}
+
+func TestGetTFA(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	user := &User{
+		client: client,
+		UserID: "userid",
+	}
+
+	tfa, err := user.GetTFA(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "userid", tfa.User)
+}
+
+func TestUnlockTFA(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	user := &User{
+		client: client,
+		UserID: "userid",
+	}
+	assert.Nil(t, user.UnlockTFA(ctx))
+}

@@ -1181,3 +1181,28 @@ type CustomCertificate struct {
 	Key          string `json:"key,omitempty"`          // PEM encoded private key
 	Restart      bool   `json:"restart,omitempty"`      // restart pveproxy
 }
+
+type NewUser struct {
+	UserID    string   `json:"userid"`
+	Comment   string   `json:"comment,omitempty"`
+	Email     string   `json:"email,omitempty"`
+	Enable    bool     `json:"enable,omitempty"`
+	Expire    int      `json:"expire,omitempty"`
+	Firstname string   `json:"firstname,omitempty"`
+	Groups    []string `json:"groups,omitempty"`
+	Keys      []string `json:"keys,omitempty"`
+	Lastname  string   `json:"lastname,omitempty"`
+	Password  string   `json:"password,omitempty"`
+}
+
+type TFA struct {
+	Realm string   `json:"realm,omitempty"`
+	Types []string `json:"types,omitempty"`
+	User  string   `json:"user,omitempty"`
+}
+
+type NewAPIToken struct {
+	FullTokenID string      `json:"full-tokenid,omitempty"`
+	Info        interface{} `json:"info,omitempty"`
+	Value       string      `json:"value,omitempty"`
+}

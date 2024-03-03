@@ -161,6 +161,10 @@ func (c *Client) Users(ctx context.Context) (users Users, err error) {
 	return
 }
 
+func (c *Client) NewUser(ctx context.Context, user *NewUser) (err error) {
+	return c.Post(ctx, "/access/users", user, nil)
+}
+
 func (u *User) Update(ctx context.Context) error {
 	return u.client.Put(ctx, fmt.Sprintf("/access/users/%s", u.UserID), u, nil)
 }
@@ -169,9 +173,44 @@ func (u *User) Delete(ctx context.Context) error {
 	return u.client.Delete(ctx, fmt.Sprintf("/access/users/%s", u.UserID), nil)
 }
 
+func (u *User) GetAPITokens(ctx context.Context) (tokens Tokens, err error) {
+	return tokens, u.client.Get(ctx, fmt.Sprintf("/access/users/%s/token", u.UserID), &tokens)
+}
+
+func (u *User) APIToken(ctx context.Context, tokenid string) (token Token, err error) {
+	return token, u.client.Get(ctx, fmt.Sprintf("/access/users/%s/token/%s", u.UserID, tokenid), &token)
+}
+
+func (u *User) NewAPIToken(ctx context.Context, token Token) (newtoken NewAPIToken, err error) {
+	return newtoken, u.client.Post(ctx, fmt.Sprintf("/access/users/%s/token/%s", u.UserID, token.TokenID), token, &newtoken)
+}
+
+func (u *User) UpdateAPIToken(ctx context.Context, tokenid string) (token Token, err error) {
+	return token, u.client.Put(ctx, fmt.Sprintf("/access/users/%s/token/%s", u.UserID, tokenid), token, nil)
+}
+
+func (u *User) DeleteAPIToken(ctx context.Context, tokenid string) error {
+	return u.client.Delete(ctx, fmt.Sprintf("/access/users/%s/token/%s", u.UserID, tokenid), nil)
+}
+
+func (u *User) GetTFA(ctx context.Context) (tfa TFA, err error) {
+	return tfa, u.client.Get(ctx, fmt.Sprintf("/access/users/%s/tfa", u.UserID), &tfa)
+}
+
+func (u *User) UnlockTFA(ctx context.Context) error {
+	return u.client.Delete(ctx, fmt.Sprintf("/access/users/%s/tfa", u.UserID), nil)
+}
+
 func (c *Client) Role(ctx context.Context, roleid string) (role Permission, err error) {
 	err = c.Get(ctx, fmt.Sprintf("/access/roles/%s", roleid), &role)
 	return
+}
+
+func (c *Client) NewRole(ctx context.Context, roleId string, privs string) (err error) {
+	return c.Post(ctx, "/access/roles", map[string]string{
+		"roleid": roleId,
+		"privs":  privs,
+	}, nil)
 }
 
 func (c *Client) Roles(ctx context.Context) (roles Roles, err error) {
