@@ -206,9 +206,9 @@ func (c *Client) Role(ctx context.Context, roleid string) (role Permission, err 
 	return
 }
 
-func (c *Client) NewRole(ctx context.Context, roleId string, privs string) (err error) {
+func (c *Client) NewRole(ctx context.Context, roleID string, privs string) (err error) {
 	return c.Post(ctx, "/access/roles", map[string]string{
-		"roleid": roleId,
+		"roleid": roleID,
 		"privs":  privs,
 	}, nil)
 }
