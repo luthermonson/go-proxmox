@@ -635,3 +635,11 @@ func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, conso
 	err = v.client.Get(ctx, u.String(), &rrddata)
 	return
 }
+
+func (v *VirtualMachine) ConvertToTemplate(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/template", v.Node, v.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, v.client), nil
+}
