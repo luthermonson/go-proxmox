@@ -546,6 +546,13 @@ type VirtualMachineMigrateOptions struct {
 	WithLocalDisks   IntOrBool `json:"with-local-disks,omitempty"`
 }
 
+type ContainerMigrateOptions struct {
+	Target  string    `json:"target"`
+	BWLimit uint64    `json:"bwlimit,omitempty"`
+	Online  IntOrBool `json:"online,omitempty"`
+	Restart IntOrBool `json:"restart,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`
@@ -1205,4 +1212,38 @@ type NewAPIToken struct {
 	FullTokenID string      `json:"full-tokenid,omitempty"`
 	Info        interface{} `json:"info,omitempty"`
 	Value       string      `json:"value,omitempty"`
+}
+
+type VNCProxyOptions struct {
+	Websocket string `json:"websocket,omitempty"`
+	Height    int    `json:"height,omitempty"`
+	Width     int    `json:"width,omitempty"`
+}
+
+type ContainerSnapshot struct {
+	Description          string `json:"description,omitempty"`
+	Name                 string `json:"snapname,omitempty"`
+	Parent               string `json:"parent,omitempty"`
+	SnapshotCreationTime int64  `json:"snaptime,omitempty"`
+}
+
+type Firewall struct {
+	Aliases []*FirewallAlias    `json:"aliases,omitempty"`
+	Ipset   []*FirewallIPSet    `json:"ipset,omitempty"`
+	Rules   []*FirewallRule     `json:"rules,omitempty"`
+	Options *FirewallNodeOption `json:"options,omitempty"`
+	// Refs 	map[string]string `json:"refs,omitempty"`
+}
+
+type FirewallAlias struct {
+	Cidr    string `json:"cidr,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type FirewallIPSet struct {
+	Name    string `json:"name,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Comment string `json:"comment,omitempty"`
 }

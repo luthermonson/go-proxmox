@@ -39,3 +39,18 @@ func TestVirtualMachine_RRDData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, rdddata, 70)
 }
+
+func TestVirtualMachines(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node := Node{
+		client: client,
+		Name:   "node1",
+	}
+
+	vms, err := node.VirtualMachines(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, vms, 3)
+}
