@@ -48,28 +48,52 @@ func (c *Container) Config(ctx context.Context, options ...ContainerOption) (*Ta
 	return NewTask(upid, c.client), err
 }
 
-func (c *Container) Start(ctx context.Context) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.Node, c.VMID), nil, &status)
+func (c *Container) Start(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.Node, c.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) Stop(ctx context.Context) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/stop", c.Node, c.VMID), nil, &status)
+func (c *Container) Stop(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/stop", c.Node, c.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) Suspend(ctx context.Context) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/suspend", c.Node, c.VMID), nil, &status)
+func (c *Container) Suspend(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/suspend", c.Node, c.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) Reboot(ctx context.Context) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/reboot", c.Node, c.VMID), nil, &status)
+func (c *Container) Reboot(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/reboot", c.Node, c.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) Resume(ctx context.Context) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/resume", c.Node, c.VMID), nil, &status)
+func (c *Container) Resume(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/resume", c.Node, c.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) Shutdown(ctx context.Context, force bool, timeout int) (status string, err error) {
-	return status, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/shutdown", c.Node, c.VMID), map[string]interface{}{"force": force, "timeout": timeout}, &status)
+func (c *Container) Shutdown(ctx context.Context, force bool, timeout int) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/shutdown", c.Node, c.VMID), map[string]interface{}{"forceStop": force, "timeout": timeout}, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
 }
 
 func (c *Container) TermProxy(ctx context.Context) (vnc *VNC, err error) {

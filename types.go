@@ -678,11 +678,6 @@ type ContainerCloneOptions struct {
 	Target      string `json:"target,omitempty"`
 }
 
-type ContainerStatuses []*ContainerStatus
-type ContainerStatus struct {
-	Data string `json:",omitempty"`
-}
-
 // ContainerOptions A key/value pair used to modify a container(LXC) config
 // Refer to https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/lxc/{vmid}/config for a list of valid values
 type ContainerOptions []*ContainerOption
