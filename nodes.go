@@ -104,6 +104,29 @@ func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
 	return &c, nil
 }
 
+func (n *Node) NewContainer(ctx context.Context, vmid int, options ...ContainerOption) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	if vmid <= 0 {
+		cluster, err := n.client.Cluster(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vmid, err = cluster.NextID(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	data["vmid"] = vmid
+
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+
+	err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc", n.Name), data, &upid)
+	return NewTask(upid, n.client), err
+}
+
 func (n *Node) Appliances(ctx context.Context) (appliances Appliances, err error) {
 	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/aplinfo", n.Name), &appliances)
 	if err != nil {
