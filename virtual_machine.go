@@ -501,10 +501,10 @@ func (v *VirtualMachine) WaitForAgent(ctx context.Context, seconds int) error {
 	}
 }
 
-func (v *VirtualMachine) AgentExec(ctx context.Context, command, inputData string) (pid int, err error) {
+func (v *VirtualMachine) AgentExec(ctx context.Context, command []string, inputData string) (pid int, err error) {
 	tmpdata := map[string]interface{}{}
 	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
-		map[string]string{
+		map[string]interface{}{
 			"command":    command,
 			"input-data": inputData,
 		},
