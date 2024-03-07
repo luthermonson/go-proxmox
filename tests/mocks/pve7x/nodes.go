@@ -888,4 +888,144 @@ func nodes() {
     ]
 }`)
 
+	// LXC
+
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc").
+		Reply(200).
+		JSON(`{
+"data": [{"cpu":0,"cpus":1,"disk":640397312,"diskread":273694720,"diskwrite":200982528,"maxdisk":8350298112,"maxmem":536870912,"maxswap":536870912,"mem":34304000,"name":"test","netin":94558593,"netout":1618542,"pid":248173,"status":"running","swap":0,"type":"lxc","uptime":919760,"vmid":"106"},{"cpu":0,"cpus":1,"disk":639303680,"diskread":283123712,"diskwrite":201687040,"maxdisk":8350298112,"maxmem":536870912,"maxswap":536870912,"mem":34508800,"name":"zort","netin":94560801,"netout":1619838,"pid":248045,"status":"running","swap":0,"type":"lxc","uptime":919761,"vmid":"105"},{"cpu":0,"cpus":1,"disk":0,"diskread":0,"diskwrite":0,"maxdisk":8589934592,"maxmem":536870912,"maxswap":536870912,"mem":0,"name":"test-container","netin":0,"netout":0,"status":"stopped","swap":0,"template":1,"type":"lxc","uptime":0,"vmid":"101"}]
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/status/current").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "cpu":0,
+        "cpus":2,
+        "disk":0,
+        "diskread":0,
+        "diskwrite":0,
+        "ha":{"managed":0},
+        "maxdisk":8589934592,
+        "maxmem":536870912,
+        "maxswap":536870912,
+        "mem":0,
+        "name":"test-container",
+        "netin":0,
+        "netout":0,
+        "status":"stopped",
+        "swap":0,
+        "template":1,
+        "type":"lxc",
+        "uptime":0,
+        "vmid":101
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/clone").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	gock.New(config.C.URI).
+		Delete("^/nodes/node1/lxc/101").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzdestroy:101:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Put("^/nodes/node1/lxc/101/config").
+		Reply(200).
+		JSON(`{"data": "null"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/start").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzstart:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/stop").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzstop:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/suspend").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzsuspend:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/reboot").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzreboot:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/resume").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzresume:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/status/shutdown").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzshutdown:101:root"}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/template").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/snapshot").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "description": "description1",
+            "name":"snapshot1",
+            "snaptime":1709753281
+        },
+        {
+            "description":"description2",
+            "name":"snapshot2",
+            "parent":"parent1",
+            "snaptime":1709753290
+        },
+        {
+            "description":"You are here!",
+            "digest":"e2f5f35c85b2ca35e5f9ab789436b25c1d71cbad",
+            "name":"current",
+            "parent":"parent2",
+            "running":1
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/snapshot").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0031B740:0645340C:23E5BA99:vzsnapshot:101:root"
+}`)
+
+	gock.New(config.C.URI).
+		Delete("^/nodes/node1/lxc/101/snapshot/snapshot1").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0031B740:0645340C:23E5BA99:vzrmsnapshot:101:root"}`)
+
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/snapshot/snapshot1").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0031B740:0645340C:23E5BA99:vzsnapshot:101:root"
+}`)
+
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/snapshot/snapshot1/rollback").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0031B740:0645340C:23E5BA99:vzrollback:101:root"
+}`)
+
 }

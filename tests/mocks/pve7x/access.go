@@ -869,4 +869,87 @@ func access() {
 		Post("^/access/groups/groupid").
 		Reply(200).
 		JSON(``)
+
+	gock.New(config.C.URI).
+		Post("^/access/users").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Post("^/access/roles").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Get("^/access/users/test/token").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "expire": 100,
+            "privsep": 0,
+            "tokenid": "test",
+            "comment": "comment"
+        },
+        {
+            "expire": 0,
+            "privsep": 1,
+            "tokenid": "test2",
+            "comment": "comment"
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Get("^/access/users/root@pam/token/test").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "expire": 0,
+        "privsep": 0,
+        "comment": "comment"
+    } 
+}`)
+
+	gock.New(config.C.URI).
+		Post("^/access/users/userid/token/test").
+		Reply(200).
+		JSON(`{
+    "data": {"full-tokenid":"userid!test","value":"tokenvalue"}
+}`)
+
+	gock.New(config.C.URI).
+		Delete("^/access/users/root@pam/token/test").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Get("^/access/users/userid/tfa").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "realm": "pve",
+        "types": [
+            "oath"
+        ],
+        "user": "userid"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Delete("^/access/users/userid/tfa").
+		Reply(200).
+		JSON(``)
+
+	gock.New(config.C.URI).
+		Put("^/access/users/userid/token/tokenid").
+		Reply(200).
+		JSON(`
+    "data": {
+        "expire": 0,
+        "privsep": 0,
+        "comment": "comment"
+    }
+}`)
+
 }

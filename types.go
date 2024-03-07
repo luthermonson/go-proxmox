@@ -546,6 +546,13 @@ type VirtualMachineMigrateOptions struct {
 	WithLocalDisks   IntOrBool `json:"with-local-disks,omitempty"`
 }
 
+type ContainerMigrateOptions struct {
+	Target  string    `json:"target"`
+	BWLimit uint64    `json:"bwlimit,omitempty"`
+	Online  IntOrBool `json:"online,omitempty"`
+	Restart IntOrBool `json:"restart,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`
@@ -913,10 +920,10 @@ type AgentOsInfo struct {
 }
 
 type AgentExecStatus struct {
-	Exited       bool   `json:"exited"`
+	Exited       int    `json:"exited"`
 	ErrData      string `json:"err-data"`
 	ErrTruncated bool   `json:"err-truncated"`
-	ExitCode     int    `json:"exit-code"`
+	ExitCode     int    `json:"exitcode"`
 	OutData      string `json:"out-data"`
 	OutTruncated string `json:"out-truncated"`
 	Signal       bool   `json:"signal"`
@@ -1180,4 +1187,63 @@ type CustomCertificate struct {
 	Force        bool   `json:"force,omitempty"`        // overwrite existing certificate
 	Key          string `json:"key,omitempty"`          // PEM encoded private key
 	Restart      bool   `json:"restart,omitempty"`      // restart pveproxy
+}
+
+type NewUser struct {
+	UserID    string   `json:"userid"`
+	Comment   string   `json:"comment,omitempty"`
+	Email     string   `json:"email,omitempty"`
+	Enable    bool     `json:"enable,omitempty"`
+	Expire    int      `json:"expire,omitempty"`
+	Firstname string   `json:"firstname,omitempty"`
+	Groups    []string `json:"groups,omitempty"`
+	Keys      []string `json:"keys,omitempty"`
+	Lastname  string   `json:"lastname,omitempty"`
+	Password  string   `json:"password,omitempty"`
+}
+
+type TFA struct {
+	Realm string   `json:"realm,omitempty"`
+	Types []string `json:"types,omitempty"`
+	User  string   `json:"user,omitempty"`
+}
+
+type NewAPIToken struct {
+	FullTokenID string      `json:"full-tokenid,omitempty"`
+	Info        interface{} `json:"info,omitempty"`
+	Value       string      `json:"value,omitempty"`
+}
+
+type VNCProxyOptions struct {
+	Websocket string `json:"websocket,omitempty"`
+	Height    int    `json:"height,omitempty"`
+	Width     int    `json:"width,omitempty"`
+}
+
+type ContainerSnapshot struct {
+	Description          string `json:"description,omitempty"`
+	Name                 string `json:"snapname,omitempty"`
+	Parent               string `json:"parent,omitempty"`
+	SnapshotCreationTime int64  `json:"snaptime,omitempty"`
+}
+
+type Firewall struct {
+	Aliases []*FirewallAlias    `json:"aliases,omitempty"`
+	Ipset   []*FirewallIPSet    `json:"ipset,omitempty"`
+	Rules   []*FirewallRule     `json:"rules,omitempty"`
+	Options *FirewallNodeOption `json:"options,omitempty"`
+	// Refs 	map[string]string `json:"refs,omitempty"`
+}
+
+type FirewallAlias struct {
+	Cidr    string `json:"cidr,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type FirewallIPSet struct {
+	Name    string `json:"name,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Comment string `json:"comment,omitempty"`
 }
