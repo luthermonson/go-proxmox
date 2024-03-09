@@ -53,7 +53,7 @@ func (c *Client) Permissions(ctx context.Context, o *PermissionsOptions) (permis
 }
 
 func (c *Client) Password(ctx context.Context, userid, password string) error {
-	return c.Post(ctx, "/access/password", map[string]string{
+	return c.Put(ctx, "/access/password", map[string]string{
 		"userid":   userid,
 		"password": password,
 	}, nil)
