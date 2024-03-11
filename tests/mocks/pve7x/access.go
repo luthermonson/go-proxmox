@@ -483,7 +483,7 @@ func access() {
 }`)
 
 	gock.New(config.C.URI).
-		Post("^/access/password$").
+		Put("^/access/password$").
 		Reply(200).
 		JSON(`{"success":1,"data":null}`)
 
