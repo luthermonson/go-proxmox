@@ -643,3 +643,20 @@ func (v *VirtualMachine) ConvertToTemplate(ctx context.Context) (task *Task, err
 	}
 	return NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string) error {
+	if v.HasTag(MakeTag(TagCloudInit)) {
+		if ok, err := v.deleteCloudInitISO(ctx); err != nil || !ok {
+			return err
+		}
+		task, err := v.Config(ctx, VirtualMachineOption{
+			Name:  device,
+			Value: "none,media=cdrom",
+		})
+		if err != nil {
+			return err
+		}
+		return task.WaitFor(ctx, 5)
+	}
+	return nil
+}
