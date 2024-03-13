@@ -1265,6 +1265,6 @@ type VirtualMachineBackupOptions struct {
 	Storage  string       `json:"storage,omitempty"`
 	Remove   int          `json:"remove,omitempty"`
 	Mode     ModeType     `json:"mode,omitempty"`
-	Compress CompressType `json:"compess,omitempty"`
+	Compress CompressType `json:"compress,omitempty"`
 	Notes    string       `json:"notes,omitempty"`
 }
