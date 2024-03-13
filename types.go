@@ -1242,3 +1242,29 @@ type FirewallIPSet struct {
 	Digest  string `json:"digest,omitempty"`
 	Comment string `json:"comment,omitempty"`
 }
+
+type (
+	ModeType     = string
+	CompressType = string
+)
+
+const (
+	ModeSnapshot = ModeType("snapshot")
+	ModeSuspend  = ModeType("suspend")
+	ModeStop     = ModeType("stop")
+
+	CompressZero = CompressType("0")
+	CompressOne  = CompressType("1")
+	CompressGzip = CompressType("gzip")
+	CompressLzo  = CompressType("lzo")
+	CompressZstd = CompressType("zstd")
+)
+
+type VirtualMachineBackupOptions struct {
+	VMID     uint64       `json:"vmid"`
+	Storage  string       `json:"storage,omitempty"`
+	Remove   int          `json:"remove,omitempty"`
+	Mode     ModeType     `json:"mode,omitempty"`
+	Compress CompressType `json:"compess,omitempty"`
+	Notes    string       `json:"notes,omitempty"`
+}

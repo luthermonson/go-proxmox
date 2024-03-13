@@ -643,3 +643,16 @@ func (v *VirtualMachine) ConvertToTemplate(ctx context.Context) (task *Task, err
 	}
 	return NewTask(upid, v.client), nil
 }
+
+func (v *VirtualMachine) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) (task *Task, err error) {
+	var upid UPID
+
+	if params == nil {
+		params = &VirtualMachineBackupOptions{}
+	}
+
+	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/vzdump", v.Node), params, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, v.client), nil
+}
