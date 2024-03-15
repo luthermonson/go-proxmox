@@ -1244,27 +1244,56 @@ type FirewallIPSet struct {
 }
 
 type (
-	ModeType     = string
-	CompressType = string
+	VirtualMachineBackupMode               = string
+	VirtualMachineBackupCompress           = string
+	VirtualMachineBackupNotificationPolicy = string
 )
 
 const (
-	ModeSnapshot = ModeType("snapshot")
-	ModeSuspend  = ModeType("suspend")
-	ModeStop     = ModeType("stop")
+	VirtualMachineBackupModeSnapshot = VirtualMachineBackupMode("snapshot")
+	VirtualMachineBackupModeSuspend  = VirtualMachineBackupMode("suspend")
+	VirtualMachineBackupModeStop     = VirtualMachineBackupMode("stop")
 
-	CompressZero = CompressType("0")
-	CompressOne  = CompressType("1")
-	CompressGzip = CompressType("gzip")
-	CompressLzo  = CompressType("lzo")
-	CompressZstd = CompressType("zstd")
+	VirtualMachineBackupCompressZero = VirtualMachineBackupCompress("0")
+	VirtualMachineBackupCompressOne  = VirtualMachineBackupCompress("1")
+	VirtualMachineBackupCompressGzip = VirtualMachineBackupCompress("gzip")
+	VirtualMachineBackupCompressLzo  = VirtualMachineBackupCompress("lzo")
+	VirtualMachineBackupCompressZstd = VirtualMachineBackupCompress("zstd")
+
+	VirtualMachineBackupNotificationPolicyAlways  = VirtualMachineBackupNotificationPolicy("always")
+	VirtualMachineBackupNotificationPolicyFailure = VirtualMachineBackupNotificationPolicy("failure")
+	VirtualMachineBackupNotificationPolicyNever   = VirtualMachineBackupNotificationPolicy("never")
 )
 
 type VirtualMachineBackupOptions struct {
-	VMID     uint64       `json:"vmid"`
-	Storage  string       `json:"storage"`
-	Remove   int          `json:"remove,omitempty"`
-	Mode     ModeType     `json:"mode,omitempty"`
-	Compress CompressType `json:"compress,omitempty"`
-	Notes    string       `json:"notes,omitempty"`
+	All                bool                                   `json:"all,omitempty"`
+	BwLimit            uint                                   `json:"bwlimit,omitempty"`
+	Compress           VirtualMachineBackupCompress           `json:"compress,omitempty"`
+	DumpDir            string                                 `json:"dumpDir,omitempty"`
+	Exclude            string                                 `json:"exclude,omitempty"`
+	ExcludePath        []string                               `json:"exclude-path,omitempty"`
+	IoNice             uint                                   `json:"ionice,omitempty"`
+	LockWait           uint                                   `json:"lockwait,omitempty"`
+	MailTo             string                                 `json:"mailto,omitempty"`
+	Mode               VirtualMachineBackupMode               `json:"mode,omitempty"`
+	Node               string                                 `json:"node,omitempty"`
+	NotesTemplate      string                                 `json:"notes-template,omitempty"`
+	NotificationPolicy VirtualMachineBackupNotificationPolicy `json:"notification-policy,omitempty"`
+	NotificationTarget string                                 `json:"notification-target,omitempty"`
+	Performance        string                                 `json:"performance,omitempty"`
+	Pigz               int                                    `json:"pigz,omitempty"`
+	Pool               string                                 `json:"pool,omitempty"`
+	Protected          string                                 `json:"protected,omitempty"`
+	PruneBackups       string                                 `json:"prune-backups,omitempty"`
+	Quiet              bool                                   `json:"quiet,omitempty"`
+	Remove             bool                                   `json:"remove,omitempty"`
+	Script             string                                 `json:"script,omitempty"`
+	StdExcludes        bool                                   `json:"stdexcludes,omitempty"`
+	StdOut             bool                                   `json:"stdout,omitempty"`
+	Stop               bool                                   `json:"stop,omitempty"`
+	StopWait           uint                                   `json:"stopwait,omitempty"`
+	Storage            string                                 `json:"storage,omitempty"`
+	TmpDir             string                                 `json:"tmpdir,omitempty"`
+	VMID               uint64                                 `json:"vmid,omitempty"`
+	Zstd               uint                                   `json:"zstd,omitempty"`
 }
