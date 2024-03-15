@@ -281,7 +281,7 @@ func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) 
 	var upid UPID
 
 	if params == nil {
-		return nil, fmt.Errorf("empty params")
+		params = &VirtualMachineBackupOptions{}
 	}
 
 	if err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/vzdump", n.Name), params, &upid); err != nil {
