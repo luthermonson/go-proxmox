@@ -1262,7 +1262,7 @@ const (
 
 type VirtualMachineBackupOptions struct {
 	VMID     uint64       `json:"vmid"`
-	Storage  string       `json:"storage,omitempty"`
+	Storage  string       `json:"storage"`
 	Remove   int          `json:"remove,omitempty"`
 	Mode     ModeType     `json:"mode,omitempty"`
 	Compress CompressType `json:"compress,omitempty"`
