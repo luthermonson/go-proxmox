@@ -276,3 +276,16 @@ func (n *Node) GetCustomCertificates(ctx context.Context) (certs *NodeCertificat
 	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/certificates/info", n.Name), &certs)
 	return
 }
+
+func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) (task *Task, err error) {
+	var upid UPID
+
+	if params == nil {
+		params = &VirtualMachineBackupOptions{}
+	}
+
+	if err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/vzdump", n.Name), params, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
