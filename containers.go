@@ -115,12 +115,10 @@ func (c *Container) Feature(ctx context.Context) (hasFeature bool, err error) {
 	return feature.HasFeature, err
 }
 
-// This seems broken on the proxmox side: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/lxc/{vmid}/interfaces
-// I wasn't able to make it work with the API. Tested on {"release":"7.3","repoid":"c3928077","version":"7.3-3"}
-// func (c *Container) Interfaces(ctx context.Context) (interfaces []string, err error) {
-// err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/interfaces", c.Node, c.VMID), &interfaces)
-// return interfaces, err
-// }
+func (c *Container) Interfaces(ctx context.Context) (interfaces ContainerInterfaces, err error) {
+	err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/interfaces", c.Node, c.VMID), &interfaces)
+	return interfaces, err
+}
 
 func (c *Container) Migrate(ctx context.Context, params *ContainerMigrateOptions) (task *Task, err error) {
 	var upid UPID
