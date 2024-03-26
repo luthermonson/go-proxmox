@@ -666,6 +666,15 @@ type Container struct {
 	Tags    string
 }
 
+type ContainerInterfaces []*ContainerInterface
+
+type ContainerInterface struct {
+	HWAddr string `json:"hwaddr,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Inet   string `json:"inet,omitempty"`
+	Inet6  string `json:"inet6,omitempty"`
+}
+
 type ContainerCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`

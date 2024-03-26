@@ -247,3 +247,19 @@ func TestContainerRollbackSnapshot(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 }
+
+func TestContainerInterfaces(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	container := Container{
+		client: client,
+		Node:   "node1",
+		VMID:   101,
+	}
+	interfaces, err := container.Interfaces(ctx)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, interfaces)
+	assert.Equal(t, interfaces, ContainerInterfaces{{HWAddr: "00:00:00:00:00:00", Inet: "127.0.0.1/8", Name: "lo", Inet6: "::1/128"}, {Inet6: "fe80::be24:11ff:fe89:6707/64", Name: "eth0", HWAddr: "bc:24:11:89:67:07", Inet: "192.168.3.95/22"}})
+}
