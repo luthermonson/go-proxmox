@@ -889,6 +889,25 @@ func nodes() {
 }`)
 
 	// LXC
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/interfaces").
+		Reply(200).
+		JSON(`{
+		"data": [
+				{
+						"inet":"127.0.0.1/8",
+						"hwaddr":"00:00:00:00:00:00",
+						"name":"lo",
+						"inet6":"::1/128"
+				},
+				{
+						"inet6":"fe80::be24:11ff:fe89:6707/64",
+						"name":"eth0",
+						"hwaddr":"bc:24:11:89:67:07",
+						"inet":"192.168.3.95/22"
+				}
+		]
+}`)
 
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/lxc").
