@@ -49,3 +49,13 @@ func (cl *Cluster) Resources(ctx context.Context, filters ...string) (rs Cluster
 
 	return rs, cl.client.Get(ctx, u.String(), &rs)
 }
+
+func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {
+	var tasks Tasks
+
+	if err := cl.client.Get(ctx, "/cluster/tasks", &tasks); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
