@@ -57,5 +57,9 @@ func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {
 		return nil, err
 	}
 
+	for index := range tasks {
+		tasks[index].client = cl.client
+	}
+
 	return tasks, nil
 }
