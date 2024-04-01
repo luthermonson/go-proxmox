@@ -580,7 +580,7 @@ type VirtualMachineMoveDiskOptions struct {
 
 type UPID string
 
-type Tasks []*Tasks
+type Tasks []*Task
 type Task struct {
 	client       *Client
 	UPID         UPID
