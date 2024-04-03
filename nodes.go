@@ -2,8 +2,8 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
 	"net/url"
 	"strings"
 )
@@ -315,9 +315,14 @@ func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, e
 		}
 	}
 
+	jsonData, err := json.Marshal(configFields)
+	if err != nil {
+		return nil, fmt.Errorf("cannot present vzdump config as json string : %w", err)
+	}
+
 	vzdumpCfg := &VzdumpConfig{}
-	if err := mapstructure.Decode(configFields, vzdumpCfg); err != nil {
-		return nil, fmt.Errorf("cannot decode map params to struct : %w", err)
+	if err := json.Unmarshal(jsonData, vzdumpCfg); err != nil {
+		return nil, fmt.Errorf("cannot parse data for vzdump config : %w", err)
 	}
 
 	return vzdumpCfg, nil

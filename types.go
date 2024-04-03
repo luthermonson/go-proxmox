@@ -1319,13 +1319,13 @@ type VzdumpConfig struct {
 	Boot       string `json:"boot"`
 	CiPassword string `json:"cipassword"`
 	CiUser     string `json:"ciuser"`
-	Cores      string `json:"cores"`
-	Memory     string `json:"memory"`
+	Cores      uint64 `json:"cores,string"`
+	Memory     uint64 `json:"memory,string"`
 	Meta       string `json:"meta"`
 	Numa       string `json:"numa"`
 	OsType     string `json:"ostype"`
 	Scsihw     string `json:"scsihw"`
-	Sockets    string `json:"sockets"`
+	Sockets    uint64 `json:"sockets,string"`
 	SshKeys    string `json:"sshkeys"`
 	VmgenID    string `json:"vmgenid"`
 }
