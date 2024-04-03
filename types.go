@@ -1328,4 +1328,153 @@ type VzdumpConfig struct {
 	Sockets    uint64 `json:"sockets,string"`
 	SshKeys    string `json:"sshkeys"`
 	VmgenID    string `json:"vmgenid"`
+
+	IDE0 string `json:"ide0,omitempty"`
+	IDE1 string `json:"ide1,omitempty"`
+	IDE2 string `json:"ide2,omitempty"`
+	IDE3 string `json:"ide3,omitempty"`
+
+	SCSI0  string `json:"scsi0,omitempty"`
+	SCSI1  string `json:"scsi1,omitempty"`
+	SCSI2  string `json:"scsi2,omitempty"`
+	SCSI3  string `json:"scsi3,omitempty"`
+	SCSI4  string `json:"scsi4,omitempty"`
+	SCSI5  string `json:"scsi5,omitempty"`
+	SCSI6  string `json:"scsi6,omitempty"`
+	SCSI7  string `json:"scsi7,omitempty"`
+	SCSI8  string `json:"scsi8,omitempty"`
+	SCSI9  string `json:"scsi9,omitempty"`
+	SCSI10 string `json:"scsi10,omitempty"`
+	SCSI11 string `json:"scsi11,omitempty"`
+	SCSI12 string `json:"scsi12,omitempty"`
+	SCSI13 string `json:"scsi13,omitempty"`
+	SCSI14 string `json:"scsi14,omitempty"`
+	SCSI15 string `json:"scsi15,omitempty"`
+	SCSI16 string `json:"scsi16,omitempty"`
+	SCSI17 string `json:"scsi17,omitempty"`
+	SCSI18 string `json:"scsi18,omitempty"`
+	SCSI19 string `json:"scsi19,omitempty"`
+	SCSI20 string `json:"scsi20,omitempty"`
+	SCSI21 string `json:"scsi21,omitempty"`
+	SCSI22 string `json:"scsi22,omitempty"`
+	SCSI23 string `json:"scsi23,omitempty"`
+	SCSI24 string `json:"scsi24,omitempty"`
+	SCSI25 string `json:"scsi25,omitempty"`
+	SCSI26 string `json:"scsi26,omitempty"`
+	SCSI27 string `json:"scsi27,omitempty"`
+	SCSI28 string `json:"scsi28,omitempty"`
+	SCSI29 string `json:"scsi29,omitempty"`
+	SCSI30 string `json:"scsi30,omitempty"`
+
+	SATA0 string `json:"sata0,omitempty"`
+	SATA1 string `json:"sata1,omitempty"`
+	SATA2 string `json:"sata2,omitempty"`
+	SATA3 string `json:"sata3,omitempty"`
+	SATA4 string `json:"sata4,omitempty"`
+	SATA5 string `json:"sata5,omitempty"`
+
+	VirtIO0  string `json:"virtio0,omitempty"`
+	VirtIO1  string `json:"virtio1,omitempty"`
+	VirtIO2  string `json:"virtio2,omitempty"`
+	VirtIO3  string `json:"virtio3,omitempty"`
+	VirtIO4  string `json:"virtio4,omitempty"`
+	VirtIO5  string `json:"virtio5,omitempty"`
+	VirtIO6  string `json:"virtio6,omitempty"`
+	VirtIO7  string `json:"virtio7,omitempty"`
+	VirtIO8  string `json:"virtio8,omitempty"`
+	VirtIO9  string `json:"virtio9,omitempty"`
+	VirtIO10 string `json:"virtio10,omitempty"`
+	VirtIO11 string `json:"virtio11,omitempty"`
+	VirtIO12 string `json:"virtio12,omitempty"`
+	VirtIO13 string `json:"virtio13,omitempty"`
+	VirtIO14 string `json:"virtio14,omitempty"`
+	VirtIO15 string `json:"virtio15,omitempty"`
+
+	Unused0 string `json:"unused0,omitempty"`
+	Unused1 string `json:"unused1,omitempty"`
+	Unused2 string `json:"unused2,omitempty"`
+	Unused3 string `json:"unused3,omitempty"`
+	Unused4 string `json:"unused4,omitempty"`
+	Unused5 string `json:"unused5,omitempty"`
+	Unused6 string `json:"unused6,omitempty"`
+	Unused7 string `json:"unused7,omitempty"`
+	Unused8 string `json:"unused8,omitempty"`
+	Unused9 string `json:"unused9,omitempty"`
+
+	// Network devices
+	Net0 string `json:"net0,omitempty"`
+	Net1 string `json:"net1,omitempty"`
+	Net2 string `json:"net2,omitempty"`
+	Net3 string `json:"net3,omitempty"`
+	Net4 string `json:"net4,omitempty"`
+	Net5 string `json:"net5,omitempty"`
+	Net6 string `json:"net6,omitempty"`
+	Net7 string `json:"net7,omitempty"`
+	Net8 string `json:"net8,omitempty"`
+	Net9 string `json:"net9,omitempty"`
+
+	// NUMA topology
+	Numa0 string `json:"numa0,omitempty"`
+	Numa1 string `json:"numa1,omitempty"`
+	Numa2 string `json:"numa2,omitempty"`
+	Numa3 string `json:"numa3,omitempty"`
+	Numa4 string `json:"numa4,omitempty"`
+	Numa5 string `json:"numa5,omitempty"`
+	Numa6 string `json:"numa6,omitempty"`
+	Numa7 string `json:"numa7,omitempty"`
+	Numa8 string `json:"numa8,omitempty"`
+	Numa9 string `json:"numa9,omitempty"`
+
+	// Host PCI devices
+	HostPCIs map[string]string `json:"-"`
+	HostPCI0 string            `json:"hostpci0,omitempty"`
+	HostPCI1 string            `json:"hostpci1,omitempty"`
+	HostPCI2 string            `json:"hostpci2,omitempty"`
+	HostPCI3 string            `json:"hostpci3,omitempty"`
+	HostPCI4 string            `json:"hostpci4,omitempty"`
+	HostPCI5 string            `json:"hostpci5,omitempty"`
+	HostPCI6 string            `json:"hostpci6,omitempty"`
+	HostPCI7 string            `json:"hostpci7,omitempty"`
+	HostPCI8 string            `json:"hostpci8,omitempty"`
+	HostPCI9 string            `json:"hostpci9,omitempty"`
+
+	// Serial devices
+	Serial0 string `json:"serial0,omitempty"`
+	Serial1 string `json:"serial1,omitempty"`
+	Serial2 string `json:"serial2,omitempty"`
+	Serial3 string `json:"serial3,omitempty"`
+
+	// USB devices
+	USB0  string `json:"usb0,omitempty"`
+	USB1  string `json:"usb1,omitempty"`
+	USB2  string `json:"usb2,omitempty"`
+	USB3  string `json:"usb3,omitempty"`
+	USB4  string `json:"usb4,omitempty"`
+	USB5  string `json:"usb5,omitempty"`
+	USB6  string `json:"usb6,omitempty"`
+	USB7  string `json:"usb7,omitempty"`
+	USB8  string `json:"usb8,omitempty"`
+	USB9  string `json:"usb9,omitempty"`
+	USB10 string `json:"usb10,omitempty"`
+	USB11 string `json:"usb11,omitempty"`
+	USB12 string `json:"usb12,omitempty"`
+	USB13 string `json:"usb13,omitempty"`
+	USB14 string `json:"usb14,omitempty"`
+
+	Parallels map[string]string `json:"-"`
+	Parallel0 string            `json:"parallel0,omitempty"`
+	Parallel1 string            `json:"parallel1,omitempty"`
+	Parallel2 string            `json:"parallel2,omitempty"`
+
+	// Cloud-init
+	IPConfig0 string `json:"ipconfig0,omitempty"`
+	IPConfig1 string `json:"ipconfig1,omitempty"`
+	IPConfig2 string `json:"ipconfig2,omitempty"`
+	IPConfig3 string `json:"ipconfig3,omitempty"`
+	IPConfig4 string `json:"ipconfig4,omitempty"`
+	IPConfig5 string `json:"ipconfig5,omitempty"`
+	IPConfig6 string `json:"ipconfig6,omitempty"`
+	IPConfig7 string `json:"ipconfig7,omitempty"`
+	IPConfig8 string `json:"ipconfig8,omitempty"`
+	IPConfig9 string `json:"ipconfig9,omitempty"`
 }
