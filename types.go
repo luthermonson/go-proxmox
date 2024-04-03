@@ -1306,3 +1306,26 @@ type VirtualMachineBackupOptions struct {
 	VMID               uint64                                 `json:"vmid,omitempty"`
 	Zstd               uint                                   `json:"zstd,omitempty"`
 }
+
+type Separator = string
+
+const (
+	StringSeparator = Separator("\n")
+	FieldSeparator  = Separator(":")
+	Space           = Separator(" ")
+)
+
+type VzdumpConfig struct {
+	Boot       string `json:"boot"`
+	CiPassword string `json:"cipassword"`
+	CiUser     string `json:"ciuser"`
+	Cores      uint64 `json:"cores,string"`
+	Memory     uint64 `json:"memory,string"`
+	Meta       string `json:"meta"`
+	Numa       string `json:"numa"`
+	OsType     string `json:"ostype"`
+	Scsihw     string `json:"scsihw"`
+	Sockets    uint64 `json:"sockets,string"`
+	SshKeys    string `json:"sshkeys"`
+	VmgenID    string `json:"vmgenid"`
+}

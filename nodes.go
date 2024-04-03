@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"net/url"
 	"strings"
 )
@@ -288,4 +289,36 @@ func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) 
 		return nil, err
 	}
 	return NewTask(upid, n.client), nil
+}
+
+func (n *Node) VzdumpExtractConfig(ctx context.Context, volume string) (*VzdumpConfig, error) {
+	var vzdumpExtractedConfig string
+
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/vzdump/extractconfig?volume=%s", n.Name, volume), &vzdumpExtractedConfig); err != nil {
+		return nil, err
+	}
+
+	return n.parseVzdumpConfig(vzdumpExtractedConfig)
+}
+
+func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, error) {
+	vzdumpFields := strings.Split(vzdumpExtractedConfig, StringSeparator)
+
+	configFields := make(map[string]any)
+
+	for _, field := range vzdumpFields {
+		if field != "" {
+			newStr := strings.SplitN(field, FieldSeparator, 2)
+			if len(newStr) == 2 {
+				configFields[newStr[0]] = strings.Trim(newStr[1], Space)
+			}
+		}
+	}
+
+	vzdumpCfg := &VzdumpConfig{}
+	if err := mapstructure.Decode(configFields, vzdumpCfg); err != nil {
+		return nil, fmt.Errorf("cannot decode map params to struct : %w", err)
+	}
+
+	return vzdumpCfg, nil
 }
