@@ -1426,17 +1426,16 @@ type VzdumpConfig struct {
 	Numa9 string `json:"numa9,omitempty"`
 
 	// Host PCI devices
-	HostPCIs map[string]string `json:"-"`
-	HostPCI0 string            `json:"hostpci0,omitempty"`
-	HostPCI1 string            `json:"hostpci1,omitempty"`
-	HostPCI2 string            `json:"hostpci2,omitempty"`
-	HostPCI3 string            `json:"hostpci3,omitempty"`
-	HostPCI4 string            `json:"hostpci4,omitempty"`
-	HostPCI5 string            `json:"hostpci5,omitempty"`
-	HostPCI6 string            `json:"hostpci6,omitempty"`
-	HostPCI7 string            `json:"hostpci7,omitempty"`
-	HostPCI8 string            `json:"hostpci8,omitempty"`
-	HostPCI9 string            `json:"hostpci9,omitempty"`
+	HostPCI0 string `json:"hostpci0,omitempty"`
+	HostPCI1 string `json:"hostpci1,omitempty"`
+	HostPCI2 string `json:"hostpci2,omitempty"`
+	HostPCI3 string `json:"hostpci3,omitempty"`
+	HostPCI4 string `json:"hostpci4,omitempty"`
+	HostPCI5 string `json:"hostpci5,omitempty"`
+	HostPCI6 string `json:"hostpci6,omitempty"`
+	HostPCI7 string `json:"hostpci7,omitempty"`
+	HostPCI8 string `json:"hostpci8,omitempty"`
+	HostPCI9 string `json:"hostpci9,omitempty"`
 
 	// Serial devices
 	Serial0 string `json:"serial0,omitempty"`
@@ -1461,10 +1460,9 @@ type VzdumpConfig struct {
 	USB13 string `json:"usb13,omitempty"`
 	USB14 string `json:"usb14,omitempty"`
 
-	Parallels map[string]string `json:"-"`
-	Parallel0 string            `json:"parallel0,omitempty"`
-	Parallel1 string            `json:"parallel1,omitempty"`
-	Parallel2 string            `json:"parallel2,omitempty"`
+	Parallel0 string `json:"parallel0,omitempty"`
+	Parallel1 string `json:"parallel1,omitempty"`
+	Parallel2 string `json:"parallel2,omitempty"`
 
 	// Cloud-init
 	IPConfig0 string `json:"ipconfig0,omitempty"`
