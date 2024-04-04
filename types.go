@@ -1326,7 +1326,7 @@ type VzdumpConfig struct {
 	OsType     string `json:"ostype"`
 	Scsihw     string `json:"scsihw"`
 	Sockets    uint64 `json:"sockets,string"`
-	SshKeys    string `json:"sshkeys"`
+	SSHKeys    string `json:"sshkeys"`
 	VmgenID    string `json:"vmgenid"`
 
 	IDE0 string `json:"ide0,omitempty"`
