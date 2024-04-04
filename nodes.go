@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -288,4 +289,41 @@ func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) 
 		return nil, err
 	}
 	return NewTask(upid, n.client), nil
+}
+
+func (n *Node) VzdumpExtractConfig(ctx context.Context, volume string) (*VzdumpConfig, error) {
+	var vzdumpExtractedConfig string
+
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/vzdump/extractconfig?volume=%s", n.Name, volume), &vzdumpExtractedConfig); err != nil {
+		return nil, err
+	}
+
+	return n.parseVzdumpConfig(vzdumpExtractedConfig)
+}
+
+func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, error) {
+	vzdumpFields := strings.Split(vzdumpExtractedConfig, StringSeparator)
+
+	configFields := make(map[string]any)
+
+	for _, field := range vzdumpFields {
+		if field != "" {
+			newStr := strings.SplitN(field, FieldSeparator, 2)
+			if len(newStr) == 2 {
+				configFields[newStr[0]] = strings.Trim(newStr[1], SpaceSeparator)
+			}
+		}
+	}
+
+	jsonData, err := json.Marshal(configFields)
+	if err != nil {
+		return nil, fmt.Errorf("cannot present vzdump config as json string : %w", err)
+	}
+
+	vzdumpCfg := &VzdumpConfig{}
+	if err := json.Unmarshal(jsonData, vzdumpCfg); err != nil {
+		return nil, fmt.Errorf("cannot parse data for vzdump config : %w", err)
+	}
+
+	return vzdumpCfg, nil
 }
