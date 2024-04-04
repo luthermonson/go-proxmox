@@ -1312,7 +1312,7 @@ type Separator = string
 const (
 	StringSeparator = Separator("\n")
 	FieldSeparator  = Separator(":")
-	Space           = Separator(" ")
+	SpaceSeparator  = Separator(" ")
 )
 
 type VzdumpConfig struct {

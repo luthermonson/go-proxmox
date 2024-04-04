@@ -310,7 +310,7 @@ func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, e
 		if field != "" {
 			newStr := strings.SplitN(field, FieldSeparator, 2)
 			if len(newStr) == 2 {
-				configFields[newStr[0]] = strings.Trim(newStr[1], Space)
+				configFields[newStr[0]] = strings.Trim(newStr[1], SpaceSeparator)
 			}
 		}
 	}
