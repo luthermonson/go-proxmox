@@ -980,16 +980,16 @@ type FirewallNodeOption struct {
 }
 
 type FirewallVirtualMachineOption struct {
-	Enable      *bool   `json:"enable,omitempty"`
-	Dhcp        *bool   `json:"dhcp,omitempty"`
-	IpFilter    *bool   `json:"ipfilter,omitempty"`
-	LogLevelIn  *string `json:"log_level_in,omitempty"`
-	LogLevelOut *string `json:"log_level_out,omitempty"`
-	MacFilter   *bool   `json:"macfilter,omitempty"`
-	Ndp         *bool   `json:"ndp,omitempty"`
-	PolicyIn    *string `json:"policy_in,omitempty"`
-	PolicyOut   *string `json:"policy_out,omitempty"`
-	Radv        *bool   `json:"radv,omitempty"`
+	Enable      *IntOrBool `json:"enable,omitempty"`
+	Dhcp        *IntOrBool `json:"dhcp,omitempty"`
+	IpFilter    *IntOrBool `json:"ipfilter,omitempty"`
+	LogLevelIn  *string    `json:"log_level_in,omitempty"`
+	LogLevelOut *string    `json:"log_level_out,omitempty"`
+	MacFilter   *IntOrBool `json:"macfilter,omitempty"`
+	Ndp         *IntOrBool `json:"ndp,omitempty"`
+	PolicyIn    *string    `json:"policy_in,omitempty"`
+	PolicyOut   *string    `json:"policy_out,omitempty"`
+	Radv        *IntOrBool `json:"radv,omitempty"`
 }
 
 type Snapshot struct {
