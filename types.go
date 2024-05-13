@@ -1494,5 +1494,4 @@ type HAGroupConfiguration struct {
 	Comment    *string
 	NoFailback *int
 	Restricted *int
-	Type       HAType
 }
