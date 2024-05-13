@@ -1492,6 +1492,6 @@ type HAGroupConfiguration struct {
 	Group      string
 	HaNodes    []HANodes
 	Comment    *string
-	NoFailback *int
-	Restricted *int
+	NoFailback *IntOrBool
+	Restricted *IntOrBool
 }

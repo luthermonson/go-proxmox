@@ -13,12 +13,12 @@ const (
 )
 
 type haGroupConfiguration struct {
-	Nodes      string  `json:"nodes"`
-	Group      string  `json:"group"`
-	Comment    *string `json:"comment,omitempty"`
-	NoFailback *int    `json:"nofailback,omitempty"`
-	Restricted *int    `json:"restricted,omitempty"`
-	Type       HAType  `json:"type,omitempty"`
+	Nodes      string     `json:"nodes"`
+	Group      string     `json:"group"`
+	Comment    *string    `json:"comment,omitempty"`
+	NoFailback *IntOrBool `json:"nofailback,omitempty"`
+	Restricted *IntOrBool `json:"restricted,omitempty"`
+	Type       HAType     `json:"type,omitempty"`
 }
 
 func (cl *Cluster) HAGroupCreate(ctx context.Context, groupConfiguration *HAGroupConfiguration) error {
