@@ -1489,10 +1489,10 @@ type HANodes struct {
 }
 
 type HAGroupConfiguration struct {
-	Group      string `json:"group"`
+	Group      string
 	HaNodes    []HANodes
-	Comment    *string `json:"comment"`
-	NoFailback *int    `json:"nofailback"`
-	Restricted *int    `json:"restricted"`
-	Type       HAType  `json:"type"`
+	Comment    *string
+	NoFailback *int
+	Restricted *int
+	Type       HAType
 }
