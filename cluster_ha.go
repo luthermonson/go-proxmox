@@ -14,10 +14,10 @@ func (cl *Cluster) HAGroup(ctx context.Context, groupConfiguration *HAGroupConfi
 	haGroupConfiguration := struct {
 		Nodes      string  `json:"nodes"`
 		Group      string  `json:"group"`
-		Comment    *string `json:"comment"`
-		NoFailback *int    `json:"nofailback"`
-		Restricted *int    `json:"restricted"`
-		Type       HAType  `json:"type"`
+		Comment    *string `json:"comment,omitempty"`
+		NoFailback *int    `json:"nofailback,omitempty"`
+		Restricted *int    `json:"restricted,omitempty"`
+		Type       HAType  `json:"type,omitempty"`
 	}{
 		Group:      groupConfiguration.Group,
 		Comment:    groupConfiguration.Comment,
