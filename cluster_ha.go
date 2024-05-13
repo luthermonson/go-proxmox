@@ -28,7 +28,7 @@ func (cl *Cluster) HAGroup(ctx context.Context, groupConfiguration *HAGroupConfi
 	for _, haNode := range groupConfiguration.HaNodes {
 		if haNode.Priority != nil {
 			nodes = append(nodes,
-				fmt.Sprintf("%s:%d", haNode.Node, haNode.Priority))
+				fmt.Sprintf("%s:%d", haNode.Node, *haNode.Priority))
 		} else {
 			nodes = append(nodes,
 				haNode.Node)
@@ -37,7 +37,7 @@ func (cl *Cluster) HAGroup(ctx context.Context, groupConfiguration *HAGroupConfi
 
 	haGroupConfiguration.Nodes = strings.Join(nodes, ",")
 
-	if err := cl.client.Post(ctx, "cluster/ha/groups", &haGroupConfiguration, nil); err != nil {
+	if err := cl.client.Post(ctx, "/cluster/ha/groups", &haGroupConfiguration, nil); err != nil {
 		return err
 	}
 
