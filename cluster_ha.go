@@ -54,6 +54,10 @@ func (cl *Cluster) HAGroupCreate(ctx context.Context, groupConfiguration *HAGrou
 	return nil
 }
 
+func (cl *Cluster) HAGroupDelete(ctx context.Context, groupName string) error {
+	return cl.client.Delete(ctx, fmt.Sprintf("/cluster/ha/groups/%s", groupName), nil)
+}
+
 func (cl *Cluster) HAGroups(ctx context.Context) ([]HAGroupConfiguration, error) {
 	var haConfigurations []haGroupConfiguration
 	if err := cl.client.Get(ctx, "/cluster/ha/groups", &haConfigurations); err != nil {
