@@ -589,10 +589,10 @@ type Task struct {
 	User         string
 	Status       string
 	Node         string
-	PID          uint64 `json:",omitempty"`
-	PStart       uint64 `json:",omitempty"`
-	Saved        string `json:",omitempty"`
-	ExitStatus   string `json:",omitempty"`
+	PID          uint64      `json:",omitempty"`
+	PStart       uint64      `json:",omitempty"`
+	Saved        StringOrInt `json:",omitempty"`
+	ExitStatus   string      `json:",omitempty"`
 	IsCompleted  bool
 	IsRunning    bool
 	IsFailed     bool
