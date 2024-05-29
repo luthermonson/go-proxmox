@@ -1476,3 +1476,22 @@ type VzdumpConfig struct {
 	IPConfig8 string `json:"ipconfig8,omitempty"`
 	IPConfig9 string `json:"ipconfig9,omitempty"`
 }
+
+type HAType = string
+
+const (
+	HATypeGroup = HAType("group")
+)
+
+type HANodes struct {
+	Node     string
+	Priority *uint
+}
+
+type HAGroupConfiguration struct {
+	Group      string
+	HaNodes    []HANodes
+	Comment    *string
+	NoFailback *IntOrBool
+	Restricted *IntOrBool
+}
