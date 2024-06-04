@@ -1480,6 +1480,7 @@ type VzdumpConfig struct {
 type (
 	HAType          string
 	HAResourceState string
+	HAResourceType  string
 )
 
 const (
@@ -1490,6 +1491,8 @@ const (
 	HAResourceStateEnabled  = HAResourceState("enabled")
 	HAResourceStateDisabled = HAResourceState("disabled")
 	HAResourceStateIgnored  = HAResourceState("ignored")
+
+	HAResourceTypeVm = HAResourceType("vm")
 )
 
 type HANodes struct {
@@ -1503,6 +1506,11 @@ type HAGroupConfiguration struct {
 	Comment    *string
 	NoFailback *IntOrBool
 	Restricted *IntOrBool
+}
+
+type SID struct {
+	Type HAResourceType
+	ID   int
 }
 
 type HAResource struct {
