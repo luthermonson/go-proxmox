@@ -569,9 +569,14 @@ func (v *VirtualMachine) AgentSetUserPassword(ctx context.Context, password stri
 	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
 }
 
-func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallVirtualMachineOption, err error) {
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
-	return
+func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (*FirewallVirtualMachineOption, error) {
+	firewallOption := FirewallVirtualMachineOption{}
+
+	if err := v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), &firewallOption); err != nil {
+		return nil, err
+	}
+
+	return &firewallOption, nil
 }
 
 func (v *VirtualMachine) FirewallOptionSet(ctx context.Context, firewallOption *FirewallVirtualMachineOption) error {
