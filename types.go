@@ -1477,10 +1477,22 @@ type VzdumpConfig struct {
 	IPConfig9 string `json:"ipconfig9,omitempty"`
 }
 
-type HAType = string
+type (
+	HAType          string
+	HAResourceState string
+	HAResourceType  string
+)
 
 const (
 	HATypeGroup = HAType("group")
+
+	HAResourceStateStarted  = HAResourceState("started")
+	HAResourceStateStopped  = HAResourceState("stopped")
+	HAResourceStateEnabled  = HAResourceState("enabled")
+	HAResourceStateDisabled = HAResourceState("disabled")
+	HAResourceStateIgnored  = HAResourceState("ignored")
+
+	HAResourceTypeVm = HAResourceType("vm")
 )
 
 type HANodes struct {
@@ -1494,4 +1506,18 @@ type HAGroupConfiguration struct {
 	Comment    *string
 	NoFailback *IntOrBool
 	Restricted *IntOrBool
+}
+
+type SID struct {
+	Type HAResourceType
+	ID   int
+}
+
+type HAResource struct {
+	ID          int              `json:"sid"`
+	Group       *string          `json:"group"`
+	Comment     *string          `json:"comment,omitempty"`
+	MaxRelocate *uint            `json:"max_relocate,omitempty"`
+	MaxRestart  *uint            `json:"max_restart,omitempty"`
+	State       *HAResourceState `json:"state,omitempty"`
 }
