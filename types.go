@@ -1508,7 +1508,7 @@ type HAGroupConfiguration struct {
 type HAResource struct {
 	ID          int              `json:"sid"`
 	Group       *string          `json:"group"`
-	Comment     *string          `json:"commentm,omitempty"`
+	Comment     *string          `json:"comment,omitempty"`
 	MaxRelocate *uint            `json:"max_relocate,omitempty"`
 	MaxRestart  *uint            `json:"max_restart,omitempty"`
 	State       *HAResourceState `json:"state,omitempty"`
