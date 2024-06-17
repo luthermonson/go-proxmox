@@ -939,6 +939,7 @@ type FirewallSecurityGroup struct {
 	Comment string          `json:"comment,omitempty"`
 	Rules   []*FirewallRule `json:"rules,omitempty"`
 }
+
 type FirewallRule struct {
 	Type     string `json:"type,omitempty"`
 	Action   string `json:"action,omitempty"`
@@ -954,6 +955,8 @@ type FirewallRule struct {
 	Proto    string `json:"proto,omitempty"`
 	Source   string `json:"source,omitempty"`
 	Sport    string `json:"sport,omitempty"`
+
+	MoveTo *int `json:"moveto,omitempty"` // Other fields will be ignored when used
 }
 
 func (r *FirewallRule) IsEnable() bool {
