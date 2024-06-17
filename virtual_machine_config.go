@@ -114,3 +114,24 @@ func (vmc *VirtualMachineConfig) MergeIPConfigs() map[string]string {
 	}
 	return vmc.IPConfigs
 }
+
+func (vmc *VirtualMachineConfig) MergeDisks() map[string]string {
+	mergedDisks := make(map[string]string)
+
+	for k, v := range vmc.MergeIDEs() {
+		mergedDisks[k] = v
+	}
+
+	for k, v := range vmc.MergeSCSIs() {
+		mergedDisks[k] = v
+	}
+
+	for k, v := range vmc.MergeSATAs() {
+		mergedDisks[k] = v
+	}
+
+	for k, v := range vmc.MergeVirtIOs() {
+		mergedDisks[k] = v
+	}
+	return mergedDisks
+}
