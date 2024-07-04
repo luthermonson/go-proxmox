@@ -52,8 +52,13 @@ func MakeTag(v string) string {
 	return fmt.Sprintf(TagFormat, v)
 }
 
+type doer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Client struct {
-	httpClient  *http.Client
+	httpClient  doer
+	tlsConfig   *tls.Config
 	userAgent   string
 	baseURL     string
 	token       string
@@ -298,16 +303,11 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
 
-	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
-		tlsConfig = transport.TLSClientConfig
-	}
 	c.log.Debugf("connecting to websocket: %s", path)
 	dialer := &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 30 * time.Second,
-		TLSClientConfig:  tlsConfig,
+		TLSClientConfig:  c.tlsConfig,
 	}
 
 	dialerHeaders := http.Header{}

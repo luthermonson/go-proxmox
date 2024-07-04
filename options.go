@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 )
@@ -57,5 +58,11 @@ func WithUserAgent(ua string) Option {
 func WithLogger(logger LeveledLoggerInterface) Option {
 	return func(c *Client) {
 		c.log = logger
+	}
+}
+
+func WithTLSConfig(config *tls.Config) Option {
+	return func(c *Client) {
+		c.tlsConfig = config
 	}
 }
