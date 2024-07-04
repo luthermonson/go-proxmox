@@ -13,7 +13,7 @@ func WithClient(client *http.Client) Option {
 	return WithHTTPClient(client)
 }
 
-func WithHTTPClient(client *http.Client) Option {
+func WithHTTPClient(client doer) Option {
 	return func(c *Client) {
 		c.httpClient = client
 	}
