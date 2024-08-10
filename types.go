@@ -248,7 +248,7 @@ type RootFS struct {
 
 type CPUInfo struct {
 	UserHz  int `json:"user_hz"`
-	MHZ     string
+	MHZ     int
 	Mode    string
 	Cores   int
 	Sockets int
@@ -900,7 +900,7 @@ type NodeNetwork struct {
 }
 
 type AgentNetworkIPAddress struct {
-	IPAddressType string `json:"ip-address-type"` //ipv4 ipv6
+	IPAddressType string `json:"ip-address-type"` // ipv4 ipv6
 	IPAddress     string `json:"ip-address"`
 	Prefix        int    `json:"prefix"`
 	MacAddress    string `json:"mac-address"`
@@ -1058,7 +1058,7 @@ type Domain struct {
 	GroupFilter    string    `json:"group_filter,omitempty"`
 	GroupName      string    `json:"group_name,omitempty"`
 	IssuerURL      string    `json:"issuer-url,omitempty"`
-	Mode           string    `json:"mode,omitempty"` //ldap, ldaps,ldap+starttls
+	Mode           string    `json:"mode,omitempty"` // ldap, ldaps,ldap+starttls
 	Password       string    `json:"password,omitempty"`
 	Port           int       `json:"port,omitempty"`
 	Prompt         string    `json:"prompt,omitempty"`
