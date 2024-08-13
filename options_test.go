@@ -46,3 +46,8 @@ func TestWithLogger(t *testing.T) {
 	client := NewClient("", WithLogger(&LeveledLogger{Level: 1}))
 	assert.Equal(t, client.log, &LeveledLogger{Level: 1})
 }
+
+func TestWithAutoReLogin(t *testing.T) {
+	client := NewClient("", WithAutoReLogin())
+	assert.Equal(t, client.autoReLogin, true)
+}

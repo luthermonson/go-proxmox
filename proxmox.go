@@ -60,6 +60,7 @@ type Client struct {
 	credentials *Credentials
 	version     *Version
 	session     *Session
+	autoReLogin bool
 	log         LeveledLoggerInterface
 }
 
@@ -128,7 +129,7 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 			return ErrNotAuthorized
 		}
 
-		if c.credentials != nil && c.session == nil {
+		if c.credentials != nil && (c.autoReLogin || c.session == nil) {
 			// credentials passed but no session started, try a login and retry the request
 			if _, err = c.Ticket(ctx, c.credentials); err != nil {
 				return err

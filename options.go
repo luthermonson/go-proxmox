@@ -59,3 +59,9 @@ func WithLogger(logger LeveledLoggerInterface) Option {
 		c.log = logger
 	}
 }
+
+func WithAutoReLogin() Option {
+	return func(c *Client) {
+		c.autoReLogin = true
+	}
+}
