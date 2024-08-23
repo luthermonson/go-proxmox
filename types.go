@@ -248,7 +248,7 @@ type RootFS struct {
 
 type CPUInfo struct {
 	UserHz  int `json:"user_hz"`
-	MHZ     int
+	MHZ     StringOrInt
 	Mode    string
 	Cores   int
 	Sockets int
@@ -731,6 +731,23 @@ type Storage struct {
 	Storage      string
 }
 
+type ClusterStorages []*ClusterStorage
+
+type ClusterStorage struct {
+	client   *Client
+	Content  string
+	Digest   string
+	Storage  string
+	Type     string
+	Thinpool string `json:",omitempty"`
+	Path     string `json:",omitempty"`
+	VgName   string `json:",omitempty"`
+}
+
+type ClusterStorageOptions struct {
+	Name  string
+	Value string
+}
 type Volume interface {
 	Delete() error
 }
