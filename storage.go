@@ -12,7 +12,7 @@ var validContent = map[string]struct{}{
 	"vztmpl": {},
 }
 
-func (c *Client) ClusterStorages(ctx context.Context, node string) (storages ClusterStorages, err error) {
+func (c *Client) ClusterStorages(ctx context.Context) (storages ClusterStorages, err error) {
 	err = c.Get(ctx, "/storage", &storages)
 	if err != nil {
 		return
