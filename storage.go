@@ -12,6 +12,65 @@ var validContent = map[string]struct{}{
 	"vztmpl": {},
 }
 
+func (c *Client) ClusterStorages(ctx context.Context, node string) (storages ClusterStorages, err error) {
+	err = c.Get(ctx, "/storage", &storages)
+	if err != nil {
+		return
+	}
+
+	for _, s := range storages {
+		s.client = c
+	}
+	return
+}
+
+func (c *Client) ClusterStorage(ctx context.Context, name string) (storage *ClusterStorage, err error) {
+	err = c.Get(ctx, fmt.Sprintf("/storage/%s", name), &storage)
+	if err != nil {
+		return
+	}
+
+	storage.client = c
+	return
+}
+
+func (c *Client) DeleteClusterStorage(ctx context.Context, name string) (*Task, error) {
+	var upid UPID
+	err := c.Delete(ctx, fmt.Sprintf("/storage/%s", name), &upid)
+	if err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c), nil
+}
+
+func (c *Client) NewClusterStorage(ctx context.Context, options ...ClusterStorageOptions) (*Task, error) {
+	var upid UPID
+
+	data := make(map[string]interface{})
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+	err := c.Post(ctx, "/storage", data, &upid)
+
+	if err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c), nil
+}
+
+func (c *Client) UpdateClusterStorage(ctx context.Context, name string, options ...ClusterStorageOptions) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+	err := c.Put(ctx, fmt.Sprintf("/storage/%s", name), data, &upid)
+	if err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c), nil
+}
+
 func (s *Storage) Upload(content, file string) (*Task, error) {
 	return s.upload(content, file, nil)
 }
