@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,6 +31,17 @@ func (cl *Cluster) NextID(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return strconv.Atoi(ret)
+}
+
+func (cl *Cluster) IsVMIDTaken(ctx context.Context, vmid int) (bool, error) {
+	var ret string
+	err := cl.client.Get(ctx, fmt.Sprintf("/cluster/nextid?vmid=%d", vmid), ret)
+	if err != nil && strings.Contains(err.Error(), fmt.Sprintf("VM %d already exists", vmid)) {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 // Resources retrieves a summary list of all resources in the cluster.

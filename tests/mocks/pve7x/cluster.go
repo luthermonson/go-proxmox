@@ -7,9 +7,21 @@ import (
 
 func cluster() {
 	gock.New(config.C.URI).
-		Get("/cluster/nextid").
+		Get("/cluster/nextid$").
 		Reply(200).
 		JSON(`{"data": "100"}`)
+
+	gock.New(config.C.URI).
+		Get("/cluster/nextid$").
+		MatchParam("vmid", "100").
+		Reply(200).
+		JSON(`{"data": "100"}`)
+
+	gock.New(config.C.URI).
+		Get("/cluster/nextid").
+		MatchParam("vmid", "200").
+		Reply(400).
+		JSON(`{"errors":{"vmid":"VM 200 already exists"},"data":null}`)
 
 	gock.New(config.C.URI).
 		Get("/cluster/status").
