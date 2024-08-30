@@ -37,7 +37,7 @@ func TestNextID(t *testing.T) {
 	assert.Equal(t, 100, nextid)
 }
 
-func TestIsVMIDTaken(t *testing.T) {
+func TestCheckID(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -45,12 +45,12 @@ func TestIsVMIDTaken(t *testing.T) {
 
 	cluster, err := client.Cluster(ctx)
 	assert.Nil(t, err)
-	idtaken, err := cluster.IsVMIDTaken(ctx, 100)
+	checkIDFree, err := cluster.CheckID(ctx, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, false, idtaken)
-	idtaken, err = cluster.IsVMIDTaken(ctx, 200)
+	assert.Equal(t, true, checkIDFree)
+	checkIDTaken, err := cluster.CheckID(ctx, 200)
 	assert.Nil(t, err)
-	assert.Equal(t, true, idtaken)
+	assert.Equal(t, false, checkIDTaken)
 }
 
 func TestCluster_Resources(t *testing.T) {
