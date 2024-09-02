@@ -654,9 +654,11 @@ func (l *Log) UnmarshalJSON(b []byte) error {
 
 type Containers []*Container
 type Container struct {
+	client          *Client
+	ContainerConfig *ContainerConfig
+
 	Name    string
 	Node    string
-	client  *Client
 	CPUs    int
 	Status  string
 	VMID    StringOrUint64
@@ -686,6 +688,77 @@ type ContainerCloneOptions struct {
 	SnapName    string `json:"snapname,omitempty"`
 	Storage     string `json:"storage,omitempty"`
 	Target      string `json:"target,omitempty"`
+}
+
+type ContainerConfig struct {
+	Arch         string     `json:"arch,omitempty"`
+	CMode        string     `json:"cmode,omitempty"`
+	Console      IntOrBool  `json:"console,omitempty"`
+	Cores        int        `json:"cores,omitempty"`
+	CPULimit     int        `json:"cpulimit,omitempty"`
+	CPUUnits     int        `json:"cpuunits,omitempty"`
+	Debug        IntOrBool  `json:"debug,omitempty"`
+	Description  string     `json:"description,omitempty"`
+	Dev0         string     `json:"dev0,omitempty"`
+	Dev1         string     `json:"dev1,omitempty"`
+	Dev2         string     `json:"dev2,omitempty"`
+	Dev3         string     `json:"dev3,omitempty"`
+	Dev4         string     `json:"dev4,omitempty"`
+	Dev5         string     `json:"dev5,omitempty"`
+	Dev6         string     `json:"dev6,omitempty"`
+	Dev7         string     `json:"dev7,omitempty"`
+	Dev8         string     `json:"dev8,omitempty"`
+	Dev9         string     `json:"dev9,omitempty"`
+	Digest       string     `json:"digest"`
+	Features     string     `json:"features,omitempty"`
+	HookScript   string     `json:"hookscript,omitempty"`
+	Lxc          [][]string `json:"lxc,omitempty"`
+	Hostname     string     `json:"hostname,omitempty"`
+	Lock         string     `json:"lock,omitempty"`
+	Memory       int        `json:"memory,omitempty"`
+	Mp0          string     `json:"mp0,omitempty"`
+	Mp1          string     `json:"mp1,omitempty"`
+	Mp2          string     `json:"mp2,omitempty"`
+	Mp3          string     `json:"mp3,omitempty"`
+	Mp4          string     `json:"mp4,omitempty"`
+	Mp5          string     `json:"mp5,omitempty"`
+	Mp6          string     `json:"mp6,omitempty"`
+	Mp7          string     `json:"mp7,omitempty"`
+	Mp8          string     `json:"mp8,omitempty"`
+	Mp9          string     `json:"mp9,omitempty"`
+	Nameserver   string     `json:"nameserver,omitempty"`
+	Net0         string     `json:"net0,omitempty"`
+	Net1         string     `json:"net1,omitempty"`
+	Net2         string     `json:"net2,omitempty"`
+	Net3         string     `json:"net3,omitempty"`
+	Net4         string     `json:"net4,omitempty"`
+	Net5         string     `json:"net5,omitempty"`
+	Net6         string     `json:"net6,omitempty"`
+	Net7         string     `json:"net7,omitempty"`
+	Net8         string     `json:"net8,omitempty"`
+	Net9         string     `json:"net9,omitempty"`
+	OnBoot       IntOrBool  `json:"onboot,omitempty"`
+	OsType       string     `json:"ostype,omitempty"`
+	Protection   IntOrBool  `json:"protection,omitempty"`
+	RootFS       string     `json:"rootfs,omitempty"`
+	SearchDomain string     `json:"searchdomain:omitempty"`
+	Startup      string     `json:"startup:omitempty"`
+	Swap         int        `json:"swap,omitempty"`
+	Tags         string     `json:"tags,omitempty"`
+	Template     IntOrBool  `json:"template,omitempty"`
+	Timezone     string     `json:"timezone,omitempty"`
+	Tty          int        `json:"tty,omitempty"`
+	Unprivileged IntOrBool  `json:"unpriviledged,omitempty"`
+	Unused0      string     `json:"unused0,omitempty"`
+	Unused1      string     `json:"unused1,omitempty"`
+	Unused2      string     `json:"unused2,omitempty"`
+	Unused3      string     `json:"unused3,omitempty"`
+	Unused4      string     `json:"unused4,omitempty"`
+	Unused5      string     `json:"unused5,omitempty"`
+	Unused6      string     `json:"unused6,omitempty"`
+	Unused7      string     `json:"unused7,omitempty"`
+	Unused8      string     `json:"unused8,omitempty"`
+	Unused9      string     `json:"unused9,omitempty"`
 }
 
 // ContainerOptions A key/value pair used to modify a container(LXC) config
