@@ -520,6 +520,7 @@ type VirtualMachineConfig struct {
 	Searchdomain string `json:"searchdomain,omitempty"`
 	SSHKeys      string `json:"sshkeys,omitempty"`
 	CICustom     string `json:"cicustom,omitempty"`
+	CIUpgrade    int    `json:"ciupgrade,omitempty"`
 
 	// Cloud-init interfaces
 	IPConfigs map[string]string `json:"-"`
