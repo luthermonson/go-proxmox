@@ -407,7 +407,7 @@ func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneO
 		return newid, nil, err
 	}
 
-	return newid, NewTask(upid, v.client), nil
+	return params.NewID, NewTask(upid, v.client), nil
 }
 
 func (v *VirtualMachine) ResizeDisk(ctx context.Context, disk, size string) (err error) {

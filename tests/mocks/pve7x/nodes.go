@@ -1047,4 +1047,10 @@ func nodes() {
     "data": "UPID:node1:0031B740:0645340C:23E5BA99:vzrollback:101:root"
 }`)
 
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/101/clone").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
 }
