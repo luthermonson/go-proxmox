@@ -17,16 +17,18 @@ func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (n
 		if err != nil {
 			return newid, nil, err
 		}
-		newid, err := cluster.NextID(ctx)
+		newid, err = cluster.NextID(ctx)
 		if err != nil {
 			return newid, nil, err
 		}
 		params.NewID = newid
+	} else {
+		newid = params.NewID
 	}
 	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/clone", c.Node, c.VMID), params, &upid); err != nil {
 		return 0, nil, err
 	}
-	return params.NewID, NewTask(upid, c.client), nil
+	return newid, NewTask(upid, c.client), nil
 }
 
 func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
