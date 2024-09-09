@@ -712,7 +712,7 @@ type ContainerConfig struct {
 	Digest       string     `json:"digest"`
 	Features     string     `json:"features,omitempty"`
 	HookScript   string     `json:"hookscript,omitempty"`
-	Lxc          [][]string `json:"lxc,omitempty"`
+	LXC          [][]string `json:"lxc,omitempty"`
 	Hostname     string     `json:"hostname,omitempty"`
 	Lock         string     `json:"lock,omitempty"`
 	Memory       int        `json:"memory,omitempty"`
@@ -738,7 +738,7 @@ type ContainerConfig struct {
 	Net8         string     `json:"net8,omitempty"`
 	Net9         string     `json:"net9,omitempty"`
 	OnBoot       IntOrBool  `json:"onboot,omitempty"`
-	OsType       string     `json:"ostype,omitempty"`
+	OSType       string     `json:"ostype,omitempty"`
 	Protection   IntOrBool  `json:"protection,omitempty"`
 	RootFS       string     `json:"rootfs,omitempty"`
 	SearchDomain string     `json:"searchdomain:omitempty"`
@@ -747,7 +747,7 @@ type ContainerConfig struct {
 	Tags         string     `json:"tags,omitempty"`
 	Template     IntOrBool  `json:"template,omitempty"`
 	Timezone     string     `json:"timezone,omitempty"`
-	Tty          int        `json:"tty,omitempty"`
+	TTY          int        `json:"tty,omitempty"`
 	Unprivileged IntOrBool  `json:"unpriviledged,omitempty"`
 	Unused0      string     `json:"unused0,omitempty"`
 	Unused1      string     `json:"unused1,omitempty"`
