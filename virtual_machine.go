@@ -167,7 +167,6 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		Name:  "boot",
 		Value: fmt.Sprintf("%s;%s", v.VirtualMachineConfig.Boot, device),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -401,6 +400,8 @@ func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneO
 			return newid, nil, err
 		}
 		params.NewID = newid
+	} else {
+		newid = params.NewID
 	}
 
 	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/clone", v.Node, v.VMID), params, &upid); err != nil {

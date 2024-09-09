@@ -35,9 +35,25 @@ func TestContainerClone(t *testing.T) {
 	cloneOptions := ContainerCloneOptions{
 		NewID: 102,
 	}
-	_, _, err := container.Clone(ctx, &cloneOptions)
+	newid, _, err := container.Clone(ctx, &cloneOptions)
+	assert.Equal(t, cloneOptions.NewID, newid)
 	assert.Nil(t, err)
+}
 
+func TestContainerCloneWithoutNewID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	container := Container{
+		client: client,
+		Node:   "node1",
+		VMID:   101,
+	}
+	cloneOptions := ContainerCloneOptions{}
+	newid, _, err := container.Clone(ctx, &cloneOptions)
+	assert.Equal(t, 100, newid)
+	assert.Nil(t, err)
 }
 
 func TestContainerDelete(t *testing.T) {
