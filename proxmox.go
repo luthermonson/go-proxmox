@@ -433,9 +433,6 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 				if err := conn.WriteMessage(websocket.BinaryMessage, send); err != nil {
 					errs <- err
 				}
-				if err := conn.WriteMessage(websocket.BinaryMessage, []byte("0:1:\n")); err != nil {
-					errs <- err
-				}
 			}
 		}
 	}()
