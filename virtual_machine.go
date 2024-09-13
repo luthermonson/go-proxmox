@@ -42,12 +42,12 @@ func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOp
 	return NewTask(upid, v.client), err
 }
 
-func (v *VirtualMachine) TermProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &vnc)
+func (v *VirtualMachine) TermProxy(ctx context.Context) (term *Term, err error) {
+	return term, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &term)
 }
 
-func (v *VirtualMachine) VNCProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", v.Node, v.VMID), nil, &vnc)
+func (v *VirtualMachine) VNCProxy(ctx context.Context, config *VNCConfig) (vnc *VNC, err error) {
+	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy?", v.Node, v.VMID), config, &vnc)
 }
 
 func (v *VirtualMachine) HasTag(value string) bool {
@@ -225,10 +225,17 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	return
 }
 
+func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+		v.Node, v.VMID, term.Port, url.QueryEscape(term.Ticket))
+
+	return v.client.TermWebSocket(p, term)
+}
+
 // VNCWebSocket copy/paste when calling to get the channel names right
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
 // for this to work you need to first set up a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
-func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
 		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
 

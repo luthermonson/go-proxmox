@@ -293,7 +293,7 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	return json.Unmarshal(body, &v) // assume passed in type fully supports response
 }
 
-func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
 	if strings.HasPrefix(path, "/") {
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
@@ -320,7 +320,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 	}
 
 	// start the session by sending user@realm:ticket
-	if err := conn.WriteMessage(websocket.BinaryMessage, []byte(vnc.User+":"+vnc.Ticket+"\n")); err != nil {
+	if err := conn.WriteMessage(websocket.BinaryMessage, []byte(term.User+":"+term.Ticket+"\n")); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
@@ -348,8 +348,8 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 		return nil, nil, nil, nil, err
 	}
 
-	send := make(chan string)
-	recv := make(chan string)
+	send := make(chan []byte)
+	recv := make(chan []byte)
 	errs := make(chan error)
 	done := make(chan struct{})
 	ticker := time.NewTicker(30 * time.Second)
@@ -403,7 +403,7 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 					}
 					errs <- err
 				}
-				recv <- string(msg)
+				recv <- msg
 			}
 		}
 	}()
@@ -428,9 +428,90 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan string, chan string, 
 				}
 			case msg := <-send:
 				c.log.Debugf("sending: %s", msg)
-				m := []byte(msg)
-				send := append([]byte(fmt.Sprintf("0:%d:", len(m))), m...)
+				send := append([]byte(fmt.Sprintf("0:%d:", len(msg))), msg...)
 				if err := conn.WriteMessage(websocket.BinaryMessage, send); err != nil {
+					errs <- err
+				}
+			}
+		}
+	}()
+
+	return send, recv, errs, closer, nil
+}
+
+func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
+	if strings.HasPrefix(path, "/") {
+		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
+	}
+
+	var tlsConfig *tls.Config
+	transport := c.httpClient.Transport.(*http.Transport)
+	if transport != nil {
+		tlsConfig = transport.TLSClientConfig
+	}
+	c.log.Debugf("connecting to websocket: %s", path)
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 30 * time.Second,
+		TLSClientConfig:  tlsConfig,
+	}
+
+	dialerHeaders := http.Header{}
+	c.authHeaders(&dialerHeaders)
+
+	conn, _, err := dialer.Dial(path, dialerHeaders)
+
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	send := make(chan []byte)
+	recv := make(chan []byte)
+	errs := make(chan error)
+	done := make(chan struct{})
+
+	closer := func() error {
+		close(done)
+		time.Sleep(1 * time.Second)
+		close(send)
+		close(recv)
+		close(errs)
+
+		return conn.Close()
+	}
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				_, msg, err := conn.ReadMessage()
+				if err != nil {
+					if strings.Contains(err.Error(), "use of closed network connection") {
+						return
+					}
+					if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+						return
+					}
+					errs <- err
+				}
+				recv <- msg
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				if err := conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					errs <- err
+				}
+				return
+			case msg := <-send:
+				c.log.Debugf("sending: %s", msg)
+				if err := conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 					errs <- err
 				}
 			}
