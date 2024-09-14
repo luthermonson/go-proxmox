@@ -910,7 +910,7 @@ func nodes() {
 }`)
 
 	gock.New(config.C.URI).
-		Get("^/nodes/node1/lxc").
+		Get("^/nodes/node1/lxc$").
 		Reply(200).
 		JSON(`{
 "data": [{"cpu":0,"cpus":1,"disk":640397312,"diskread":273694720,"diskwrite":200982528,"maxdisk":8350298112,"maxmem":536870912,"maxswap":536870912,"mem":34304000,"name":"test","netin":94558593,"netout":1618542,"pid":248173,"status":"running","swap":0,"type":"lxc","uptime":919760,"vmid":"106"},{"cpu":0,"cpus":1,"disk":639303680,"diskread":283123712,"diskwrite":201687040,"maxdisk":8350298112,"maxmem":536870912,"maxswap":536870912,"mem":34508800,"name":"zort","netin":94560801,"netout":1619838,"pid":248045,"status":"running","swap":0,"type":"lxc","uptime":919761,"vmid":"105"},{"cpu":0,"cpus":1,"disk":0,"diskread":0,"diskwrite":0,"maxdisk":8589934592,"maxmem":536870912,"maxswap":536870912,"mem":0,"name":"test-container","netin":0,"netout":0,"status":"stopped","swap":0,"template":1,"type":"lxc","uptime":0,"vmid":"101"}]
@@ -959,6 +959,48 @@ func nodes() {
 		Put("^/nodes/node1/lxc/101/config").
 		Reply(200).
 		JSON(`{"data": "null"}`)
+
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/config").
+		Reply(200).
+		JSON(`{"data":
+{
+   "arch" : "amd64",
+   "cores" : 2,
+   "digest" : "5911baea29f4c0073fb063fd9ab29e75892832bf",
+   "features" : "fuse=1,mknod=1,nesting=1",
+   "hostname" : "test-container",
+   "lxc" : [
+      [
+         "lxc.cgroup2.devices.allow",
+         "c 226:0 rwm"
+      ],
+      [
+         "lxc.cgroup2.devices.allow",
+         "c 226:128 rwm"
+      ],
+      [
+         "lxc.cgroup2.devices.allow",
+         "c 29:0 rwm"
+      ],
+      [
+         "lxc.mount.entry",
+         "/dev/dri dev/dri none bind,optional,create=dir"
+      ],
+      [
+         "lxc.mount.entry",
+         "/dev/fb0 dev/fb0 none bind,optional,create=file"
+      ]
+   ],
+   "memory" : 4096,
+   "mp0" : "/mnt/foo/bar,mp=/storage",
+   "net0" : "name=eth0,bridge=vmbr0,firewall=1,hwaddr=5D:CF:BD:B2:C5:39,ip=dhcp,type=veth",
+   "onboot" : 1,
+   "ostype" : "debian",
+   "rootfs" : "vmstore:subvol-101-disk-0,size=30G",
+   "swap" : 512,
+   "tags" : "tag1;tag2"
+}}`)
 
 	gock.New(config.C.URI).
 		Post("^/nodes/node1/lxc/101/status/start").

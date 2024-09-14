@@ -657,16 +657,16 @@ type Container struct {
 	client          *Client
 	ContainerConfig *ContainerConfig
 
+	CPUs    int
+	MaxDisk uint64
+	MaxMem  uint64
+	MaxSwap uint64
 	Name    string
 	Node    string
-	CPUs    int
 	Status  string
-	VMID    StringOrUint64
-	Uptime  uint64
-	MaxMem  uint64
-	MaxDisk uint64
-	MaxSwap uint64
 	Tags    string
+	Uptime  uint64
+	VMID    StringOrUint64
 }
 
 type ContainerInterfaces []*ContainerInterface

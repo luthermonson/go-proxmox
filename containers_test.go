@@ -8,6 +8,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestContainer(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node := Node{
+		client: client,
+		Name:   "node1",
+	}
+	container, err := node.Container(ctx, 101)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, container, container.ContainerConfig)
+}
+
 func TestContainers(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -81,8 +95,9 @@ func TestContainerConfig(t *testing.T) {
 		Node:   "node1",
 		VMID:   101,
 	}
-	_, err := container.Config(ctx)
+	task, err := container.Config(ctx)
 	assert.Nil(t, err)
+	assert.NotEmpty(t, task)
 }
 
 func TestContainerStart(t *testing.T) {
