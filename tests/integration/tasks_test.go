@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -60,21 +61,21 @@ func TestTask_JsonUnmarshalWithEndTime(t *testing.T) {
 func TestTask(t *testing.T) {
 	// download ubuntu iso for long-running task to test against
 	isoName := nameGenerator(12) + ".iso"
-	task, err := td.storage.DownloadURL("iso", isoName, ubuntuURL)
+	task, err := td.storage.DownloadURL(context.TODO(), "iso", isoName, ubuntuURL)
 	assert.Nil(t, err)
 
 	// test ping and wait, big iso should take more than 15s
 	go func() {
-		timeout := task.Wait(time.Duration(5*time.Second), time.Duration(30*time.Second))
+		timeout := task.Wait(context.TODO(), time.Duration(5*time.Second), time.Duration(30*time.Second))
 		assert.True(t, proxmox.IsTimeout(timeout))
-		assert.Nil(t, task.Stop())
+		assert.Nil(t, task.Stop(context.TODO()))
 	}()
 
-	log, err := task.Log(0, 50)
+	log, err := task.Log(context.TODO(), 0, 50)
 	assert.Nil(t, err)
 	assert.Contains(t, log[0], ubuntuURL)
 
-	watch, err := task.Watch(0)
+	watch, err := task.Watch(context.TODO(), 0)
 	assert.Nil(t, err)
 	for {
 		select {
