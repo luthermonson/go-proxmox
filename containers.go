@@ -40,6 +40,8 @@ func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
 	return NewTask(upid, c.client), nil
 }
 
+// Config sets ContainerOptions for Container
+// see https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/lxc/{vmid}/config for available attributes
 func (c *Container) Config(ctx context.Context, options ...ContainerOption) (*Task, error) {
 	var upid UPID
 	data := make(map[string]interface{})

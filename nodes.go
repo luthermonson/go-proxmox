@@ -102,14 +102,20 @@ func (n *Node) Containers(ctx context.Context) (c Containers, err error) {
 }
 
 func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
-	var c Container
+	c := &Container{
+		client: n.client,
+		Node:   n.Name,
+	}
+
 	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c); err != nil {
 		return nil, err
 	}
-	c.client = n.client
-	c.Node = n.Name
 
-	return &c, nil
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/config", n.Name, vmid), &c.ContainerConfig); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (n *Node) NewContainer(ctx context.Context, vmid int, options ...ContainerOption) (*Task, error) {
