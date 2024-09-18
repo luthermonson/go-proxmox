@@ -50,12 +50,25 @@ type Version struct {
 	Version string `json:"version"`
 }
 
-type VNC struct {
-	Cert   string
+type Term struct {
 	Port   StringOrInt
 	Ticket string
 	UPID   string
 	User   string
+}
+
+type VNCConfig struct {
+	GeneratePassword bool `json:"generate-password,omitempty"`
+	Websocket        bool `json:"websocket,omitempty"`
+}
+
+type VNC struct {
+	Cert     string
+	Port     StringOrInt
+	Ticket   string
+	UPID     string
+	User     string
+	Password string `json:",omitempty"`
 }
 
 type Cluster struct {

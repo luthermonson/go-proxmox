@@ -98,11 +98,18 @@ func (c *Container) Shutdown(ctx context.Context, force bool, timeout int) (task
 	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) TermProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/termproxy", c.Node, c.VMID), nil, &vnc)
+func (c *Container) TermProxy(ctx context.Context) (term *Term, err error) {
+	return term, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/termproxy", c.Node, c.VMID), nil, &term)
 }
 
-func (c *Container) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+func (c *Container) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/lxc/%d/vncwebsocket?port=%d&vncticket=%s",
+		c.Node, c.VMID, term.Port, url.QueryEscape(term.Ticket))
+
+	return c.client.TermWebSocket(p, term)
+}
+
+func (c *Container) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/lxc/%d/vncwebsocket?port=%d&vncticket=%s",
 		c.Node, c.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
 

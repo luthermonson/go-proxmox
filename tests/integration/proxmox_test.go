@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ type TestingData struct {
 	nodeStorage     string
 	isoURL          string
 	appliancePrefix string
+	vncVmId         int
 }
 
 var (
@@ -52,6 +54,8 @@ var (
 )
 
 func init() {
+	var err error
+
 	td.username = os.Getenv("PROXMOX_USERNAME")
 	td.password = os.Getenv("PROXMOX_PASSWORD")
 	td.otp = os.Getenv("PROXMOX_OTP")
@@ -61,6 +65,10 @@ func init() {
 	td.nodeStorage = os.Getenv("PROXMOX_NODE_STORAGE")
 	td.isoURL = os.Getenv("PROXMOX_ISO_URL") // https://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-virt-3.14.1-x86_64.iso
 	td.appliancePrefix = "alpine-virt-3.14.1"
+	vncVmId, err := strconv.Atoi(os.Getenv("PROXMOX_VNC_VMID"))
+	if err == nil {
+		td.vncVmId = vncVmId
+	}
 
 	if td.nodeName == "" {
 		return
@@ -68,7 +76,6 @@ func init() {
 
 	td.client = ClientFromLogins()
 	ctx := context.Background()
-	var err error
 
 	td.node, err = td.client.Node(ctx, td.nodeName)
 	if err != nil {

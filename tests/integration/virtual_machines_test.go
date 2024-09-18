@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -19,59 +20,59 @@ import (
 // NewVirtualMachine fixture to download a tinycore iso and returns a vm, make sure you defer the cleanup if you use it
 func NewVirtualMachine(t *testing.T, name string) *proxmox.VirtualMachine {
 	client := ClientFromLogins()
-	node, err := client.Node(td.nodeName)
+	node, err := client.Node(context.TODO(), td.nodeName)
 	require.NoError(t, err)
 
 	isoName := name + ".iso"
-	task, err := td.storage.DownloadURL("iso", isoName, tinycoreURL)
+	task, err := td.storage.DownloadURL(context.TODO(), "iso", isoName, tinycoreURL)
 	assert.Nil(t, err)
-	assert.Nil(t, task.Wait(time.Duration(5*time.Second), time.Duration(5*time.Minute)))
+	assert.Nil(t, task.Wait(context.TODO(), time.Duration(5*time.Second), time.Duration(5*time.Minute)))
 
-	iso, err := td.storage.ISO(isoName)
+	iso, err := td.storage.ISO(context.TODO(), isoName)
 	assert.Nil(t, err)
 
-	cluster, err := client.Cluster()
+	cluster, err := client.Cluster(context.TODO())
 	require.NoError(t, err)
 
-	nextid, err := cluster.NextID()
+	nextid, err := cluster.NextID(context.TODO())
 	require.NoError(t, err)
 
-	task, err = node.NewVirtualMachine(nextid, proxmox.VirtualMachineOption{Name: "cdrom", Value: iso.VolID})
+	task, err = node.NewVirtualMachine(context.TODO(), nextid, proxmox.VirtualMachineOption{Name: "cdrom", Value: iso.VolID})
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
 
-	vm, err := node.VirtualMachine(nextid)
+	vm, err := node.VirtualMachine(context.TODO(), nextid)
 	require.NoError(t, err)
-	task, err = vm.Config(
+	task, err = vm.Config(context.TODO(),
 		proxmox.VirtualMachineOption{Name: "name", Value: name},
 		proxmox.VirtualMachineOption{Name: "serial0", Value: "socket"},
 	)
 
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
 
 	return vm
 }
 
 func CleanupVirtualMachine(t *testing.T, vm *proxmox.VirtualMachine) {
-	task, err := vm.Stop()
+	task, err := vm.Stop(context.TODO())
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 30*time.Second))
 
 	if vm.VirtualMachineConfig != nil && vm.VirtualMachineConfig.IDE2 != "" {
 		s := strings.Split(vm.VirtualMachineConfig.IDE2, ",")
 		if len(s) > 2 {
-			iso, err := td.storage.ISO(filepath.Base(s[0]))
+			iso, err := td.storage.ISO(context.TODO(), filepath.Base(s[0]))
 			assert.Nil(t, err)
-			task, err := iso.Delete()
+			task, err := iso.Delete(context.TODO())
 			require.NoError(t, err)
-			require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
+			require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
 		}
 	}
 
-	task, err = vm.Delete()
+	task, err = vm.Delete(context.TODO())
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 30*time.Second))
 }
 
 func TestNode_NewVirtualMachine(t *testing.T) {
@@ -81,24 +82,24 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	defer CleanupVirtualMachine(t, vm)
 
 	// Start
-	task, err := vm.Start()
+	task, err := vm.Start(context.TODO())
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 10*time.Second))
-	require.NoError(t, vm.Ping())
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// TODO while this connects it doesn't do anything because the vm isn't setup to use the serial0 socket
-	vnc, err := vm.TermProxy()
+	term, err := vm.TermProxy(context.TODO())
 	require.NoError(t, err)
-	send, recv, errs, close, err := vm.VNCWebSocket(vnc)
+	send, recv, errs, close, err := vm.TermWebSocket(term)
 	defer close()
 
 	go func() {
 		for {
 			select {
 			case msg := <-recv:
-				if msg != "" {
-					fmt.Println("MSG: " + msg)
+				if len(msg) > 0 {
+					fmt.Println("MSG: " + string(msg))
 				}
 			case err := <-errs:
 				if err != nil {
@@ -110,11 +111,11 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	}()
 
 	time.Sleep(2 * time.Second)
-	send <- "\n"
+	send <- []byte("\n")
 	time.Sleep(2 * time.Second)
-	send <- "ls -la"
+	send <- []byte("ls -la\n")
 	time.Sleep(2 * time.Second)
-	send <- "hostname"
+	send <- []byte("hostname\n")
 	time.Sleep(2 * time.Second)
 
 	// Reboot disabled for now doesn't work great w/o the guest agent installed so will uncomment when that's done
@@ -125,42 +126,42 @@ func TestNode_NewVirtualMachine(t *testing.T) {
 	//assert.Equal(t, StatusVirtualMachineRunning, vm.Status)
 
 	// Stop
-	task, err = vm.Stop()
+	task, err = vm.Stop(context.TODO())
 	assert.NoError(t, err)
-	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
-	require.NoError(t, vm.Ping())
+	assert.NoError(t, task.Wait(context.TODO(), 1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.Equal(t, proxmox.StatusVirtualMachineStopped, vm.Status)
 
 	// Start again to test hibernating/pause and resumse
-	task, err = vm.Start()
+	task, err = vm.Start(context.TODO())
 	require.NoError(t, err)
-	require.NoError(t, task.Wait(1*time.Second, 30*time.Second))
-	require.NoError(t, vm.Ping())
+	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 30*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// Hibernate
-	task, err = vm.Hibernate()
+	task, err = vm.Hibernate(context.TODO())
 	assert.NoError(t, err)
-	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
-	require.NoError(t, vm.Ping())
+	assert.NoError(t, task.Wait(context.TODO(), 1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.True(t, vm.IsHibernated())
 
-	task, err = vm.Resume()
+	task, err = vm.Resume(context.TODO())
 	assert.NoError(t, err)
-	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
-	require.NoError(t, vm.Ping())
+	assert.NoError(t, task.Wait(context.TODO(), 1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 
 	// Pause
-	task, err = vm.Pause()
+	task, err = vm.Pause(context.TODO())
 	assert.NoError(t, err)
-	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
-	require.NoError(t, vm.Ping())
+	assert.NoError(t, task.Wait(context.TODO(), 1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.True(t, vm.IsPaused())
 
-	task, err = vm.Resume()
+	task, err = vm.Resume(context.TODO())
 	assert.NoError(t, err)
-	assert.NoError(t, task.Wait(1*time.Second, 15*time.Second))
-	require.NoError(t, vm.Ping())
+	assert.NoError(t, task.Wait(context.TODO(), 1*time.Second, 15*time.Second))
+	require.NoError(t, vm.Ping(context.TODO()))
 	assert.Equal(t, proxmox.StatusVirtualMachineRunning, vm.Status)
 }

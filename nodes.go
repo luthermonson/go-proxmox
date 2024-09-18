@@ -26,12 +26,19 @@ func (n *Node) Version(ctx context.Context) (version *Version, err error) {
 	return version, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
 
-func (n *Node) TermProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &vnc)
+func (n *Node) TermProxy(ctx context.Context) (term *Term, err error) {
+	return term, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &term)
+}
+
+func (n *Node) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/vncwebsocket?port=%d&vncticket=%s",
+		n.Name, term.Port, url.QueryEscape(term.Ticket))
+
+	return n.client.TermWebSocket(p, term)
 }
 
 // VNCWebSocket send, recv, errors, closer, error
-func (n *Node) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+func (n *Node) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/vncwebsocket?port=%d&vncticket=%s",
 		n.Name, vnc.Port, url.QueryEscape(vnc.Ticket))
 
