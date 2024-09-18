@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/luthermonson/go-proxmox"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNodes(t *testing.T) {
@@ -145,4 +147,42 @@ func TestNode_TermProxy(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	send <- []byte("exit\n")
 	time.Sleep(1 * time.Second)
+}
+
+func TestNode_VncProxy(t *testing.T) {
+	assert.NotEqual(t, 0, td.vncVmId)
+
+	vm, err := td.node.VirtualMachine(context.TODO(), td.vncVmId)
+	require.NoError(t, err)
+
+	vnc, err := vm.VNCProxy(context.TODO(), nil)
+	require.NoError(t, err)
+
+	send, recv, errs, close, err := vm.VNCWebSocket(vnc)
+	assert.Nil(t, err)
+	defer close()
+
+	go func() {
+		for {
+			select {
+			case msg := <-recv:
+				if len(msg) > 0 {
+					fmt.Printf("MSG: %s -> %v\n", string(msg), msg)
+					if strings.HasPrefix(string(msg), "RFB") {
+						send <- msg
+					}
+					if bytes.Equal(msg, []byte{0x01, 0x02}) {
+						fmt.Println("Success!")
+					}
+				}
+			case err := <-errs:
+				if err != nil {
+					fmt.Println("ERROR: " + err.Error())
+					return
+				}
+			}
+		}
+	}()
+
+	time.Sleep(5 * time.Second)
 }
