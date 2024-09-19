@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoVNC Client</title>
+  <style>
+    #vncContainer {
+      width: 800px;
+      height: 600px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>noVNC Client</h1>
+  <div id="vncContainer"></div>
+  <p id="status">Status: Desconectado</p>
+  <button id="connectButton">Conectar</button>
+  <button id="disconnectButton">Desconectar</button>
+
+  <script type="module" src="vnc.js"></script>
+</body>
+
+</html>

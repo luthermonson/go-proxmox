@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.xterm {
+  padding: 5px;
+}

@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  background-color: dimgrey;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+html {
+  height: 100%;
+}
+
+#top_bar {
+  background-color: #6e84a3;
+  color: white;
+  font: bold 12px Helvetica;
+  padding: 6px 5px 4px 5px;
+  border-bottom: 1px outset;
+}
+#status {
+  text-align: center;
+}
+#sendCtrlAltDelButton {
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  border: 1px outset;
+  padding: 5px 5px 4px 5px;
+  cursor: pointer;
+}
+
+#screen {
+  flex: 1; /* fill remaining space */
+  overflow: hidden;
+}
