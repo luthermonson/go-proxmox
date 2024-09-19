@@ -952,7 +952,7 @@ func (b *IntOrBool) UnmarshalJSON(i []byte) error {
 }
 
 func (b *IntOrBool) MarshalJSON() ([]byte, error) {
-	if *b == true {
+	if *b {
 		return []byte("1"), nil
 	}
 	return []byte("0"), nil
@@ -1061,7 +1061,7 @@ type FirewallRule struct {
 }
 
 func (r *FirewallRule) IsEnable() bool {
-	return 1 == r.Enable
+	return r.Enable == 1
 }
 
 type FirewallNodeOption struct {

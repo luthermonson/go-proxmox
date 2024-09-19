@@ -59,7 +59,7 @@ func (n *Node) NetworkReload(ctx context.Context) (*Task, error) {
 }
 
 func (nw *NodeNetwork) Update(ctx context.Context) error {
-	if "" == nw.Iface {
+	if nw.Iface == "" {
 		return nil
 	}
 	return nw.client.Put(ctx, fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), nw, nil)
@@ -67,7 +67,7 @@ func (nw *NodeNetwork) Update(ctx context.Context) error {
 
 func (nw *NodeNetwork) Delete(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if "" == nw.Iface {
+	if nw.Iface == "" {
 		return
 	}
 	err = nw.client.Delete(ctx, fmt.Sprintf("/nodes/%s/network/%s", nw.Node, nw.Iface), &upid)

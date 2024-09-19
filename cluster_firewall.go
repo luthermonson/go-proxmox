@@ -27,7 +27,7 @@ func (cl *Cluster) FWGroup(ctx context.Context, name string) (group *FirewallSec
 }
 
 func (cl *Cluster) NewFWGroup(ctx context.Context, group *FirewallSecurityGroup) error {
-	return cl.client.Post(ctx, fmt.Sprintf("/cluster/firewall/groups"), group, &group)
+	return cl.client.Post(ctx, "/cluster/firewall/groups", group, &group)
 }
 
 func (g *FirewallSecurityGroup) GetRules(ctx context.Context) ([]*FirewallRule, error) {

@@ -15,7 +15,7 @@ func (vmc *VirtualMachineConfig) mergeIndexedDevices(prefix string) map[string]s
 	for i := 0; i < count; i++ {
 		fn := t.Field(i).Name
 		fv := v.Field(i).String()
-		if "" == fv {
+		if fv == "" {
 			continue
 		}
 		if strings.HasPrefix(fn, prefix) {

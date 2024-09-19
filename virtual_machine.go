@@ -477,7 +477,7 @@ func (v *VirtualMachine) AgentGetNetworkIFaces(ctx context.Context) (iFaces []*A
 	}
 	if result, ok := networks["result"]; ok {
 		for _, iface := range result {
-			if "lo" == iface.Name {
+			if iface.Name == "lo" {
 				continue
 			}
 			iFaces = append(iFaces, iface)
