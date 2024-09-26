@@ -64,9 +64,11 @@ func TestCluster_Resources(t *testing.T) {
 
 	// json unmarshaling tests
 	rs, err := cluster.Resources(ctx)
+	assert.Nil(t, err)
 	assert.Equal(t, 20, len(rs))
 
 	// type param test
 	rs, err = cluster.Resources(ctx, "node")
+	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 }

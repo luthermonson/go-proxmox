@@ -46,13 +46,13 @@ func (t *Task) Ping(ctx context.Context) error {
 		t.client = tmp.client
 	}
 
-	if "stopped" == t.Status {
+	if t.Status == "stopped" {
 		t.IsCompleted = true
 	} else {
 		t.IsRunning = true
 	}
 	if t.IsCompleted {
-		if "OK" == t.ExitStatus {
+		if t.ExitStatus == "OK" {
 			t.IsSuccessful = true
 		} else {
 			t.IsFailed = true
