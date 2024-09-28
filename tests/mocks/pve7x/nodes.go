@@ -937,6 +937,7 @@ func nodes() {
         "status":"stopped",
         "swap":0,
         "template":1,
+        "tags":"tag1;tag2",
         "type":"lxc",
         "uptime":0,
         "vmid":101
@@ -960,6 +961,7 @@ func nodes() {
 		Reply(200).
 		JSON(`{"data": "null"}`)
 
+		// Used for ContainerConfig
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/lxc/101/config").
 		Reply(200).
