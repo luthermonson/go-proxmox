@@ -704,74 +704,105 @@ type ContainerCloneOptions struct {
 }
 
 type ContainerConfig struct {
-	Arch         string     `json:"arch,omitempty"`
-	CMode        string     `json:"cmode,omitempty"`
-	Console      IntOrBool  `json:"console,omitempty"`
-	Cores        int        `json:"cores,omitempty"`
-	CPULimit     int        `json:"cpulimit,omitempty"`
-	CPUUnits     int        `json:"cpuunits,omitempty"`
-	Debug        IntOrBool  `json:"debug,omitempty"`
-	Description  string     `json:"description,omitempty"`
-	Dev0         string     `json:"dev0,omitempty"`
-	Dev1         string     `json:"dev1,omitempty"`
-	Dev2         string     `json:"dev2,omitempty"`
-	Dev3         string     `json:"dev3,omitempty"`
-	Dev4         string     `json:"dev4,omitempty"`
-	Dev5         string     `json:"dev5,omitempty"`
-	Dev6         string     `json:"dev6,omitempty"`
-	Dev7         string     `json:"dev7,omitempty"`
-	Dev8         string     `json:"dev8,omitempty"`
-	Dev9         string     `json:"dev9,omitempty"`
-	Digest       string     `json:"digest"`
-	Features     string     `json:"features,omitempty"`
-	HookScript   string     `json:"hookscript,omitempty"`
-	LXC          [][]string `json:"lxc,omitempty"`
-	Hostname     string     `json:"hostname,omitempty"`
-	Lock         string     `json:"lock,omitempty"`
-	Memory       int        `json:"memory,omitempty"`
-	Mp0          string     `json:"mp0,omitempty"`
-	Mp1          string     `json:"mp1,omitempty"`
-	Mp2          string     `json:"mp2,omitempty"`
-	Mp3          string     `json:"mp3,omitempty"`
-	Mp4          string     `json:"mp4,omitempty"`
-	Mp5          string     `json:"mp5,omitempty"`
-	Mp6          string     `json:"mp6,omitempty"`
-	Mp7          string     `json:"mp7,omitempty"`
-	Mp8          string     `json:"mp8,omitempty"`
-	Mp9          string     `json:"mp9,omitempty"`
-	Nameserver   string     `json:"nameserver,omitempty"`
-	Net0         string     `json:"net0,omitempty"`
-	Net1         string     `json:"net1,omitempty"`
-	Net2         string     `json:"net2,omitempty"`
-	Net3         string     `json:"net3,omitempty"`
-	Net4         string     `json:"net4,omitempty"`
-	Net5         string     `json:"net5,omitempty"`
-	Net6         string     `json:"net6,omitempty"`
-	Net7         string     `json:"net7,omitempty"`
-	Net8         string     `json:"net8,omitempty"`
-	Net9         string     `json:"net9,omitempty"`
-	OnBoot       IntOrBool  `json:"onboot,omitempty"`
-	OSType       string     `json:"ostype,omitempty"`
-	Protection   IntOrBool  `json:"protection,omitempty"`
-	RootFS       string     `json:"rootfs,omitempty"`
-	SearchDomain string     `json:"searchdomain:omitempty"`
-	Startup      string     `json:"startup:omitempty"`
-	Swap         int        `json:"swap,omitempty"`
-	Tags         string     `json:"tags,omitempty"`
-	Template     IntOrBool  `json:"template,omitempty"`
-	Timezone     string     `json:"timezone,omitempty"`
-	TTY          int        `json:"tty,omitempty"`
-	Unprivileged IntOrBool  `json:"unpriviledged,omitempty"`
-	Unused0      string     `json:"unused0,omitempty"`
-	Unused1      string     `json:"unused1,omitempty"`
-	Unused2      string     `json:"unused2,omitempty"`
-	Unused3      string     `json:"unused3,omitempty"`
-	Unused4      string     `json:"unused4,omitempty"`
-	Unused5      string     `json:"unused5,omitempty"`
-	Unused6      string     `json:"unused6,omitempty"`
-	Unused7      string     `json:"unused7,omitempty"`
-	Unused8      string     `json:"unused8,omitempty"`
-	Unused9      string     `json:"unused9,omitempty"`
+	Arch         string            `json:"arch,omitempty"`
+	CMode        string            `json:"cmode,omitempty"`
+	Console      IntOrBool         `json:"console,omitempty"`
+	Cores        int               `json:"cores,omitempty"`
+	CPULimit     int               `json:"cpulimit,omitempty"`
+	CPUUnits     int               `json:"cpuunits,omitempty"`
+	Debug        IntOrBool         `json:"debug,omitempty"`
+	Description  string            `json:"description,omitempty"`
+	Devs         map[string]string `json:"-"` // internal helper for Dev0..9
+	Dev0         string            `json:"dev0,omitempty"`
+	Dev1         string            `json:"dev1,omitempty"`
+	Dev2         string            `json:"dev2,omitempty"`
+	Dev3         string            `json:"dev3,omitempty"`
+	Dev4         string            `json:"dev4,omitempty"`
+	Dev5         string            `json:"dev5,omitempty"`
+	Dev6         string            `json:"dev6,omitempty"`
+	Dev7         string            `json:"dev7,omitempty"`
+	Dev8         string            `json:"dev8,omitempty"`
+	Dev9         string            `json:"dev9,omitempty"`
+	Digest       string            `json:"digest"`
+	Features     string            `json:"features,omitempty"`
+	HookScript   string            `json:"hookscript,omitempty"`
+	LXC          [][]string        `json:"lxc,omitempty"`
+	Hostname     string            `json:"hostname,omitempty"`
+	Lock         string            `json:"lock,omitempty"`
+	Memory       int               `json:"memory,omitempty"`
+	Mps          map[string]string `json:"-"` // internal helper for Mp0..9
+	Mp0          string            `json:"mp0,omitempty"`
+	Mp1          string            `json:"mp1,omitempty"`
+	Mp2          string            `json:"mp2,omitempty"`
+	Mp3          string            `json:"mp3,omitempty"`
+	Mp4          string            `json:"mp4,omitempty"`
+	Mp5          string            `json:"mp5,omitempty"`
+	Mp6          string            `json:"mp6,omitempty"`
+	Mp7          string            `json:"mp7,omitempty"`
+	Mp8          string            `json:"mp8,omitempty"`
+	Mp9          string            `json:"mp9,omitempty"`
+	Nameserver   string            `json:"nameserver,omitempty"`
+	Nets         map[string]string `json:"-"` // internal helper for Net0..9
+	Net0         string            `json:"net0,omitempty"`
+	Net1         string            `json:"net1,omitempty"`
+	Net2         string            `json:"net2,omitempty"`
+	Net3         string            `json:"net3,omitempty"`
+	Net4         string            `json:"net4,omitempty"`
+	Net5         string            `json:"net5,omitempty"`
+	Net6         string            `json:"net6,omitempty"`
+	Net7         string            `json:"net7,omitempty"`
+	Net8         string            `json:"net8,omitempty"`
+	Net9         string            `json:"net9,omitempty"`
+	OnBoot       IntOrBool         `json:"onboot,omitempty"`
+	OSType       string            `json:"ostype,omitempty"`
+	Protection   IntOrBool         `json:"protection,omitempty"`
+	RootFS       string            `json:"rootfs,omitempty"`
+	SearchDomain string            `json:"searchdomain:omitempty"`
+	Startup      string            `json:"startup:omitempty"`
+	Swap         int               `json:"swap,omitempty"`
+	TagsSlice    []string          `json:"-"` // internal helper to manage tags easier
+	Tags         string            `json:"tags,omitempty"`
+	Template     IntOrBool         `json:"template,omitempty"`
+	Timezone     string            `json:"timezone,omitempty"`
+	TTY          int               `json:"tty,omitempty"`
+	Unprivileged IntOrBool         `json:"unpriviledged,omitempty"`
+	Unuseds      map[string]string `json:"-"` // internal helper
+	Unused0      string            `json:"unused0,omitempty"`
+	Unused1      string            `json:"unused1,omitempty"`
+	Unused2      string            `json:"unused2,omitempty"`
+	Unused3      string            `json:"unused3,omitempty"`
+	Unused4      string            `json:"unused4,omitempty"`
+	Unused5      string            `json:"unused5,omitempty"`
+	Unused6      string            `json:"unused6,omitempty"`
+	Unused7      string            `json:"unused7,omitempty"`
+	Unused8      string            `json:"unused8,omitempty"`
+	Unused9      string            `json:"unused9,omitempty"`
+}
+
+func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
+	type tmpContainerConfig ContainerConfig
+
+	// create a struct and embed temporary alias of ContainerConfig to avoid recursion
+	// this will also populate the rest of the fields using the built in unmarshal function
+	tmp := &struct {
+		*tmpContainerConfig
+	}{
+		tmpContainerConfig: (*tmpContainerConfig)(cc),
+	}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	// Split the tags on TagSeparator and populate TagsSlice
+	cc.TagsSlice = strings.Split(cc.Tags, TagSeperator)
+
+	// Populate the indexed fields into helper maps
+	cc.MergeDevs()
+	cc.MergeMps()
+	cc.MergeNets()
+	cc.MergeUnuseds()
+
+	return nil
 }
 
 // ContainerOptions A key/value pair used to modify a container(LXC) config

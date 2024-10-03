@@ -294,3 +294,63 @@ func TestContainerInterfaces(t *testing.T) {
 	assert.NotEmpty(t, interfaces)
 	assert.Equal(t, interfaces, ContainerInterfaces{{HWAddr: "00:00:00:00:00:00", Inet: "127.0.0.1/8", Name: "lo", Inet6: "::1/128"}, {Inet6: "fe80::be24:11ff:fe89:6707/64", Name: "eth0", HWAddr: "bc:24:11:89:67:07", Inet: "192.168.3.95/22"}})
 }
+
+func TestContainerTagsSlice(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	container, err := node.Container(ctx, 101)
+	assert.Nil(t, err)
+
+	assert.NotEmpty(t, container.ContainerConfig.TagsSlice)
+}
+
+func TestContainer_AddTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	container, err := node.Container(ctx, 101)
+	assert.Nil(t, err)
+
+	container.AddTag(ctx, "newTag")
+	assert.True(t, container.HasTag("newTag"))
+}
+
+func TestContainer_HasTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	container, err := node.Container(ctx, 101)
+	assert.Nil(t, err)
+
+	assert.True(t, container.HasTag("tag1"))
+	assert.False(t, container.HasTag("not_there"))
+}
+
+func TestContainer_RemoveTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	container, err := node.Container(ctx, 101)
+	assert.Nil(t, err)
+
+	assert.True(t, container.HasTag("tag1"))
+	container.RemoveTag(ctx, "tag1")
+	assert.False(t, container.HasTag("tag1"))
+}

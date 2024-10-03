@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (newid int, task *Task, err error) {
@@ -287,4 +288,85 @@ func (c *Container) GetFirewallOptions(ctx context.Context) (options *FirewallVi
 
 func (c *Container) UpdateFirewallOptions(ctx context.Context, options *FirewallVirtualMachineOption) error {
 	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/options", c.Node, c.VMID), options, nil)
+}
+
+// Tag Management Helpers
+
+// HasTag returns if a Tag is present in TagSlice
+func (c *Container) HasTag(value string) bool {
+	if c.ContainerConfig == nil {
+		return false
+	}
+
+	if c.ContainerConfig.Tags == "" {
+		return false
+	}
+
+	if c.ContainerConfig.TagsSlice == nil {
+		c.SplitTags()
+	}
+
+	for _, tag := range c.ContainerConfig.TagsSlice {
+		if tag == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AddTag appends the passed value to TagsSlice and updates Tags via c.Config
+// If accurate state is important, then reassign the value of Container after the task
+// has completed.
+func (c *Container) AddTag(ctx context.Context, value string) (*Task, error) {
+	if c.HasTag(value) {
+		return nil, ErrNoop
+	}
+
+	if c.ContainerConfig.TagsSlice == nil {
+		c.SplitTags()
+	}
+
+	c.ContainerConfig.TagsSlice = append(c.ContainerConfig.TagsSlice, value)
+	c.ContainerConfig.Tags = strings.Join(c.ContainerConfig.TagsSlice, TagSeperator)
+	c.Tags = c.ContainerConfig.Tags // Keep the parent object up to date
+
+	return c.Config(ctx, ContainerOption{
+		Name:  "tags",
+		Value: c.ContainerConfig.Tags,
+	})
+}
+
+// RemoveTag removes the passed value from TagsSlice and updates Tags via c.Config
+// If accurate state is important, then reassign the value of Container after the task
+// has completed.
+func (c *Container) RemoveTag(ctx context.Context, value string) (*Task, error) {
+	if !c.HasTag(value) {
+		return nil, ErrNoop
+	}
+
+	if c.ContainerConfig.TagsSlice == nil {
+		c.SplitTags()
+	}
+
+	for i, tag := range c.ContainerConfig.TagsSlice {
+		if tag == value {
+			c.ContainerConfig.TagsSlice = append(
+				c.ContainerConfig.TagsSlice[:i],
+				c.ContainerConfig.TagsSlice[i+1:]...,
+			)
+		}
+	}
+
+	c.ContainerConfig.Tags = strings.Join(c.ContainerConfig.TagsSlice, TagSeperator)
+	c.Tags = c.ContainerConfig.Tags // keep the parent object up to date
+	return c.Config(ctx, ContainerOption{
+		Name:  "tags",
+		Value: c.ContainerConfig.Tags,
+	})
+}
+
+// SplitTags sets ContainerConfig TagsSlice my splitting the value of ContainerConfig.Tags with TagSeparator
+func (c *Container) SplitTags() {
+	c.ContainerConfig.TagsSlice = strings.Split(c.ContainerConfig.Tags, TagSeperator)
 }
