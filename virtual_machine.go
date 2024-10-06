@@ -287,7 +287,7 @@ func (v *VirtualMachine) Stop(ctx context.Context) (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsPaused() bool {
-	return v.Status == StatusVirtualMachineRunning
+	return v.Status == StatusVirtualMachinePaused
 }
 
 func (v *VirtualMachine) Pause(ctx context.Context) (task *Task, err error) {

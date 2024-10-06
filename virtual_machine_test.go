@@ -75,3 +75,37 @@ func TestVirtualMachineCloneWithoutNewID(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 100, newID)
 }
+
+func TestVirtualMachineState(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	runningVM := VirtualMachine{
+		Status: "running",
+	}
+	assert.False(t, runningVM.IsStopped())
+	assert.False(t, runningVM.IsPaused())
+	assert.False(t, runningVM.IsHibernated())
+	assert.True(t, runningVM.IsRunning())
+	stoppedVM := VirtualMachine{
+		Status: "stopped",
+	}
+	assert.True(t, stoppedVM.IsStopped())
+	assert.False(t, stoppedVM.IsPaused())
+	assert.False(t, stoppedVM.IsHibernated())
+	assert.False(t, stoppedVM.IsRunning())
+	pausedVM := VirtualMachine{
+		Status: "paused",
+	}
+	assert.False(t, pausedVM.IsStopped())
+	assert.True(t, pausedVM.IsPaused())
+	assert.False(t, pausedVM.IsHibernated())
+	assert.False(t, pausedVM.IsRunning())
+	hibernatedVM := VirtualMachine{
+		Status: "stopped",
+		Lock:   "suspended",
+	}
+	assert.True(t, hibernatedVM.IsStopped())
+	assert.False(t, hibernatedVM.IsPaused())
+	assert.True(t, hibernatedVM.IsHibernated())
+	assert.False(t, hibernatedVM.IsRunning())
+}
