@@ -41,7 +41,7 @@ func (cc *ContainerConfig) MergeDevs() map[string]string {
 	return cc.Devs
 }
 
-// MergeDevs merges and assigns the indexed Mp0..9 fields to a string map
+// MergeMps merges and assigns the indexed Mp0..9 fields to a string map
 func (cc *ContainerConfig) MergeMps() map[string]string {
 	if cc.Mps == nil {
 		cc.Mps = cc.mergeIndexedFields("Mp")
@@ -49,7 +49,7 @@ func (cc *ContainerConfig) MergeMps() map[string]string {
 	return cc.Mps
 }
 
-// MergeDevs merges and assigns the indexed Net0..9 fields to a string map
+// MergeNets merges and assigns the indexed Net0..9 fields to a string map
 func (cc *ContainerConfig) MergeNets() map[string]string {
 	if cc.Nets == nil {
 		cc.Nets = cc.mergeIndexedFields("Net")
@@ -57,7 +57,7 @@ func (cc *ContainerConfig) MergeNets() map[string]string {
 	return cc.Nets
 }
 
-// MergeDevs merges and assigns the indexed Unused0..9 fields to a string map
+// MergeUnuseds merges and assigns the indexed Unused0..9 fields to a string map
 func (cc *ContainerConfig) MergeUnuseds() map[string]string {
 	if cc.Unuseds == nil {
 		cc.Unuseds = cc.mergeIndexedFields("Unused")
