@@ -243,7 +243,7 @@ func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan 
 }
 
 func (v *VirtualMachine) IsRunning() bool {
-	return v.Status == StatusVirtualMachineRunning
+	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
 }
 
 func (v *VirtualMachine) Start(ctx context.Context) (task *Task, err error) {
@@ -256,7 +256,7 @@ func (v *VirtualMachine) Start(ctx context.Context) (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsStopped() bool {
-	return v.Status == StatusVirtualMachineStopped
+	return v.Status == StatusVirtualMachineStopped && (v.Lock != "suspended")
 }
 
 func (v *VirtualMachine) Reset(ctx context.Context) (task *Task, err error) {
@@ -287,7 +287,7 @@ func (v *VirtualMachine) Stop(ctx context.Context) (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsPaused() bool {
-	return v.Status == StatusVirtualMachinePaused
+	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == StatusVirtualMachinePaused
 }
 
 func (v *VirtualMachine) Pause(ctx context.Context) (task *Task, err error) {
