@@ -26,7 +26,7 @@ A go client for [Proxmox VE](https://www.proxmox.com/). The client implements [/
 Core developers are home lab enthusiasts working in the virtualization and kubernetes space. The common use case we have for
 Proxmox is dev stress testing and validation of functionality in the products we work on, we plan to build the following tooling 
 around this library to make that easier.
-* [Docker Machine Driver](https://github.com/luthermonson/docker-machine-driver-proxmox) for consumption by (Rancher)[https://rancher.com/docs/rancher/v1.5/en/configuration/machine-drivers/]
+* [Docker Machine Driver](https://github.com/luthermonson/docker-machine-driver-proxmox) for consumption by [Rancher](https://rancher.com/docs/rancher/v1.5/en/configuration/machine-drivers/)
 * [Terminal UI](https://github.com/luthermonson/p9s) inspired by [k9s](https://github.com/derailed/k9s) for quick management of PVE Clusters
 * [Terraform Provider](https://github.com/luthermonson/terraform-provider-proxmox) with better local-exec and cloud-init/unattend xml support
 * [Cluster API Provider Proxmox](https://github.com/luthermonson/cluster-api-provider-proxmox) to create kubernetes clusters
