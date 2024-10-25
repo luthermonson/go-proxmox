@@ -30,8 +30,8 @@ func (cl *Cluster) GetHAResource(ctx context.Context, sid SID) (HAResource, erro
 	return haResource, nil
 }
 
-func (cl *Cluster) ListHAResources(ctx context.Context, resourceType HAResourceType) ([]SID, error) {
-	var haResources []SID
+func (cl *Cluster) ListHAResources(ctx context.Context, resourceType HAResourceType) ([]HAResource, error) {
+	var haResources []HAResource
 	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/ha/resources?type=%s", resourceType), &haResources); err != nil {
 		return nil, err
 	}
