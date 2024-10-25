@@ -52,11 +52,11 @@ func fillHAResources(resources []haResource) ([]HAResource, error) {
 
 		haResources = append(haResources, HAResource{
 			ID:          sid.ID,
-			Group:       &resource.Group,
-			Comment:     &resource.Comment,
-			MaxRelocate: &resource.MaxRelocate,
-			MaxRestart:  &resource.MaxRestart,
-			State:       &resource.State,
+			Group:       AsPtr(resource.Group),
+			Comment:     AsPtr(resource.Comment),
+			MaxRelocate: AsPtr(resource.MaxRelocate),
+			MaxRestart:  AsPtr(resource.MaxRestart),
+			State:       AsPtr(resource.State),
 		})
 	}
 
