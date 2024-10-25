@@ -1516,6 +1516,15 @@ type SID struct {
 	ID   int
 }
 
+type haResource struct {
+	Group       string          `json:"group"`
+	Sid         string          `json:"sid"`
+	State       HAResourceState `json:"state"`
+	Comment     string          `json:"comment"`
+	MaxRestart  uint            `json:"max_restart"`
+	MaxRelocate uint            `json:"max_relocate"`
+}
+
 type HAResource struct {
 	ID          int              `json:"sid"`
 	Group       *string          `json:"group"`
