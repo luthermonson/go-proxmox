@@ -603,10 +603,10 @@ type Task struct {
 	User         string
 	Status       string
 	Node         string
-	PID          uint64 `json:",omitempty"`
-	PStart       uint64 `json:",omitempty"`
-	Saved        string `json:",omitempty"`
-	ExitStatus   string `json:",omitempty"`
+	PID          uint64      `json:",omitempty"`
+	PStart       uint64      `json:",omitempty"`
+	Saved        StringOrInt `json:",omitempty"`
+	ExitStatus   string      `json:",omitempty"`
 	IsCompleted  bool
 	IsRunning    bool
 	IsFailed     bool
@@ -1074,6 +1074,7 @@ type FirewallSecurityGroup struct {
 	Comment string          `json:"comment,omitempty"`
 	Rules   []*FirewallRule `json:"rules,omitempty"`
 }
+
 type FirewallRule struct {
 	Type     string `json:"type,omitempty"`
 	Action   string `json:"action,omitempty"`
@@ -1089,6 +1090,8 @@ type FirewallRule struct {
 	Proto    string `json:"proto,omitempty"`
 	Source   string `json:"source,omitempty"`
 	Sport    string `json:"sport,omitempty"`
+
+	MoveTo *int `json:"moveto,omitempty"` // Other fields will be ignored when used
 }
 
 func (r *FirewallRule) IsEnable() bool {
@@ -1115,16 +1118,16 @@ type FirewallNodeOption struct {
 }
 
 type FirewallVirtualMachineOption struct {
-	Enable      bool   `json:"enable,omitempty"`
-	Dhcp        bool   `json:"dhcp,omitempty"`
-	Ipfilter    bool   `json:"ipfilter,omitempty"`
-	LogLevelIn  string `json:"log_level_in,omitempty"`
-	LogLevelOut string `json:"log_level_out,omitempty"`
-	Macfilter   bool   `json:"macfilter,omitempty"`
-	Ntp         bool   `json:"ntp,omitempty"`
-	PolicyIn    string `json:"policy_in,omitempty"`
-	PolicyOut   string `json:"policy_out,omitempty"`
-	Radv        bool   `json:"radv,omitempty"`
+	Enable      *IntOrBool `json:"enable,omitempty"`
+	Dhcp        *IntOrBool `json:"dhcp,omitempty"`
+	IpFilter    *IntOrBool `json:"ipfilter,omitempty"`
+	LogLevelIn  *string    `json:"log_level_in,omitempty"`
+	LogLevelOut *string    `json:"log_level_out,omitempty"`
+	MacFilter   *IntOrBool `json:"macfilter,omitempty"`
+	Ndp         *IntOrBool `json:"ndp,omitempty"`
+	PolicyIn    *string    `json:"policy_in,omitempty"`
+	PolicyOut   *string    `json:"policy_out,omitempty"`
+	Radv        *IntOrBool `json:"radv,omitempty"`
 }
 
 type Snapshot struct {
@@ -1610,4 +1613,58 @@ type VzdumpConfig struct {
 	IPConfig7 string `json:"ipconfig7,omitempty"`
 	IPConfig8 string `json:"ipconfig8,omitempty"`
 	IPConfig9 string `json:"ipconfig9,omitempty"`
+}
+
+type (
+	HAType          string
+	HAResourceState string
+	HAResourceType  string
+)
+
+const (
+	HATypeGroup = HAType("group")
+
+	HAResourceStateStarted  = HAResourceState("started")
+	HAResourceStateStopped  = HAResourceState("stopped")
+	HAResourceStateEnabled  = HAResourceState("enabled")
+	HAResourceStateDisabled = HAResourceState("disabled")
+	HAResourceStateIgnored  = HAResourceState("ignored")
+
+	HAResourceTypeVm = HAResourceType("vm")
+)
+
+type HANodes struct {
+	Node     string
+	Priority *uint
+}
+
+type HAGroupConfiguration struct {
+	Group      string
+	HaNodes    []HANodes
+	Comment    *string
+	NoFailback *IntOrBool
+	Restricted *IntOrBool
+}
+
+type SID struct {
+	Type HAResourceType
+	ID   int
+}
+
+type haResource struct {
+	Group       string          `json:"group"`
+	Sid         string          `json:"sid"`
+	State       HAResourceState `json:"state"`
+	Comment     string          `json:"comment"`
+	MaxRestart  uint            `json:"max_restart"`
+	MaxRelocate uint            `json:"max_relocate"`
+}
+
+type HAResource struct {
+	ID          int              `json:"sid"`
+	Group       *string          `json:"group"`
+	Comment     *string          `json:"comment,omitempty"`
+	MaxRelocate *uint            `json:"max_relocate,omitempty"`
+	MaxRestart  *uint            `json:"max_restart,omitempty"`
+	State       *HAResourceState `json:"state,omitempty"`
 }
