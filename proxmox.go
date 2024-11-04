@@ -151,7 +151,7 @@ func (c *Client) Get(ctx context.Context, p string, v interface{}) error {
 func (c *Client) GetWithParams(ctx context.Context, p string, d interface{}, v interface{}) error {
 	// Parse data and append to URL
 	if d != nil {
-		queryString, err := dataParserForUrl(d)
+		queryString, err := dataParserForURL(d)
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func (c *Client) GetWithParams(ctx context.Context, p string, d interface{}, v i
 }
 
 // dataParserForUrl parses the data and appends it to the URL as a query string
-func dataParserForUrl(d interface{}) (string, error) {
+func dataParserForURL(d interface{}) (string, error) {
 	jsonBytes, err := json.Marshal(d)
 	if err != nil {
 		return "", err
