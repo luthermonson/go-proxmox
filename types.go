@@ -143,7 +143,7 @@ func (cl *Cluster) UnmarshalJSON(b []byte) error {
 type ClusterResources []*ClusterResource
 
 type ClusterResource struct {
-	ID         string  `jsont:"id"`
+	ID         string  `json:"id"`
 	Type       string  `json:"type"`
 	CGroupMode uint64  `json:"cgroup-mode,omitempty"`
 	Content    string  `json:",omitempty"`
@@ -304,11 +304,17 @@ const (
 )
 
 type RRDData struct {
-	MaxCPU  int
-	MaxMem  uint64
-	Disk    int
-	MaxDisk uint64
-	Time    uint64
+	Time      uint64
+	Cpu       float64
+	MaxCpu    int
+	Mem       float64
+	MaxMem    uint64
+	Disk      int
+	MaxDisk   uint64
+	DiskRead  float64
+	DiskWrite float64
+	NetIn     float64
+	NetOut    float64
 }
 
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
