@@ -1611,3 +1611,10 @@ type VzdumpConfig struct {
 	IPConfig8 string `json:"ipconfig8,omitempty"`
 	IPConfig9 string `json:"ipconfig9,omitempty"`
 }
+
+type PendingConfiguration struct {
+	Key     string `json:"key,omitempty"`
+	Delete  int    `json:"delete,omitempty"`
+	Pending string `json:"pending,omitempty"`
+	Value   string `json:"value,omitempty"`
+}
