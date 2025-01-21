@@ -765,7 +765,7 @@ type ContainerConfig struct {
 	Template     IntOrBool         `json:"template,omitempty"`
 	Timezone     string            `json:"timezone,omitempty"`
 	TTY          int               `json:"tty,omitempty"`
-	Unprivileged IntOrBool         `json:"unpriviledged,omitempty"`
+	Unprivileged IntOrBool         `json:"unprivileged,omitempty"`
 	Unuseds      map[string]string `json:"-"` // internal helper
 	Unused0      string            `json:"unused0,omitempty"`
 	Unused1      string            `json:"unused1,omitempty"`
