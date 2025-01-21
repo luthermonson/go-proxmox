@@ -1611,3 +1611,13 @@ type VzdumpConfig struct {
 	IPConfig8 string `json:"ipconfig8,omitempty"`
 	IPConfig9 string `json:"ipconfig9,omitempty"`
 }
+
+type PendingConfiguration []PendingConfigItem
+
+type PendingConfigItem struct {
+	Key    string `json:"key,omitempty"`
+	Delete *int   `json:"delete,omitempty"`
+	// Proxmox API doc says "Pending" & "Value" fields return string but in reality it could be anything
+	Pending interface{} `json:"pending,omitempty"`
+	Value   interface{} `json:"value,omitempty"`
+}
