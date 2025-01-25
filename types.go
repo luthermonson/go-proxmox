@@ -214,6 +214,9 @@ type Node struct {
 	Ksm        Ksm
 	Uptime     uint64
 	Wait       float64
+
+	CurrentKernel CurrentKernel `json:"current-kernel"`
+	BootInfo      BootInfo      `json:"boot-info"`
 }
 
 type VirtualMachines []*VirtualMachine
@@ -262,7 +265,7 @@ type RootFS struct {
 type CPUInfo struct {
 	UserHz  int `json:"user_hz"`
 	MHZ     StringOrInt
-	Mode    string
+	Model   string
 	Cores   int
 	Sockets int
 	Flags   string
@@ -278,6 +281,18 @@ type Memory struct {
 
 type Ksm struct {
 	Shared int64
+}
+
+type CurrentKernel struct {
+	Release string
+	SysName string
+	Version string
+	Machine string
+}
+
+type BootInfo struct {
+	Mode       string
+	SecureBoot int
 }
 
 type Time struct {
