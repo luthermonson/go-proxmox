@@ -2,8 +2,6 @@ module github.com/luthermonson/go-proxmox
 
 go 1.22
 
-toolchain go1.23.6
-
 require (
 	github.com/buger/goterm v1.0.4
 	github.com/diskfs/go-diskfs v1.5.0
