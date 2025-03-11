@@ -172,6 +172,217 @@ type ClusterResource struct {
 	VMID       uint64  `json:",omitempty"`
 }
 
+type ClusterCephStatus struct {
+	ElectionEpoch  int            `json:"election_epoch"`
+	Fsid           string         `json:"fsid"`
+	Fsmap          CephFsMap      `json:"fsmap"`
+	Health         CephHealth     `json:"health"`
+	Mgrmap         CephMgrMap     `json:"mgrmap"`
+	Monmap         CephMonMap     `json:"monmap"`
+	Osdmap         CephOsdMap     `json:"osdmap"`
+	Pgmap          CephPgMap      `json:"pgmap"`
+	ProgressEvents struct{}       `json:"progress_events"`
+	Quorum         []int          `json:"quorum"`
+	QuorumAge      int            `json:"quorum_age"`
+	QuorumNames    []string       `json:"quorum_names"`
+	Servicemap     CephServiceMap `json:"servicemap"`
+}
+
+type CephHealthCheckName string
+type CephHealthCheck struct {
+	Detail []struct {
+		Message string `json:"message"`
+	} `json:"detail"`
+	Muted    bool   `json:"muted"`
+	Severity string `json:"severity"`
+	Summary  struct {
+		Count   int    `json:"count"`
+		Message string `json:"message"`
+	} `json:"summary"`
+}
+
+type CephHealth struct {
+	Checks map[CephHealthCheckName]CephHealthCheck `json:"checks"`
+	Mutes  []interface{}                           `json:"mutes"`
+	Status string                                  `json:"status"`
+}
+
+type CephOsdMap struct {
+	Epoch          int `json:"epoch"`
+	NumInOsds      int `json:"num_in_osds"`
+	NumOsds        int `json:"num_osds"`
+	NumRemappedPgs int `json:"num_remapped_pgs"`
+	NumUpOsds      int `json:"num_up_osds"`
+	OsdInSince     int `json:"osd_in_since"`
+	OsdUpSince     int `json:"osd_up_since"`
+}
+
+type CephPgMap struct {
+	BytesAvail int64 `json:"bytes_avail"`
+	BytesTotal int64 `json:"bytes_total"`
+	BytesUsed  int64 `json:"bytes_used"`
+	DataBytes  int64 `json:"data_bytes"`
+	NumObjects int   `json:"num_objects"`
+	NumPgs     int   `json:"num_pgs"`
+	NumPools   int   `json:"num_pools"`
+	PgsByState []struct {
+		Count     int    `json:"count"`
+		StateName string `json:"state_name"`
+	} `json:"pgs_by_state"`
+	ReadBytesSec  int `json:"read_bytes_sec"`
+	ReadOpPerSec  int `json:"read_op_per_sec"`
+	WriteBytesSec int `json:"write_bytes_sec"`
+	WriteOpPerSec int `json:"write_op_per_sec"`
+}
+
+type CephMonMap struct {
+	Created           time.Time       `json:"created"`
+	DisallowedLeaders string          `json:"disallowed_leaders: "`
+	ElectionStrategy  int             `json:"election_strategy"`
+	Epoch             int             `json:"epoch"`
+	Features          CephMonFeatures `json:"features"`
+	Fsid              string          `json:"fsid"`
+	MinMonRelease     int             `json:"min_mon_release"`
+	MinMonReleaseName string          `json:"min_mon_release_name"`
+	Modified          time.Time       `json:"modified"`
+	Mons              []CephMon       `json:"mons"`
+	Quorum            []int           `json:"quorum"`
+	RemovedRanks      string          `json:"removed_ranks: "`
+	StretchMode       bool            `json:"stretch_mode"`
+	TiebreakerMon     string          `json:"tiebreaker_mon"`
+}
+
+type CephMon struct {
+	Addr          string `json:"addr"`
+	CrushLocation string `json:"crush_location"`
+	Name          string `json:"name"`
+	Priority      int    `json:"priority"`
+	Rank          int    `json:"rank"`
+	Weight        int    `json:"weight"`
+	PublicAddr    string `json:"public_addr"`
+	PublicAddrs   struct {
+		Addrvec []CephMgrAddrVector `json:"addrvec"`
+	} `json:"public_addrs"`
+}
+
+type CephMonFeatures struct {
+	Optional   []interface{} `json:"optional"`
+	Persistent []string      `json:"persistent"`
+}
+
+type CephFsMap struct {
+	ByRank []struct {
+		FilesystemID int    `json:"filesystem_id"`
+		Gid          int    `json:"gid"`
+		Name         string `json:"name"`
+		Rank         int    `json:"rank"`
+		Status       string `json:"status"`
+	} `json:"by_rank"`
+	Epoch     int `json:"epoch"`
+	ID        int `json:"id"`
+	In        int `json:"in"`
+	Max       int `json:"max"`
+	Up        int `json:"up"`
+	UpStandby int `json:"up:standby"`
+}
+
+type CephServiceMap struct {
+	Epoch    int      `json:"epoch"`
+	Modified string   `json:"modified"`
+	Services struct{} `json:"services"`
+}
+
+type CephMgrMap struct {
+	ActiveAddr          string                   `json:"active_addr"`
+	ActiveAddrs         CephMgrActiveAddresses   `json:"active_addrs"`
+	ActiveChange        string                   `json:"active_change"`
+	ActiveClients       []CephMgrActiveClient    `json:"active_clients"`
+	ActiveGid           int                      `json:"active_gid"`
+	ActiveMgrFeatures   int64                    `json:"active_mgr_features"`
+	ActiveName          string                   `json:"active_name"`
+	AlwaysOnModules     CephMgrAlwaysOnModules   `json:"always_on_modules"`
+	Available           bool                     `json:"available"`
+	AvailableModules    []CephMgrAvailableModule `json:"available_modules"`
+	Epoch               int                      `json:"epoch"`
+	LastFailureOsdEpoch int                      `json:"last_failure_osd_epoch"`
+	Modules             []string                 `json:"modules"`
+	Services            CephMgrServices          `json:"services"`
+	Standbys            []CephMgrStandby         `json:"standbys"`
+}
+
+type CephMgrAvailableModule struct {
+	CanRun        bool                          `json:"can_run"`
+	ErrorString   string                        `json:"error_string"`
+	ModuleOptions CephMgrAvailableModuleOptions `json:"module_options"`
+	Name          string                        `json:"name"`
+}
+
+type CephMgrAvailableModuleOptions struct {
+	Interval          CephMgrAvailableModuleOption `json:"interval"`
+	LogLevel          CephMgrAvailableModuleOption `json:"log_level"`
+	LogToCluster      CephMgrAvailableModuleOption `json:"log_to_cluster"`
+	LogToClusterLevel CephMgrAvailableModuleOption `json:"log_to_cluster_level"`
+	LogToFile         CephMgrAvailableModuleOption `json:"log_to_file"`
+	SMTPDestination   CephMgrAvailableModuleOption `json:"smtp_destination"`
+	SMTPFromName      CephMgrAvailableModuleOption `json:"smtp_from_name"`
+	SMTPHost          CephMgrAvailableModuleOption `json:"smtp_host"`
+	SMTPPassword      CephMgrAvailableModuleOption `json:"smtp_password"`
+	SMTPPort          CephMgrAvailableModuleOption `json:"smtp_port"`
+	SMTPSender        CephMgrAvailableModuleOption `json:"smtp_sender"`
+	SMTPSsl           CephMgrAvailableModuleOption `json:"smtp_ssl"`
+	SMTPUser          CephMgrAvailableModuleOption `json:"smtp_user"`
+}
+
+type CephMgrAvailableModuleOption struct {
+	DefaultValue string        `json:"default_value"`
+	Desc         string        `json:"desc"`
+	EnumAllowed  []string      `json:"enum_allowed"`
+	Flags        int           `json:"flags"`
+	Level        string        `json:"level"`
+	LongDesc     string        `json:"long_desc"`
+	Max          string        `json:"max"`
+	Min          string        `json:"min"`
+	Name         string        `json:"name"`
+	SeeAlso      []interface{} `json:"see_also"`
+	Tags         []interface{} `json:"tags"`
+	Type         string        `json:"type"`
+}
+
+type CephMgrServices struct {
+	Dashboard  string `json:"dashboard"`
+	Prometheus string `json:"prometheus"`
+}
+
+type CephMgrStandby struct {
+	AvailableModules []CephMgrAvailableModule `json:"available_modules"`
+	Gid              int                      `json:"gid"`
+	MgrFeatures      int64                    `json:"mgr_features"`
+	Name             string                   `json:"name"`
+}
+
+type CephMgrActiveAddresses struct {
+	Addrvec []CephMgrAddrVector `json:"addrvec"`
+}
+
+type CephMgrAddrVector struct {
+	Addr  string `json:"addr"`
+	Nonce int    `json:"nonce"`
+	Type  string `json:"type"`
+}
+
+type CephMgrActiveClient struct {
+	Addrvec []CephMgrAddrVector `json:"addrvec"`
+	Name    string              `json:"name"`
+}
+
+type CephMgrAlwaysOnModules struct {
+	Octopus []string `json:"octopus"`
+	Pacific []string `json:"pacific"`
+	Quincy  []string `json:"quincy"`
+	Reef    []string `json:"reef"`
+	Squid   []string `json:"squid"`
+}
+
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
 	// shared
