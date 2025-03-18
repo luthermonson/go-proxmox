@@ -172,6 +172,10 @@ type ClusterResource struct {
 	VMID       uint64  `json:",omitempty"`
 }
 
+type Ceph struct {
+	client *Client
+}
+
 type ClusterCephStatus struct {
 	ElectionEpoch  int            `json:"election_epoch"`
 	Fsid           string         `json:"fsid"`
