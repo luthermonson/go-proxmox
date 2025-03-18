@@ -193,16 +193,18 @@ type ClusterCephStatus struct {
 }
 
 type CephHealthCheckName string
+type CephHealthCheckDetail struct {
+	Message string `json:"message"`
+}
+type CephHealthCheckSummary struct {
+	Count   int    `json:"count"`
+	Message string `json:"message"`
+}
 type CephHealthCheck struct {
-	Detail []struct {
-		Message string `json:"message"`
-	} `json:"detail"`
-	Muted    bool   `json:"muted"`
-	Severity string `json:"severity"`
-	Summary  struct {
-		Count   int    `json:"count"`
-		Message string `json:"message"`
-	} `json:"summary"`
+	Detail   []CephHealthCheckDetail `json:"detail"`
+	Muted    bool                    `json:"muted"`
+	Severity string                  `json:"severity"`
+	Summary  CephHealthCheckSummary  `json:"summary"`
 }
 
 type CephHealth struct {
