@@ -633,15 +633,14 @@ func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (tas
 func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
 	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrddata", v.Node, v.VMID)}
 
-	// consolidation functions are variadic because they're optional, putting everything into one string and sending that
+	// consolidation functions are variadic because they're optional, but Proxmox only allows one cf parameter
 	params := url.Values{}
 	if len(consolidationFunction) > 0 {
-
-		f := ""
-		for _, cf := range consolidationFunction {
-			f = f + string(cf)
+		if len(consolidationFunction) != 1 {
+			return nil, fmt.Errorf("only one consolidation function allowed")
 		}
-		params.Add("cf", f)
+
+		params.Add("cf", string(consolidationFunction[0]))
 	}
 
 	params.Add("timeframe", string(timeframe))
