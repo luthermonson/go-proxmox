@@ -156,7 +156,7 @@ func (c *Container) MoveVolume(ctx context.Context, params *VirtualMachineMoveDi
 	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ConsolidationFunction) (rrddata []*RRDData, err error) {
+func (c *Container) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
 	u := url.URL{Path: fmt.Sprintf("/lxc/%s/qemu/%d/rrddata", c.Node, c.VMID)}
 
 	// consolidation functions are variadic because they're optional, but Proxmox only allows one cf parameter
