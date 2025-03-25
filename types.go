@@ -522,8 +522,8 @@ const (
 
 type RRDData struct {
 	Time      uint64
-	Cpu       float64
-	MaxCpu    int
+	CPU       float64
+	MaxCPU    int
 	Mem       float64
 	MaxMem    uint64
 	Disk      int
