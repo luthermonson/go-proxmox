@@ -10,6 +10,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,6 +145,42 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 
 func (c *Client) Get(ctx context.Context, p string, v interface{}) error {
 	return c.Req(ctx, http.MethodGet, p, nil, v)
+}
+
+// GetWithParams is a helper function to append query parameters to the URL
+func (c *Client) GetWithParams(ctx context.Context, p string, d interface{}, v interface{}) error {
+	// Parse data and append to URL
+	if d != nil {
+		queryString, err := dataParserForURL(d)
+		if err != nil {
+			return err
+		}
+		p = p + "?" + queryString
+	}
+	return c.Req(ctx, http.MethodGet, p, nil, v)
+}
+
+// dataParserForUrl parses the data and appends it to the URL as a query string
+func dataParserForURL(d interface{}) (string, error) {
+	jsonBytes, err := json.Marshal(d)
+	if err != nil {
+		return "", err
+	}
+
+	var m map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &m)
+	if err != nil {
+		return "", err
+	}
+
+	values := url.Values{}
+	for key, value := range m {
+		strValue := fmt.Sprintf("%v", value)
+		values.Set(key, strValue)
+	}
+
+	return values.Encode(), nil
+
 }
 
 func (c *Client) Post(ctx context.Context, p string, d interface{}, v interface{}) error {

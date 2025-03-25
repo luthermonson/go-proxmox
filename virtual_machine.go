@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
@@ -126,7 +127,7 @@ func (v *VirtualMachine) SplitTags() {
 func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string) error {
 	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
 	// create userdata iso file on the local fs
-	iso, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
+	isofilename, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	task, err := storage.Upload("iso", iso.Name())
+	task, err := storage.Upload("iso", isofilename)
 	if err != nil {
 		return err
 	}
@@ -174,10 +175,11 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	return task.WaitFor(ctx, 2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (iso *os.File, err error) {
-	iso, err = os.Create(filepath.Join(os.TempDir(), filename))
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
+	isopath = filepath.Join(os.TempDir(), filename)
+	iso, err := file.OpenFromPath(isopath, false)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	defer func() {
@@ -186,11 +188,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 
 	fs, err := iso9660.Create(iso, 0, 0, blockSize, "")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	if err := fs.Mkdir("/"); err != nil {
-		return nil, err
+	if err = fs.Mkdir("/"); err != nil {
+		return "", err
 	}
 
 	cifiles := map[string]string{
@@ -207,11 +209,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	for filename, content := range cifiles {
 		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		if _, err := rw.Write([]byte(content)); err != nil {
-			return nil, err
+		if _, err = rw.Write([]byte(content)); err != nil {
+			return "", err
 		}
 	}
 
@@ -219,7 +221,7 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		RockRidge:        true,
 		VolumeIdentifier: volumeIdentifier,
 	}); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return
@@ -673,4 +675,9 @@ func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string)
 		return err
 	}
 	return nil
+}
+
+func (v *VirtualMachine) Pending(ctx context.Context) (pending *PendingConfiguration, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/pending", v.Node, v.VMID), &pending)
+	return
 }

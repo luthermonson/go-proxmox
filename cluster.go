@@ -79,3 +79,17 @@ func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {
 
 	return tasks, nil
 }
+
+func (cl *Cluster) Ceph(ctx context.Context) (*Ceph, error) {
+	ceph := &Ceph{
+		client: cl.client,
+	}
+
+	// TODO?
+	//// requires (/, Sys.Audit), do not error out if no access to still get the ceph
+	//if err := ceph.Status(ctx); !IsNotAuthorized(err) {
+	//	return ceph, err
+	//}
+
+	return ceph, nil
+}
