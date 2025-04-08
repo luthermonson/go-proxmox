@@ -1844,3 +1844,35 @@ type PendingConfigItem struct {
 	Pending interface{} `json:"pending,omitempty"`
 	Value   interface{} `json:"value,omitempty"`
 }
+
+type Vnet struct {
+}
+type VnetOptions struct {
+	Vnet string `json:"vnet,omitempty"`
+}
+type NetRange struct {
+	StartAddress string `json:"start-address,omitempty"`
+	EndAddress   string `json:"end-address,omitempty"`
+}
+type VnetSubnet struct {
+	CIDR      string     `json:"cidr,omitempty"`
+	Gateway   string     `json:"gateway,omitempty"`
+	Netmask   string     `json:"mask,omitempty"`
+	Type      string     `json:"type,omitempty"`
+	Zone      string     `json:"zone,omitempty"`
+	Vnet      string     `json:"vnet,omitempty"`
+	Snat      int        `json:"snat,omitempty"`
+	Network   string     `json:"network,omitempty"`
+	ID        string     `json:"id,omitempty"`
+	DhcpRange []NetRange `json:"dhcp-range,omitempty"`
+}
+type IPAM struct {
+	Hostname string `json:"hostname,omitempty"`
+	IP       string `json:"ip,omitempty"`
+	Mac      string `json:"mac,omitempty"`
+	Subnet   string `json:"subnet,omitempty"`
+	VMID     string `json:"vmid,omitempty"`
+	Vnet     string `json:"vnet,omitempty"`
+	Zone     string `json:"zone,omitempty"`
+	Gateway  int    `json:"gateway,omitempty"`
+}

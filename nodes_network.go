@@ -77,3 +77,7 @@ func (nw *NodeNetwork) Delete(ctx context.Context) (task *Task, err error) {
 
 	return nw.NodeAPI.NetworkReload(ctx)
 }
+func (n *Node) IPAM(ctx context.Context) (ipam []*IPAM, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/cluster/sdn/ipams/%s/status", n.Name), &ipam)
+	return
+}
