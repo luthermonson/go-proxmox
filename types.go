@@ -1610,6 +1610,32 @@ type FirewallIPSet struct {
 	Comment string `json:"comment,omitempty"`
 }
 
+type FirewallIPSetCreationOption struct {
+	Name    string `json:"name,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Comment string `json:"comment,omitempty"`
+	Rename  string `json:"rename,omitempty"`
+}
+
+type FirewallIPSetEntry struct {
+	CIDR    string `json:"cidr,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Comment string `json:"comment,omitempty"`
+	NoMatch bool   `json:"nomatch,omitempty"`
+}
+
+type FirewallIPSetEntryCreationOption struct {
+	CIDR    string `json:"cidr,omitempty"`
+	Comment string `json:"comment,omitempty"`
+	NoMatch bool   `json:"nomatch,omitempty"`
+}
+
+type FirewallIPSetEntryUpdateOption struct {
+	Comment string `json:"comment,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	NoMatch bool   `json:"nomatch,omitempty"`
+}
+
 type (
 	VirtualMachineBackupMode               = string
 	VirtualMachineBackupCompress           = string
