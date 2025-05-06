@@ -1611,7 +1611,7 @@ type FirewallIPSet struct {
 }
 
 type FirewallIPSetCreationOption struct {
-	Name    string `json:"name,omitempty"`
+	Name    string `json:"name"`
 	Digest  string `json:"digest,omitempty"`
 	Comment string `json:"comment,omitempty"`
 	Rename  string `json:"rename,omitempty"`
@@ -1625,7 +1625,7 @@ type FirewallIPSetEntry struct {
 }
 
 type FirewallIPSetEntryCreationOption struct {
-	CIDR    string `json:"cidr,omitempty"`
+	CIDR    string `json:"cidr"`
 	Comment string `json:"comment,omitempty"`
 	NoMatch bool   `json:"nomatch,omitempty"`
 }

@@ -253,13 +253,7 @@ func (c *Container) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPS
 	return ipsets, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset", c.Node, c.VMID), &ipsets)
 }
 
-func (c *Container) NewFirewallIPSet(ctx context.Context, ipset *FirewallIPSetCreationOption) error {
-	if ipset == nil {
-		ipset = &FirewallIPSetCreationOption{}
-	}
-	if ipset.Name == "" {
-		return fmt.Errorf("ipset name is required")
-	}
+func (c *Container) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCreationOption) error {
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset", c.Node, c.VMID), ipset, nil)
 }
 
@@ -271,13 +265,7 @@ func (c *Container) GetFirewallIPSetEntries(ctx context.Context, name string) (e
 	return entries, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), &entries)
 }
 
-func (c *Container) NewFirewallIPSetEntry(ctx context.Context, name string, entry *FirewallIPSetEntryCreationOption) error {
-	if entry == nil {
-		entry = &FirewallIPSetEntryCreationOption{}
-	}
-	if entry.CIDR == "" {
-		return fmt.Errorf("ipset entry cidr is required")
-	}
+func (c *Container) NewFirewallIPSetEntry(ctx context.Context, name string, entry FirewallIPSetEntryCreationOption) error {
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), entry, nil)
 }
 
