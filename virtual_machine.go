@@ -584,7 +584,7 @@ func (c *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*Firewa
 	return ipsets, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), &ipsets)
 }
 
-func (c *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset *FirewallIPSetCreationOption) error {
+func (c *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCreationOption) error {
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), ipset, nil)
 }
 
@@ -596,7 +596,7 @@ func (c *VirtualMachine) GetFirewallIPSetEntries(ctx context.Context, name strin
 	return entries, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, name), &entries)
 }
 
-func (c *VirtualMachine) NewFirewallIPSetEntry(ctx context.Context, name string, entry *FirewallIPSetEntryCreationOption) error {
+func (c *VirtualMachine) NewFirewallIPSetEntry(ctx context.Context, name string, entry FirewallIPSetEntryCreationOption) error {
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, name), entry, nil)
 }
 
