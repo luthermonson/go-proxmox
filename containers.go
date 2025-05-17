@@ -253,12 +253,35 @@ func (c *Container) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPS
 	return ipsets, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset", c.Node, c.VMID), &ipsets)
 }
 
-func (c *Container) NewFirewallIPSet(ctx context.Context, ipset *FirewallIPSet) error {
+func (c *Container) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCreationOption) error {
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset", c.Node, c.VMID), ipset, nil)
 }
 
 func (c *Container) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
 	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), map[string]interface{}{"force": force})
+}
+
+func (c *Container) GetFirewallIPSetEntries(ctx context.Context, name string) (entries []*FirewallIPSetEntry, err error) {
+	return entries, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), &entries)
+}
+
+func (c *Container) NewFirewallIPSetEntry(ctx context.Context, name string, entry FirewallIPSetEntryCreationOption) error {
+	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), entry, nil)
+}
+
+func (c *Container) DeleteFirewallIPSetEntry(ctx context.Context, name string, cidr string, digest string) error {
+	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr), map[string]interface{}{
+		"digest": digest,
+	})
+}
+
+func (c *Container) GetFirewallIPSetEntry(ctx context.Context, name string, cidr string) (entry *FirewallIPSetEntry, err error) {
+	err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr), &entry)
+	return
+}
+
+func (c *Container) UpdateFirewallIPSetEntry(ctx context.Context, name string, cidr string, entry *FirewallIPSetEntryUpdateOption) error {
+	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr), entry, nil)
 }
 
 func (c *Container) FirewallRules(ctx context.Context) (rules []*FirewallRule, err error) {
