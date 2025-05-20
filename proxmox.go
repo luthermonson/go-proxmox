@@ -324,6 +324,68 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	}
 
 	if body, ok := datakey["data"]; ok {
+		if storagesPtr, ok := v.(*Storages); ok {
+			var rawList []map[string]interface{}
+
+			decoder := json.NewDecoder(bytes.NewReader(body))
+			decoder.UseNumber()
+			if err := decoder.Decode(&rawList); err != nil {
+				return err
+			}
+
+			var result Storages
+
+			for _, raw := range rawList {
+				s := &Storage{}
+
+				if name, ok := raw["storage"].(string); ok {
+					s.Name = name
+				}
+				if content, ok := raw["content"].(string); ok {
+					s.Content = content
+				}
+				if typ, ok := raw["type"].(string); ok {
+					s.Type = typ
+				}
+				if enabled, ok := raw["enabled"].(json.Number); ok {
+					if i, err := enabled.Int64(); err == nil {
+						s.Enabled = int(i)
+					}
+				}
+				if active, ok := raw["active"].(json.Number); ok {
+					if i, err := active.Int64(); err == nil {
+						s.Active = int(i)
+					}
+				}
+				if shared, ok := raw["shared"].(json.Number); ok {
+					if i, err := shared.Int64(); err == nil {
+						s.Shared = int(i)
+					}
+				}
+				if usedFraction, ok := raw["used_fraction"].(json.Number); ok {
+					if f, err := usedFraction.Float64(); err == nil {
+						s.UsedFraction = f
+					}
+				}
+
+				for key, dest := range map[string]*uint64{
+					"avail": &s.Avail,
+					"used":  &s.Used,
+					"total": &s.Total,
+				} {
+					if n, ok := raw[key].(json.Number); ok {
+						if f, err := n.Float64(); err == nil {
+							*dest = uint64(f)
+						}
+					}
+				}
+
+				result = append(result, s)
+			}
+
+			*storagesPtr = result
+			return nil
+		}
 		return json.Unmarshal(body, &v)
 	}
 
