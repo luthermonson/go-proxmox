@@ -280,6 +280,24 @@ func (c *Client) authHeaders(header *http.Header) {
 	}
 }
 
+func extractJSONNumber[T int64 | float64](raw map[string]interface{}, key string, assign func(T)) {
+	if num, ok := raw[key].(json.Number); ok {
+		var val any
+		var err error
+
+		switch any(*new(T)).(type) {
+		case int64:
+			val, err = num.Int64()
+		case float64:
+			val, err = num.Float64()
+		}
+
+		if err == nil {
+			assign(val.(T))
+		}
+	}
+}
+
 func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	if res.StatusCode == http.StatusInternalServerError ||
 		res.StatusCode == http.StatusNotImplemented {
@@ -347,37 +365,27 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 				if typ, ok := raw["type"].(string); ok {
 					s.Type = typ
 				}
-				if enabled, ok := raw["enabled"].(json.Number); ok {
-					if i, err := enabled.Int64(); err == nil {
-						s.Enabled = int(i)
-					}
-				}
-				if active, ok := raw["active"].(json.Number); ok {
-					if i, err := active.Int64(); err == nil {
-						s.Active = int(i)
-					}
-				}
-				if shared, ok := raw["shared"].(json.Number); ok {
-					if i, err := shared.Int64(); err == nil {
-						s.Shared = int(i)
-					}
-				}
-				if usedFraction, ok := raw["used_fraction"].(json.Number); ok {
-					if f, err := usedFraction.Float64(); err == nil {
-						s.UsedFraction = f
-					}
-				}
+				extractJSONNumber(raw, "enabled", func(v int64) {
+					s.Enabled = int(v)
+				})
+				extractJSONNumber(raw, "active", func(v int64) {
+					s.Active = int(v)
+				})
+				extractJSONNumber(raw, "shared", func(v int64) {
+					s.Shared = int(v)
+				})
+				extractJSONNumber(raw, "used_fraction", func(v float64) {
+					s.UsedFraction = v
+				})
 
 				for key, dest := range map[string]*uint64{
 					"avail": &s.Avail,
 					"used":  &s.Used,
 					"total": &s.Total,
 				} {
-					if n, ok := raw[key].(json.Number); ok {
-						if f, err := n.Float64(); err == nil {
-							*dest = uint64(f)
-						}
-					}
+					extractJSONNumber(raw, key, func(v float64) {
+						*dest = uint64(v)
+					})
 				}
 
 				result = append(result, s)
