@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -33,23 +34,15 @@ func (n *Node) Network(ctx context.Context, iface string) (network *NodeNetwork,
 	return
 }
 
-func (n *Node) Networks(ctx context.Context) (networks NodeNetworks, err error) {
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network", n.Name), &networks)
-	if err != nil {
-		return nil, err
+func (n *Node) Networks(ctx context.Context, ifaceType ...string) (networks NodeNetworks, err error) {
+	filterParam := ""
+	if len(ifaceType) > 1 {
+		return nil, errors.New("only one interface type filter is allowed")
+	} else if len(ifaceType) == 1 {
+		filterParam = fmt.Sprintf("?type=%s", ifaceType[0])
 	}
 
-	for _, v := range networks {
-		v.client = n.client
-		v.Node = n.Name
-		v.NodeAPI = n
-	}
-
-	return
-}
-
-func (n *Node) NetworksOfType(ctx context.Context, ifaceType string) (networks NodeNetworks, err error) {
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network?type=%s", n.Name, ifaceType), &networks)
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network%s", n.Name, filterParam), &networks)
 	if err != nil {
 		return nil, err
 	}
