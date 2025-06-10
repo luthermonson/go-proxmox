@@ -48,6 +48,21 @@ func (n *Node) Networks(ctx context.Context) (networks NodeNetworks, err error) 
 	return
 }
 
+func (n *Node) NetworksOfType(ctx context.Context, ifaceType string) (networks NodeNetworks, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network?type=%s", n.Name, ifaceType), &networks)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range networks {
+		v.client = n.client
+		v.Node = n.Name
+		v.NodeAPI = n
+	}
+
+	return
+}
+
 func (n *Node) NetworkReload(ctx context.Context) (*Task, error) {
 	var upid UPID
 	err := n.client.Put(ctx, fmt.Sprintf("/nodes/%s/network", n.Name), nil, &upid)

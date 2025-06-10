@@ -8,6 +8,34 @@ import (
 func nodes() {
 	gock.New(config.C.URI).
 		Persist().
+		Get("^/nodes/node1/network").
+		ParamPresent("type").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "iface": "vmbr1",
+            "bridge_fd": "0",
+            "autostart": 1,
+            "bridge_ports": "eno1.2 vmbr2.10",
+            "priority": 31,
+            "families": [
+                "inet"
+            ],
+            "bridge_vids": "2-4094",
+            "active": 1,
+            "bridge_stp": "off",
+            "bridge_vlan_aware": 1,
+            "type": "bridge",
+            "comments": "some comment\n",
+            "method6": "manual",
+            "method": "manual"
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
 		Get("^/nodes/node1/network$").
 		Reply(200).
 		JSON(`{
