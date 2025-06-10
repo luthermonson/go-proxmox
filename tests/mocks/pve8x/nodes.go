@@ -23,7 +23,7 @@ func nodes() {
                 "inet"
             ],
             "bridge_vids": "2-4094",
-            "active": 1,
+            "active": "1",
             "bridge_stp": "off",
             "bridge_vlan_aware": 1,
             "type": "bridge",
