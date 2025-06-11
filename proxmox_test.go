@@ -159,4 +159,31 @@ func TestClient_handleResponse(t *testing.T) {
 	err = client.handleResponse(resp, &testData)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad request:  - {\"test\":\"data\"}", err.Error())
+	
+	// storage total is float 
+	storageData := `{
+        "data": [
+          {
+            "storage": "local",
+            "enabled": 1,
+            "active": 1,
+            "total": 1.12589990684262e+15
+          }
+        ]
+    }`
+	resp = &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(storageData)),
+	}
+
+	var storages Storages
+	err = client.handleResponse(resp, &storages)
+	storage := storages[0]
+	fmt.Println(storage)
+	assert.Equal(t, "local", storage.Name)
+	assert.Equal(t, 1, storage.Enabled)
+	assert.Equal(t, 1, storage.Active)
+
+	expectedTotal := uint64(1125899906842620)
+	assert.Equal(t, expectedTotal, storage.Total)
 }
