@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/stretchr/testify/assert"
@@ -160,11 +162,17 @@ func TestClient_handleResponse(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad request:  - {\"test\":\"data\"}", err.Error())
 
-	// storage test with float total
-	storageData := `{
+	// storages test with float total
+	storagesData := `{
 	        "data": [
 	          {
 	            "storage": "local",
+	            "enabled": 1,
+	            "active": 1,
+	            "total": 1.12589990684262e+15
+	          },
+	          {
+	            "storage": "local2",
 	            "enabled": 1,
 	            "active": 1,
 	            "total": 1.12589990684262e+15
@@ -173,14 +181,14 @@ func TestClient_handleResponse(t *testing.T) {
 	}`
 	resp = &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(strings.NewReader(storageData)),
+		Body:       io.NopCloser(strings.NewReader(storagesData)),
 	}
 
 	var testStorages Storages
 	err = client.handleResponse(resp, &testStorages)
 	require.NoError(t, err)
 
-	require.Len(t, testStorages, 1)
+	require.Len(t, testStorages, 2)
 	storage := testStorages[0]
 
 	assert.Equal(t, "local", storage.Name)
@@ -190,32 +198,25 @@ func TestClient_handleResponse(t *testing.T) {
 	expectedTotal := uint64(1125899906842620)
 	assert.Equal(t, expectedTotal, storage.Total)
 
-	// storage test with int total
-	storageData = `{
-	        "data": [
-	          {
-	            "storage": "local",
-	            "enabled": 1,
-	            "active": 1,
-	            "total": 150
+	// storage test with float total
+	storageData := `{
+	        "data": {
+	            "storage": "local3",
+	            "enabled": 4,
+	            "active": 5,
+	            "total": 1.12589990684262e+15
 	          }
-	        ]
 	}`
 	resp = &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(strings.NewReader(storageData)),
 	}
-
-	err = client.handleResponse(resp, &testStorages)
+	var testStorage Storage
+	err = client.handleResponse(resp, &testStorage)
 	require.NoError(t, err)
 
-	require.Len(t, testStorages, 1)
-	storage = testStorages[0]
-
-	assert.Equal(t, "local", storage.Name)
-	assert.Equal(t, 1, storage.Enabled)
-	assert.Equal(t, 1, storage.Active)
-
-	expectedTotal = uint64(150)
-	assert.Equal(t, expectedTotal, storage.Total)
+	assert.Equal(t, "local3", testStorage.Name)
+	assert.Equal(t, 4, testStorage.Enabled)
+	assert.Equal(t, 5, testStorage.Active)
+	assert.Equal(t, expectedTotal, testStorage.Total)
 }

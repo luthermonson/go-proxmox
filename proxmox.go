@@ -342,7 +342,8 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	}
 
 	if body, ok := datakey["data"]; ok {
-		if storagesPtr, ok := v.(*Storages); ok {
+		switch typedV := v.(type) {
+		case *Storages:
 			var rawList []map[string]interface{}
 
 			decoder := json.NewDecoder(bytes.NewReader(body))
@@ -350,7 +351,6 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 			if err := decoder.Decode(&rawList); err != nil {
 				return err
 			}
-
 			var result Storages
 
 			for _, raw := range rawList {
@@ -391,10 +391,53 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 				result = append(result, s)
 			}
 
-			*storagesPtr = result
+			*typedV = result
 			return nil
+		case *Storage:
+			var raw map[string]interface{}
+
+			decoder := json.NewDecoder(bytes.NewReader(body))
+			decoder.UseNumber()
+			if err := decoder.Decode(&raw); err != nil {
+				return err
+			}
+			s := typedV
+
+			if name, ok := raw["storage"].(string); ok {
+				s.Name = name
+			}
+			if content, ok := raw["content"].(string); ok {
+				s.Content = content
+			}
+			if typ, ok := raw["type"].(string); ok {
+				s.Type = typ
+			}
+			extractJSONNumber(raw, "enabled", func(v int64) {
+				s.Enabled = int(v)
+			})
+			extractJSONNumber(raw, "active", func(v int64) {
+				s.Active = int(v)
+			})
+			extractJSONNumber(raw, "shared", func(v int64) {
+				s.Shared = int(v)
+			})
+			extractJSONNumber(raw, "used_fraction", func(v float64) {
+				s.UsedFraction = v
+			})
+
+			for key, dest := range map[string]*uint64{
+				"avail": &s.Avail,
+				"used":  &s.Used,
+				"total": &s.Total,
+			} {
+				extractJSONNumber(raw, key, func(v float64) {
+					*dest = uint64(v)
+				})
+			}
+			return nil
+		default:
+			return json.Unmarshal(body, &v)
 		}
-		return json.Unmarshal(body, &v)
 	}
 
 	return json.Unmarshal(body, &v) // assume passed in type fully supports response
