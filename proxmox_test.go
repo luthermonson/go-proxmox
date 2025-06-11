@@ -159,31 +159,63 @@ func TestClient_handleResponse(t *testing.T) {
 	err = client.handleResponse(resp, &testData)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad request:  - {\"test\":\"data\"}", err.Error())
-	
-	// storage total is float 
+
+	// storage test with float total
 	storageData := `{
-        "data": [
-          {
-            "storage": "local",
-            "enabled": 1,
-            "active": 1,
-            "total": 1.12589990684262e+15
-          }
-        ]
-    }`
+	        "data": [
+	          {
+	            "storage": "local",
+	            "enabled": 1,
+	            "active": 1,
+	            "total": 1.12589990684262e+15
+	          }
+	        ]
+	}`
 	resp = &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(strings.NewReader(storageData)),
 	}
 
-	var storages Storages
-	err = client.handleResponse(resp, &storages)
-	storage := storages[0]
-	fmt.Println(storage)
+	var testStorages Storages
+	err = client.handleResponse(resp, &testStorages)
+	require.NoError(t, err)
+
+	require.Len(t, testStorages, 1)
+	storage := testStorages[0]
+
 	assert.Equal(t, "local", storage.Name)
 	assert.Equal(t, 1, storage.Enabled)
 	assert.Equal(t, 1, storage.Active)
 
 	expectedTotal := uint64(1125899906842620)
+	assert.Equal(t, expectedTotal, storage.Total)
+
+	// storage test with int total
+	storageData = `{
+	        "data": [
+	          {
+	            "storage": "local",
+	            "enabled": 1,
+	            "active": 1,
+	            "total": 150
+	          }
+	        ]
+	}`
+	resp = &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(storageData)),
+	}
+
+	err = client.handleResponse(resp, &testStorages)
+	require.NoError(t, err)
+
+	require.Len(t, testStorages, 1)
+	storage = testStorages[0]
+
+	assert.Equal(t, "local", storage.Name)
+	assert.Equal(t, 1, storage.Enabled)
+	assert.Equal(t, 1, storage.Active)
+
+	expectedTotal = uint64(150)
 	assert.Equal(t, expectedTotal, storage.Total)
 }
