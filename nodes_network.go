@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 )
 
 func (n *Node) NewNetwork(ctx context.Context, network *NodeNetwork) (task *Task, err error) {
@@ -35,14 +36,18 @@ func (n *Node) Network(ctx context.Context, iface string) (network *NodeNetwork,
 }
 
 func (n *Node) Networks(ctx context.Context, ifaceType ...string) (networks NodeNetworks, err error) {
-	filterParam := ""
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/network", n.Name)}
+	params := url.Values{}
+
 	if len(ifaceType) > 1 {
 		return nil, errors.New("only one interface type filter is allowed")
 	} else if len(ifaceType) == 1 {
-		filterParam = fmt.Sprintf("?type=%s", ifaceType[0])
+		params.Add("type", ifaceType[0])
 	}
 
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/network%s", n.Name, filterParam), &networks)
+	u.RawQuery = params.Encode()
+
+	err = n.client.Get(ctx, u.String(), &networks)
 	if err != nil {
 		return nil, err
 	}
