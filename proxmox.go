@@ -280,6 +280,24 @@ func (c *Client) authHeaders(header *http.Header) {
 	}
 }
 
+func extractJSONNumber[T int64 | float64](raw map[string]interface{}, key string, assign func(T)) {
+	if num, ok := raw[key].(json.Number); ok {
+		var val any
+		var err error
+
+		switch any(*new(T)).(type) {
+		case int64:
+			val, err = num.Int64()
+		case float64:
+			val, err = num.Float64()
+		}
+
+		if err == nil {
+			assign(val.(T))
+		}
+	}
+}
+
 func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	if res.StatusCode == http.StatusInternalServerError ||
 		res.StatusCode == http.StatusNotImplemented {
@@ -324,7 +342,102 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	}
 
 	if body, ok := datakey["data"]; ok {
-		return json.Unmarshal(body, &v)
+		switch typedV := v.(type) {
+		case *Storages:
+			var rawList []map[string]interface{}
+
+			decoder := json.NewDecoder(bytes.NewReader(body))
+			decoder.UseNumber()
+			if err := decoder.Decode(&rawList); err != nil {
+				return err
+			}
+			var result Storages
+
+			for _, raw := range rawList {
+				s := &Storage{}
+
+				if name, ok := raw["storage"].(string); ok {
+					s.Name = name
+				}
+				if content, ok := raw["content"].(string); ok {
+					s.Content = content
+				}
+				if typ, ok := raw["type"].(string); ok {
+					s.Type = typ
+				}
+				extractJSONNumber(raw, "enabled", func(v int64) {
+					s.Enabled = int(v)
+				})
+				extractJSONNumber(raw, "active", func(v int64) {
+					s.Active = int(v)
+				})
+				extractJSONNumber(raw, "shared", func(v int64) {
+					s.Shared = int(v)
+				})
+				extractJSONNumber(raw, "used_fraction", func(v float64) {
+					s.UsedFraction = v
+				})
+
+				for key, dest := range map[string]*uint64{
+					"avail": &s.Avail,
+					"used":  &s.Used,
+					"total": &s.Total,
+				} {
+					extractJSONNumber(raw, key, func(v float64) {
+						*dest = uint64(v)
+					})
+				}
+
+				result = append(result, s)
+			}
+
+			*typedV = result
+			return nil
+		case *Storage:
+			var raw map[string]interface{}
+
+			decoder := json.NewDecoder(bytes.NewReader(body))
+			decoder.UseNumber()
+			if err := decoder.Decode(&raw); err != nil {
+				return err
+			}
+			s := typedV
+
+			if name, ok := raw["storage"].(string); ok {
+				s.Name = name
+			}
+			if content, ok := raw["content"].(string); ok {
+				s.Content = content
+			}
+			if typ, ok := raw["type"].(string); ok {
+				s.Type = typ
+			}
+			extractJSONNumber(raw, "enabled", func(v int64) {
+				s.Enabled = int(v)
+			})
+			extractJSONNumber(raw, "active", func(v int64) {
+				s.Active = int(v)
+			})
+			extractJSONNumber(raw, "shared", func(v int64) {
+				s.Shared = int(v)
+			})
+			extractJSONNumber(raw, "used_fraction", func(v float64) {
+				s.UsedFraction = v
+			})
+
+			for key, dest := range map[string]*uint64{
+				"avail": &s.Avail,
+				"used":  &s.Used,
+				"total": &s.Total,
+			} {
+				extractJSONNumber(raw, key, func(v float64) {
+					*dest = uint64(v)
+				})
+			}
+			return nil
+		default:
+			return json.Unmarshal(body, &v)
+		}
 	}
 
 	return json.Unmarshal(body, &v) // assume passed in type fully supports response
