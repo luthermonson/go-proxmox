@@ -67,3 +67,21 @@ func TestNetworksPve8(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, networks, 5)
 }
+
+func TestNetworksPve8NetworksOfType(t *testing.T) {
+	mocks.ProxmoxVE8x(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	node := Node{
+		client: client,
+		Name:   "node1",
+	}
+
+	networks, err := node.Networks(ctx, "any_bridge")
+	assert.Nil(t, err)
+	assert.Len(t, networks, 1)
+
+	_, err = node.Networks(ctx, "any_bridge", "second_argument")
+	assert.NotNil(t, err)
+}

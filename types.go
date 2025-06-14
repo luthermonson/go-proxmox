@@ -1247,14 +1247,14 @@ type NodeNetwork struct {
 	OVSPorts   string `json:"ovs_ports,omitempty"`
 	OVSTags    string `json:"ovs_tag,omitempty"`
 
-	Slaves   string `json:"slaves,omitempty"`
-	Address  string `json:"address,omitempty"`
-	Address6 string `json:"address6,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Active   int    `json:"active,omitempty"`
-	Method   string `json:"method,omitempty"`
-	Method6  string `json:"method6,omitempty"`
-	Priority int    `json:"priority,omitempty"`
+	Slaves   string      `json:"slaves,omitempty"`
+	Address  string      `json:"address,omitempty"`
+	Address6 string      `json:"address6,omitempty"`
+	Type     string      `json:"type,omitempty"`
+	Active   StringOrInt `json:"active,omitempty"`
+	Method   string      `json:"method,omitempty"`
+	Method6  string      `json:"method6,omitempty"`
+	Priority int         `json:"priority,omitempty"`
 }
 
 type AgentNetworkIPAddress struct {
