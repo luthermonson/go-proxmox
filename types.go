@@ -140,6 +140,49 @@ func (cl *Cluster) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type genericClusterStatusItem struct {
+	// Common attributes for both types: cluster and node
+	Name string
+	Type string
+	Id   string
+
+	// 'cluster' type specific attributes
+	Version int
+	Quorate int
+	Nodes   int
+
+	// 'node' type specific attributes
+	Ip     string
+	Online int
+	NodeId int
+	Level  string
+	Local  int
+}
+
+type ClusterStatus struct {
+	ClusterInfo  clusterInfo
+	ClusterNodes []clusterNode
+}
+
+type clusterInfo struct {
+	Name    string
+	Type    string
+	Id      string
+	Version int
+	Quorate int
+	Nodes   int
+}
+type clusterNode struct {
+	Name   string
+	Type   string
+	Id     string
+	Ip     string
+	Online int
+	NodeId int
+	Level  string
+	Local  int
+}
+
 type ClusterResources []*ClusterResource
 
 type ClusterResource struct {

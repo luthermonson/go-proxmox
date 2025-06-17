@@ -14,15 +14,46 @@ func (c *Client) Cluster(ctx context.Context) (*Cluster, error) {
 	}
 
 	// requires (/, Sys.Audit), do not error out if no access to still get the cluster
-	if err := cluster.Status(ctx); !IsNotAuthorized(err) {
+	if _, err := cluster.Status(ctx); !IsNotAuthorized(err) {
 		return cluster, err
 	}
 
 	return cluster, nil
 }
 
-func (cl *Cluster) Status(ctx context.Context) error {
-	return cl.client.Get(ctx, "/cluster/status", cl)
+func (cl *Cluster) Status(ctx context.Context) (ClusterStatus, error) {
+	var rawResponseItems []genericClusterStatusItem
+	err := cl.client.Get(ctx, "/cluster/status", &rawResponseItems)
+
+	var ci clusterInfo
+	var clusterNodes []clusterNode
+	for _, item := range rawResponseItems {
+		if item.Type == "cluster" {
+			ci = clusterInfo{
+				Name:    item.Name,
+				Type:    item.Type,
+				Id:      item.Id,
+				Version: item.Version,
+				Quorate: item.Quorate,
+				Nodes:   item.Nodes,
+			}
+		}
+		if item.Type == "node" {
+			cn := clusterNode{
+				Name:   item.Name,
+				Type:   item.Type,
+				Id:     item.Id,
+				Ip:     item.Ip,
+				Online: item.Online,
+				NodeId: item.NodeId,
+				Level:  item.Level,
+				Local:  item.Local,
+			}
+			clusterNodes = append(clusterNodes, cn)
+		}
+	}
+
+	return ClusterStatus{ClusterInfo: ci, ClusterNodes: clusterNodes}, err
 }
 
 func (cl *Cluster) NextID(ctx context.Context) (int, error) {
