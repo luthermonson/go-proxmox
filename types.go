@@ -144,7 +144,7 @@ type genericClusterStatusItem struct {
 	// Common attributes for both types: cluster and node
 	Name string
 	Type string
-	Id   string
+	ID   string `json:"id"`
 
 	// 'cluster' type specific attributes
 	Version int
@@ -152,9 +152,9 @@ type genericClusterStatusItem struct {
 	Nodes   int
 
 	// 'node' type specific attributes
-	Ip     string
+	IP     string `json:"ip"`
 	Online int
-	NodeId int
+	NodeID int `json:"nodeId"`
 	Level  string
 	Local  int
 }
@@ -167,7 +167,7 @@ type ClusterStatus struct {
 type clusterInfo struct {
 	Name    string
 	Type    string
-	Id      string
+	ID      string `json:"id"`
 	Version int
 	Quorate int
 	Nodes   int
@@ -175,10 +175,10 @@ type clusterInfo struct {
 type clusterNode struct {
 	Name   string
 	Type   string
-	Id     string
-	Ip     string
+	ID     string `json:"id"`
+	IP     string `json:"ip"`
 	Online int
-	NodeId int
+	NodeID int `json:"nodeId"`
 	Level  string
 	Local  int
 }

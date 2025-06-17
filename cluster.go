@@ -32,7 +32,7 @@ func (cl *Cluster) Status(ctx context.Context) (ClusterStatus, error) {
 			ci = clusterInfo{
 				Name:    item.Name,
 				Type:    item.Type,
-				Id:      item.Id,
+				ID:      item.ID,
 				Version: item.Version,
 				Quorate: item.Quorate,
 				Nodes:   item.Nodes,
@@ -42,10 +42,10 @@ func (cl *Cluster) Status(ctx context.Context) (ClusterStatus, error) {
 			cn := clusterNode{
 				Name:   item.Name,
 				Type:   item.Type,
-				Id:     item.Id,
-				Ip:     item.Ip,
+				ID:     item.ID,
+				IP:     item.IP,
 				Online: item.Online,
-				NodeId: item.NodeId,
+				NodeID: item.NodeID,
 				Level:  item.Level,
 				Local:  item.Local,
 			}
