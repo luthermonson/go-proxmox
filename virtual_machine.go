@@ -177,6 +177,16 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 
 func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
 	isopath = filepath.Join(os.TempDir(), filename)
+
+	isoFile, err := os.Create(isopath)
+	if err != nil {
+		return "", err
+	}
+
+	if err := isoFile.Close(); err != nil {
+		return "", err
+	}
+
 	iso, err := file.OpenFromPath(isopath, false)
 	if err != nil {
 		return "", err
