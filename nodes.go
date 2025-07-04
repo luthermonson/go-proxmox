@@ -242,6 +242,10 @@ func (n *Node) findStorageByContent(ctx context.Context, content string) (storag
 	}
 
 	for _, storage := range storages {
+		if storage.Enabled == 0 {
+			continue
+		}
+
 		if strings.Contains(storage.Content, content) {
 			storage.Node = n.Name
 			storage.client = n.client
