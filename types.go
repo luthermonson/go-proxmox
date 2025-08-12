@@ -1872,9 +1872,21 @@ type PendingConfigItem struct {
 }
 
 type VNet struct {
+	Name      string `json:"vnet,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Zone      string `json:"zone,omitempty"`
+	VlanAware int    `json:"vlanaware,omitempty"`
+	Tag       uint16 `json:"tag,omitempty"`
 }
+
 type VNetOptions struct {
-	VNet string `json:"vnet,omitempty"`
+	Name         string `json:"vnet"`
+	Zone         string `json:"zone"`
+	Alias        string `json:"alias,omitempty"`
+	IsolatePorts bool   `json:"isolate-ports,omitempty"`
+	Tag          uint32 `json:"tag,omitempty"`  // Could be a VLAN or VXLAN tag
+	Type         string `json:"type,omitempty"` // Type must be set to "vnet"
+	VlanAware    bool   `json:"vlanaware,omitempty"`
 }
 type NetRange struct {
 	StartAddress string `json:"start-address,omitempty"`
@@ -1901,4 +1913,47 @@ type IPAM struct {
 	VNet     string `json:"vnet,omitempty"`
 	Zone     string `json:"zone,omitempty"`
 	Gateway  int    `json:"gateway,omitempty"`
+}
+
+type SDNZone struct {
+	Name       string   `json:"zone"`
+	Type       string   `json:"type"`
+	DHCP       string   `json:"dhcp,omitempty"`
+	DNS        string   `json:"dns,omitempty"`
+	DNSZone    string   `json:"dnszone,omitempty"`
+	IPAM       string   `json:"ipam,omitempty"`
+	MTU        int      `json:"mtu,omitempty"`
+	Nodes      []string `json:"nodes,omitempty"`
+	Pending    bool     `json:"pending,omitempty"`
+	ReverseDNS string   `json:"reversedns,omitempty"`
+	State      string   `json:"state,omitempty"`
+}
+
+type SDNZoneOptions struct {
+	Name                     string `json:"zone"`
+	Type                     string `json:"type"`
+	AdvertiseSubnets         bool   `json:"advertise-subnets,omitempty"`
+	Bridge                   string `json:"bridge,omitempty"`
+	BridgeDisableMACLearning bool   `json:"bridge-disable-mac-learning,omitempty"`
+	Controller               string `json:"controller,omitempty"`
+	DHCP                     string `json:"dhcp,omitempty"`
+	DisableARPNDSuppression  bool   `json:"disable-arp-nd-suppression,omitempty"`
+	DNS                      string `json:"dns,omitempty"`
+	DNSZone                  string `json:"dnszone,omitempty"`
+	DPID                     int    `json:"dpid,omitempty"`
+	ExitNodes                string `json:"exit-nodes,omitempty"`
+	ExitNodesLocalRouting    bool   `json:"exit-nodes-local-routing,omitempty"`
+	ExitNodesPrimary         string `json:"exit-nodes-primary,omitempty"`
+	Fabric                   string `json:"fabric,omitempty"`
+	IPAM                     string `json:"ipam,omitempty"`
+	MAC                      string `json:"mac,omitempty"`
+	MTU                      int    `json:"mtu,omitempty"`
+	Nodes                    string `json:"nodes,omitempty"`
+	Peers                    string `json:"peers,omitempty"`
+	ReverseDNS               string `json:"reversedns,omitempty"`
+	RTImport                 string `json:"rt-import,omitempty"`
+	Tag                      uint   `json:"tag,omitempty"`
+	VLANProtocol             string `json:"vlan-protocol,omitempty"`
+	VRFVXLAN                 int    `json:"vrf-vxlan,omitempty"`
+	VXLANPort                uint16 `json:"vxlan-port,omitempty"`
 }
