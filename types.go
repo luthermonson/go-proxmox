@@ -1473,7 +1473,7 @@ type Token struct {
 	TokenID string    `json:"tokenid,omitempty"`
 	Comment string    `json:"comment,omitempty"`
 	Expire  int       `json:"expire,omitempty"`
-	Privsep IntOrBool `json:"privsep,omitempty"`
+	Privsep IntOrBool `json:"privsep"`
 }
 
 type Roles []*Role
