@@ -386,4 +386,46 @@ func cluster() {
         }
     ]
 }`)
+
+	gock.New(config.C.URI).
+		Get("^/cluster/sdn/zones$").
+		MatchParams(map[string]string{
+			"type": "vxlan",
+		}).
+		Reply(200).
+		JSON(`{
+		"data": [
+				{"zone":"test1","type":"vxlan","ipam":"pve"}
+			]
+		}`)
+
+	gock.New(config.C.URI).
+		Get("^/cluster/sdn/zones$").
+		Reply(200).
+		JSON(`{
+		"data": [
+				{"zone":"test1","type":"vxlan","ipam":"pve"},
+				{"zone":"test2","type":"simple","ipam":"pve"}
+			]
+		}`)
+
+	gock.New(config.C.URI).
+		Get("^/cluster/sdn/vnets$").
+		Reply(200).
+		JSON(`{
+		"data": [
+				{"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10},
+				{"vnet":"user10","type":"vnet","zone":"test1","vlanaware":1,"tag":30},
+				{"vnet":"user11","type":"vnet","zone":"test1","vlanaware":1,"tag":31},
+				{"vnet":"user2","type":"vnet","zone":"test3","vlanaware":1,"tag":11},
+				{"vnet":"user3","type":"vnet","zone":"test1","vlanaware":1,"tag":12}
+			]
+		}`)
+
+	gock.New(config.C.URI).
+		Get("^/cluster/sdn/vnets/user1$").
+		Reply(200).
+		JSON(`{
+		"data": {"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10}
+		}`)
 }

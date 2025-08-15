@@ -72,3 +72,50 @@ func TestCluster_Resources(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 }
+
+func TestCluster_SDNZones(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
+	// json unmarshaling tests
+	zones, err := cluster.SDNZones(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(zones))
+
+	// type param test
+	zones, err = cluster.SDNZones(ctx, "vxlan")
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(zones))
+	assert.Equal(t, "vxlan", zones[0].Type)
+	assert.Equal(t, "test1", zones[0].Name)
+	assert.Equal(t, "pve", zones[0].IPAM)
+}
+
+func TestCluster_SDNVNets(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
+	// json unmarshaling tests
+	vnets, err := cluster.SDNVNets(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(vnets))
+
+	// vnet name test
+	vnet, err := cluster.SDNVNet(ctx, "user1")
+	assert.Nil(t, err)
+	assert.Equal(t, "user1", vnet.Name)
+	assert.Equal(t, "vnet", vnet.Type)
+	assert.Equal(t, "test1", vnet.Zone)
+	assert.Equal(t, 1, vnet.VlanAware)
+	assert.Equal(t, uint16(10), vnet.Tag)
+}
