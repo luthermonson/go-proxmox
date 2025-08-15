@@ -18,23 +18,11 @@ func (cl *Cluster) SDNApply(ctx context.Context) error {
 }
 
 func (cl *Cluster) SDNVNets(ctx context.Context) (vnets []*VNet, err error) {
-	err = cl.client.Get(ctx, "/cluster/sdn/vnets", &vnets)
-
-	if nil != err {
-		return nil, err
-	}
-
-	return vnets, nil
+	return vnets, cl.client.Get(ctx, "/cluster/sdn/vnets", &vnets)
 }
 
 func (cl *Cluster) SDNVNet(ctx context.Context, name string) (vnet *VNet, err error) {
-	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s", name), &vnet)
-
-	if nil != err {
-		return nil, err
-	}
-
-	return vnet, nil
+	return vnet, cl.client.Get(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s", name), &vnet)
 }
 
 func (cl *Cluster) NewSDNVNet(ctx context.Context, vnet *VNetOptions) error {
