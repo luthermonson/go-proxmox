@@ -1430,7 +1430,7 @@ type Domain struct {
 	TFA            string    `json:"tfa,omitempty"`
 	UserAttr       string    `json:"user_attr,omitempty"`
 	UserClasses    string    `json:"user_classes,omitempty"`
-	Verify         IntOrBool `json:"verify,omitempty"`
+	Verify         IntOrBool `json:"verify"`
 }
 
 // DomainSyncOptions see details https://pve.proxmox.com/pve-docs/api-viewer/#/access/domains/{realm}/sync
@@ -1456,7 +1456,7 @@ type User struct {
 	UserID         string           `json:"userid,omitempty"`
 	Comment        string           `json:"comment,omitempty"`
 	Email          string           `json:"email,omitempty"`
-	Enable         IntOrBool        `json:"enable,omitempty"`
+	Enable         IntOrBool        `json:"enable"`
 	Expire         int              `json:"expire,omitempty"`
 	Firstname      string           `json:"firstname,omitempty"`
 	Lastname       string           `json:"lastname,omitempty"`
@@ -1473,7 +1473,7 @@ type Token struct {
 	TokenID string    `json:"tokenid,omitempty"`
 	Comment string    `json:"comment,omitempty"`
 	Expire  int       `json:"expire,omitempty"`
-	Privsep IntOrBool `json:"privsep,omitempty"`
+	Privsep IntOrBool `json:"privsep"`
 }
 
 type Roles []*Role
@@ -1490,7 +1490,7 @@ type ACL struct {
 	RoleID    string    `json:",omitempty"`
 	Type      string    `json:",omitempty"`
 	UGID      string    `json:",omitempty"`
-	Propagate IntOrBool `json:",omitempty"`
+	Propagate IntOrBool `json:""`
 }
 
 type ACLOptions struct {
@@ -1512,7 +1512,7 @@ type StorageDownloadURLOptions struct {
 	Checksum           string    `json:"checksum,omitempty"`
 	ChecksumAlgorithm  string    `json:"checksum-algorithm,omitempty"`
 	Compression        string    `json:"compression,omitempty"`
-	VerifyCertificates IntOrBool `json:"verify-certificates,omitempty"`
+	VerifyCertificates IntOrBool `json:"verify-certificates"`
 }
 
 type StorageContent struct {
@@ -1555,7 +1555,7 @@ type NewUser struct {
 	UserID    string   `json:"userid"`
 	Comment   string   `json:"comment,omitempty"`
 	Email     string   `json:"email,omitempty"`
-	Enable    bool     `json:"enable,omitempty"`
+	Enable    bool     `json:"enable"`
 	Expire    int      `json:"expire,omitempty"`
 	Firstname string   `json:"firstname,omitempty"`
 	Groups    []string `json:"groups,omitempty"`
@@ -1679,9 +1679,9 @@ type VirtualMachineBackupOptions struct {
 	Protected          string                                 `json:"protected,omitempty"`
 	PruneBackups       string                                 `json:"prune-backups,omitempty"`
 	Quiet              bool                                   `json:"quiet,omitempty"`
-	Remove             bool                                   `json:"remove,omitempty"`
+	Remove             bool                                   `json:"remove"`
 	Script             string                                 `json:"script,omitempty"`
-	StdExcludes        bool                                   `json:"stdexcludes,omitempty"`
+	StdExcludes        bool                                   `json:"stdexcludes"`
 	StdOut             bool                                   `json:"stdout,omitempty"`
 	Stop               bool                                   `json:"stop,omitempty"`
 	StopWait           uint                                   `json:"stopwait,omitempty"`
