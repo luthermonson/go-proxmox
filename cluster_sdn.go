@@ -13,8 +13,10 @@ func (cl *Cluster) SDNSubnets(ctx context.Context, VNetName string) (subnets []*
 	return
 }
 
-func (cl *Cluster) SDNApply(ctx context.Context) error {
-	return cl.client.Put(ctx, "/cluster/sdn/", nil, nil)
+func (cl *Cluster) SDNApply(ctx context.Context) (*Task, error) {
+	var upid UPID
+	err := cl.client.Put(ctx, "/cluster/sdn/", nil, &upid)
+	return NewTask(upid, cl.client), err
 }
 
 func (cl *Cluster) SDNVNets(ctx context.Context) (vnets []*VNet, err error) {
