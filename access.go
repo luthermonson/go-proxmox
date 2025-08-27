@@ -30,8 +30,8 @@ func (c *Client) ACL(ctx context.Context) (acl ACLs, err error) {
 	return acl, c.Get(ctx, "/access/acl", &acl)
 }
 
-func (c *Client) UpdateACL(ctx context.Context, acl ACL) error {
-	return c.Put(ctx, "/access/acl", &acl, nil)
+func (c *Client) UpdateACL(ctx context.Context, aclOptions ACLOptions) error {
+	return c.Put(ctx, "/access/acl", &aclOptions, nil)
 }
 
 // Permissions get permissions for the current user for the client which passes no params, use Permission
