@@ -1486,21 +1486,21 @@ type Role struct {
 
 type ACLs []*ACL
 type ACL struct {
-	Path      string    `json:",omitempty"`
-	RoleID    string    `json:",omitempty"`
-	Type      string    `json:",omitempty"`
-	UGID      string    `json:",omitempty"`
-	Propagate IntOrBool `json:""`
+	Path      string    `json:"path,omitempty"`
+	RoleID    string    `json:"roleid,omitempty"`
+	Type      string    `json:"type,omitempty"`
+	UGID      string    `json:"ugid,omitempty"`
+	Propagate IntOrBool `json:"propagate,omitempty"`
 }
 
 type ACLOptions struct {
-	Path      string    `json:",omitempty"`
-	Roles     string    `json:",omitempty"`
-	Groups    string    `json:",omitempty"`
-	Users     string    `json:",omitempty"`
-	Tokens    string    `json:",omitempty"`
-	Propagate IntOrBool `json:",omitempty"`
-	Delete    IntOrBool `json:",omitempty"` // true to delete the ACL
+	Path      string    `json:"path,omitempty"`
+	Roles     string    `json:"roles,omitempty"` // comma separated list of roles
+	Groups    string    `json:"groups,omitempty"`
+	Users     string    `json:"users,omitempty"`
+	Tokens    string    `json:"tokens,omitempty"`
+	Propagate IntOrBool `json:"propagate"`        // Default is true, omitempty would never send false
+	Delete    IntOrBool `json:"delete,omitempty"` // true to delete the ACL
 }
 
 type StorageDownloadURLOptions struct {
