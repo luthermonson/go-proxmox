@@ -479,7 +479,7 @@ type RootFS struct {
 type CPUInfo struct {
 	UserHz  int `json:"user_hz"`
 	MHZ     StringOrInt
-	Mode    string
+	Model   string
 	Cores   int
 	Sockets int
 	Flags   string
