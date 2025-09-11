@@ -1468,6 +1468,18 @@ type User struct {
 	TOTPLocked     IntOrBool        `json:"totp-locked,omitempty"`
 }
 
+type UserOptions struct {
+	Append    IntOrBool `json:"append,omitempty"`
+	Comment   string    `json:"comment,omitempty"`
+	Email     string    `json:"email,omitempty"`
+	Enable    IntOrBool `json:"enable"`
+	Expire    int       `json:"expire,omitempty"`
+	Firstname string    `json:"firstname,omitempty"`
+	Groups    []string  `json:"groups,omitempty"`
+	Keys      string    `json:"keys,omitempty"`
+	Lastname  string    `json:"lastname,omitempty"`
+}
+
 type Tokens []*Token
 type Token struct {
 	TokenID string    `json:"tokenid,omitempty"`
