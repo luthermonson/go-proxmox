@@ -1099,6 +1099,9 @@ type ISO struct{ Content }
 type VzTmpls []*VzTmpl
 type VzTmpl struct{ Content }
 
+type Imports []*Import
+type Import struct{ Content }
+
 type Backups []*Backup
 type Backup struct{ Content }
 
