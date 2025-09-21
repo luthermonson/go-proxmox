@@ -602,151 +602,32 @@ type VirtualMachineConfig struct {
 
 	// Disk devices
 	IDEs map[string]string `json:"-"`
-	IDE0 string            `json:"ide0,omitempty"`
-	IDE1 string            `json:"ide1,omitempty"`
-	IDE2 string            `json:"ide2,omitempty"`
-	IDE3 string            `json:"ide3,omitempty"`
 
-	SCSIs  map[string]string `json:"-"`
-	SCSI0  string            `json:"scsi0,omitempty"`
-	SCSI1  string            `json:"scsi1,omitempty"`
-	SCSI2  string            `json:"scsi2,omitempty"`
-	SCSI3  string            `json:"scsi3,omitempty"`
-	SCSI4  string            `json:"scsi4,omitempty"`
-	SCSI5  string            `json:"scsi5,omitempty"`
-	SCSI6  string            `json:"scsi6,omitempty"`
-	SCSI7  string            `json:"scsi7,omitempty"`
-	SCSI8  string            `json:"scsi8,omitempty"`
-	SCSI9  string            `json:"scsi9,omitempty"`
-	SCSI10 string            `json:"scsi10,omitempty"`
-	SCSI11 string            `json:"scsi11,omitempty"`
-	SCSI12 string            `json:"scsi12,omitempty"`
-	SCSI13 string            `json:"scsi13,omitempty"`
-	SCSI14 string            `json:"scsi14,omitempty"`
-	SCSI15 string            `json:"scsi15,omitempty"`
-	SCSI16 string            `json:"scsi16,omitempty"`
-	SCSI17 string            `json:"scsi17,omitempty"`
-	SCSI18 string            `json:"scsi18,omitempty"`
-	SCSI19 string            `json:"scsi19,omitempty"`
-	SCSI20 string            `json:"scsi20,omitempty"`
-	SCSI21 string            `json:"scsi21,omitempty"`
-	SCSI22 string            `json:"scsi22,omitempty"`
-	SCSI23 string            `json:"scsi23,omitempty"`
-	SCSI24 string            `json:"scsi24,omitempty"`
-	SCSI25 string            `json:"scsi25,omitempty"`
-	SCSI26 string            `json:"scsi26,omitempty"`
-	SCSI27 string            `json:"scsi27,omitempty"`
-	SCSI28 string            `json:"scsi28,omitempty"`
-	SCSI29 string            `json:"scsi29,omitempty"`
-	SCSI30 string            `json:"scsi30,omitempty"`
+	SCSIs map[string]string `json:"-"`
 
 	SATAs map[string]string `json:"-"`
-	SATA0 string            `json:"sata0,omitempty"`
-	SATA1 string            `json:"sata1,omitempty"`
-	SATA2 string            `json:"sata2,omitempty"`
-	SATA3 string            `json:"sata3,omitempty"`
-	SATA4 string            `json:"sata4,omitempty"`
-	SATA5 string            `json:"sata5,omitempty"`
 
-	VirtIOs  map[string]string `json:"-"`
-	VirtIO0  string            `json:"virtio0,omitempty"`
-	VirtIO1  string            `json:"virtio1,omitempty"`
-	VirtIO2  string            `json:"virtio2,omitempty"`
-	VirtIO3  string            `json:"virtio3,omitempty"`
-	VirtIO4  string            `json:"virtio4,omitempty"`
-	VirtIO5  string            `json:"virtio5,omitempty"`
-	VirtIO6  string            `json:"virtio6,omitempty"`
-	VirtIO7  string            `json:"virtio7,omitempty"`
-	VirtIO8  string            `json:"virtio8,omitempty"`
-	VirtIO9  string            `json:"virtio9,omitempty"`
-	VirtIO10 string            `json:"virtio10,omitempty"`
-	VirtIO11 string            `json:"virtio11,omitempty"`
-	VirtIO12 string            `json:"virtio12,omitempty"`
-	VirtIO13 string            `json:"virtio13,omitempty"`
-	VirtIO14 string            `json:"virtio14,omitempty"`
-	VirtIO15 string            `json:"virtio15,omitempty"`
+	VirtIOs map[string]string `json:"-"`
 
 	Unuseds map[string]string `json:"-"`
-	Unused0 string            `json:"unused0,omitempty"`
-	Unused1 string            `json:"unused1,omitempty"`
-	Unused2 string            `json:"unused2,omitempty"`
-	Unused3 string            `json:"unused3,omitempty"`
-	Unused4 string            `json:"unused4,omitempty"`
-	Unused5 string            `json:"unused5,omitempty"`
-	Unused6 string            `json:"unused6,omitempty"`
-	Unused7 string            `json:"unused7,omitempty"`
-	Unused8 string            `json:"unused8,omitempty"`
-	Unused9 string            `json:"unused9,omitempty"`
 
 	// Network devices
 	Nets map[string]string `json:"-"`
-	Net0 string            `json:"net0,omitempty"`
-	Net1 string            `json:"net1,omitempty"`
-	Net2 string            `json:"net2,omitempty"`
-	Net3 string            `json:"net3,omitempty"`
-	Net4 string            `json:"net4,omitempty"`
-	Net5 string            `json:"net5,omitempty"`
-	Net6 string            `json:"net6,omitempty"`
-	Net7 string            `json:"net7,omitempty"`
-	Net8 string            `json:"net8,omitempty"`
-	Net9 string            `json:"net9,omitempty"`
 
 	// NUMA topology
 	Numas map[string]string `json:"-"`
-	Numa0 string            `json:"numa0,omitempty"`
-	Numa1 string            `json:"numa1,omitempty"`
-	Numa2 string            `json:"numa2,omitempty"`
-	Numa3 string            `json:"numa3,omitempty"`
-	Numa4 string            `json:"numa4,omitempty"`
-	Numa5 string            `json:"numa5,omitempty"`
-	Numa6 string            `json:"numa6,omitempty"`
-	Numa7 string            `json:"numa7,omitempty"`
-	Numa8 string            `json:"numa8,omitempty"`
-	Numa9 string            `json:"numa9,omitempty"`
 
 	// Host PCI devices
 	HostPCIs map[string]string `json:"-"`
-	HostPCI0 string            `json:"hostpci0,omitempty"`
-	HostPCI1 string            `json:"hostpci1,omitempty"`
-	HostPCI2 string            `json:"hostpci2,omitempty"`
-	HostPCI3 string            `json:"hostpci3,omitempty"`
-	HostPCI4 string            `json:"hostpci4,omitempty"`
-	HostPCI5 string            `json:"hostpci5,omitempty"`
-	HostPCI6 string            `json:"hostpci6,omitempty"`
-	HostPCI7 string            `json:"hostpci7,omitempty"`
-	HostPCI8 string            `json:"hostpci8,omitempty"`
-	HostPCI9 string            `json:"hostpci9,omitempty"`
 
 	// Serial devices
 	Serials map[string]string `json:"-"`
-	Serial0 string            `json:"serial0,omitempty"`
-	Serial1 string            `json:"serial1,omitempty"`
-	Serial2 string            `json:"serial2,omitempty"`
-	Serial3 string            `json:"serial3,omitempty"`
 
 	// USB devices
-	USBs  map[string]string `json:"-"`
-	USB0  string            `json:"usb0,omitempty"`
-	USB1  string            `json:"usb1,omitempty"`
-	USB2  string            `json:"usb2,omitempty"`
-	USB3  string            `json:"usb3,omitempty"`
-	USB4  string            `json:"usb4,omitempty"`
-	USB5  string            `json:"usb5,omitempty"`
-	USB6  string            `json:"usb6,omitempty"`
-	USB7  string            `json:"usb7,omitempty"`
-	USB8  string            `json:"usb8,omitempty"`
-	USB9  string            `json:"usb9,omitempty"`
-	USB10 string            `json:"usb10,omitempty"`
-	USB11 string            `json:"usb11,omitempty"`
-	USB12 string            `json:"usb12,omitempty"`
-	USB13 string            `json:"usb13,omitempty"`
-	USB14 string            `json:"usb14,omitempty"`
+	USBs map[string]string `json:"-"`
 
 	// Parallel devices
 	Parallels map[string]string `json:"-"`
-	Parallel0 string            `json:"parallel0,omitempty"`
-	Parallel1 string            `json:"parallel1,omitempty"`
-	Parallel2 string            `json:"parallel2,omitempty"`
 
 	// Cloud-init
 	CIType       string `json:"citype,omitempty"`
@@ -760,16 +641,6 @@ type VirtualMachineConfig struct {
 
 	// Cloud-init interfaces
 	IPConfigs map[string]string `json:"-"`
-	IPConfig0 string            `json:"ipconfig0,omitempty"`
-	IPConfig1 string            `json:"ipconfig1,omitempty"`
-	IPConfig2 string            `json:"ipconfig2,omitempty"`
-	IPConfig3 string            `json:"ipconfig3,omitempty"`
-	IPConfig4 string            `json:"ipconfig4,omitempty"`
-	IPConfig5 string            `json:"ipconfig5,omitempty"`
-	IPConfig6 string            `json:"ipconfig6,omitempty"`
-	IPConfig7 string            `json:"ipconfig7,omitempty"`
-	IPConfig8 string            `json:"ipconfig8,omitempty"`
-	IPConfig9 string            `json:"ipconfig9,omitempty"`
 }
 
 type VirtualMachineMigrateOptions struct {
@@ -813,6 +684,59 @@ type VirtualMachineMoveDiskOptions struct {
 	TargetDigest string `json:"target-digest,omitempty"`
 	TargetDisk   string `json:"target-disk,omitempty"`
 	TargetVMID   int    `json:"target-vmid,omitempty"`
+}
+
+func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
+	type tmpVirtualMachineConfig VirtualMachineConfig
+
+	// create a struct and embed temporary alias of VirtualMachineConfig to avoid recursion
+	// this will also populate the rest of the fields using the built in unmarshal function
+	tmp := &struct {
+		*tmpVirtualMachineConfig
+	}{
+		tmpVirtualMachineConfig: (*tmpVirtualMachineConfig)(vmc),
+	}
+
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	vmc.TagsSlice = strings.Split(vmc.Tags, TagSeperator)
+
+	var tmpMap map[string]any
+	if err := json.Unmarshal(data, &tmpMap); err != nil {
+		return err
+	}
+
+	for k, v := range tmpMap {
+		if strings.HasPrefix(k, "net") {
+			vmc.Nets[k] = v.(string)
+		} else if strings.HasPrefix(k, "numa") {
+			vmc.Numas[k] = v.(string)
+		} else if strings.HasPrefix(k, "unused") {
+			vmc.Unuseds[k] = v.(string)
+		} else if strings.HasPrefix(k, "ide") {
+			vmc.IDEs[k] = v.(string)
+		} else if strings.HasPrefix(k, "scsi") {
+			vmc.SCSIs[k] = v.(string)
+		} else if strings.HasPrefix(k, "sata") {
+			vmc.SATAs[k] = v.(string)
+		} else if strings.HasPrefix(k, "virtio") {
+			vmc.VirtIOs[k] = v.(string)
+		} else if strings.HasPrefix(k, "hostpci") {
+			vmc.HostPCIs[k] = v.(string)
+		} else if strings.HasPrefix(k, "serial") {
+			vmc.Serials[k] = v.(string)
+		} else if strings.HasPrefix(k, "usb") {
+			vmc.USBs[k] = v.(string)
+		} else if strings.HasPrefix(k, "parallel") {
+			vmc.Parallels[k] = v.(string)
+		} else if strings.HasPrefix(k, "ipconfig") {
+			vmc.IPConfigs[k] = v.(string)
+		}
+	}
+
+	return nil
 }
 
 type UPID string
@@ -927,79 +851,46 @@ type ContainerCloneOptions struct {
 }
 
 type ContainerConfig struct {
-	Arch         string            `json:"arch,omitempty"`
-	CMode        string            `json:"cmode,omitempty"`
-	Console      IntOrBool         `json:"console,omitempty"`
-	Cores        int               `json:"cores,omitempty"`
-	CPULimit     int               `json:"cpulimit,omitempty"`
-	CPUUnits     int               `json:"cpuunits,omitempty"`
-	Debug        IntOrBool         `json:"debug,omitempty"`
-	Description  string            `json:"description,omitempty"`
-	Devs         map[string]string `json:"-"` // internal helper for Dev0..9
-	Dev0         string            `json:"dev0,omitempty"`
-	Dev1         string            `json:"dev1,omitempty"`
-	Dev2         string            `json:"dev2,omitempty"`
-	Dev3         string            `json:"dev3,omitempty"`
-	Dev4         string            `json:"dev4,omitempty"`
-	Dev5         string            `json:"dev5,omitempty"`
-	Dev6         string            `json:"dev6,omitempty"`
-	Dev7         string            `json:"dev7,omitempty"`
-	Dev8         string            `json:"dev8,omitempty"`
-	Dev9         string            `json:"dev9,omitempty"`
-	Digest       string            `json:"digest"`
-	Features     string            `json:"features,omitempty"`
-	HookScript   string            `json:"hookscript,omitempty"`
-	LXC          [][]string        `json:"lxc,omitempty"`
-	Hostname     string            `json:"hostname,omitempty"`
-	Lock         string            `json:"lock,omitempty"`
-	Memory       int               `json:"memory,omitempty"`
-	Mps          map[string]string `json:"-"` // internal helper for Mp0..9
-	Mp0          string            `json:"mp0,omitempty"`
-	Mp1          string            `json:"mp1,omitempty"`
-	Mp2          string            `json:"mp2,omitempty"`
-	Mp3          string            `json:"mp3,omitempty"`
-	Mp4          string            `json:"mp4,omitempty"`
-	Mp5          string            `json:"mp5,omitempty"`
-	Mp6          string            `json:"mp6,omitempty"`
-	Mp7          string            `json:"mp7,omitempty"`
-	Mp8          string            `json:"mp8,omitempty"`
-	Mp9          string            `json:"mp9,omitempty"`
-	Nameserver   string            `json:"nameserver,omitempty"`
-	Nets         map[string]string `json:"-"` // internal helper for Net0..9
-	Net0         string            `json:"net0,omitempty"`
-	Net1         string            `json:"net1,omitempty"`
-	Net2         string            `json:"net2,omitempty"`
-	Net3         string            `json:"net3,omitempty"`
-	Net4         string            `json:"net4,omitempty"`
-	Net5         string            `json:"net5,omitempty"`
-	Net6         string            `json:"net6,omitempty"`
-	Net7         string            `json:"net7,omitempty"`
-	Net8         string            `json:"net8,omitempty"`
-	Net9         string            `json:"net9,omitempty"`
-	OnBoot       IntOrBool         `json:"onboot,omitempty"`
-	OSType       string            `json:"ostype,omitempty"`
-	Protection   IntOrBool         `json:"protection,omitempty"`
-	RootFS       string            `json:"rootfs,omitempty"`
-	SearchDomain string            `json:"searchdomain:omitempty"`
-	Startup      string            `json:"startup:omitempty"`
-	Swap         int               `json:"swap,omitempty"`
-	TagsSlice    []string          `json:"-"` // internal helper to manage tags easier
-	Tags         string            `json:"tags,omitempty"`
-	Template     IntOrBool         `json:"template,omitempty"`
-	Timezone     string            `json:"timezone,omitempty"`
-	TTY          int               `json:"tty,omitempty"`
-	Unprivileged IntOrBool         `json:"unprivileged,omitempty"`
-	Unuseds      map[string]string `json:"-"` // internal helper
-	Unused0      string            `json:"unused0,omitempty"`
-	Unused1      string            `json:"unused1,omitempty"`
-	Unused2      string            `json:"unused2,omitempty"`
-	Unused3      string            `json:"unused3,omitempty"`
-	Unused4      string            `json:"unused4,omitempty"`
-	Unused5      string            `json:"unused5,omitempty"`
-	Unused6      string            `json:"unused6,omitempty"`
-	Unused7      string            `json:"unused7,omitempty"`
-	Unused8      string            `json:"unused8,omitempty"`
-	Unused9      string            `json:"unused9,omitempty"`
+	Arch        string    `json:"arch,omitempty"`
+	CMode       string    `json:"cmode,omitempty"`
+	Console     IntOrBool `json:"console,omitempty"`
+	Cores       int       `json:"cores,omitempty"`
+	CPULimit    int       `json:"cpulimit,omitempty"`
+	CPUUnits    int       `json:"cpuunits,omitempty"`
+	Debug       IntOrBool `json:"debug,omitempty"`
+	Description string    `json:"description,omitempty"`
+
+	Devs map[string]string `json:"-"` // internal helper for Dev0..9
+
+	Digest     string     `json:"digest"`
+	Features   string     `json:"features,omitempty"`
+	HookScript string     `json:"hookscript,omitempty"`
+	LXC        [][]string `json:"lxc,omitempty"`
+	Hostname   string     `json:"hostname,omitempty"`
+	Lock       string     `json:"lock,omitempty"`
+	Memory     int        `json:"memory,omitempty"`
+
+	Mps map[string]string `json:"-"` // internal helper for Mp0..9
+
+	Nameserver string `json:"nameserver,omitempty"`
+
+	Nets map[string]string `json:"-"` // internal helper for Net0..9
+
+	OnBoot       IntOrBool `json:"onboot,omitempty"`
+	OSType       string    `json:"ostype,omitempty"`
+	Protection   IntOrBool `json:"protection,omitempty"`
+	RootFS       string    `json:"rootfs,omitempty"`
+	SearchDomain string    `json:"searchdomain:omitempty"`
+	Startup      string    `json:"startup:omitempty"`
+	Swap         int       `json:"swap,omitempty"`
+	TagsSlice    []string  `json:"-"` // internal helper to manage tags easier
+	Tags         string    `json:"tags,omitempty"`
+	Template     IntOrBool `json:"template,omitempty"`
+	Timezone     string    `json:"timezone,omitempty"`
+	TTY          int       `json:"tty,omitempty"`
+	Unprivileged IntOrBool `json:"unprivileged,omitempty"`
+
+	Unuseds map[string]string `json:"-"` // internal helper
 }
 
 func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
@@ -1019,11 +910,22 @@ func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
 	// Split the tags on TagSeparator and populate TagsSlice
 	cc.TagsSlice = strings.Split(cc.Tags, TagSeperator)
 
-	// Populate the indexed fields into helper maps
-	cc.MergeDevs()
-	cc.MergeMps()
-	cc.MergeNets()
-	cc.MergeUnuseds()
+	var tmpMap map[string]any
+	if err := json.Unmarshal(data, &tmpMap); err != nil {
+		return err
+	}
+
+	for k, v := range tmpMap {
+		if strings.HasPrefix(k, "dev") {
+			cc.Devs[k] = v.(string)
+		} else if strings.HasPrefix(k, "mp") {
+			cc.Mps[k] = v.(string)
+		} else if strings.HasPrefix(k, "net") {
+			cc.Nets[k] = v.(string)
+		} else if strings.HasPrefix(k, "unused") {
+			cc.Unuseds[k] = v.(string)
+		}
+	}
 
 	return nil
 }
