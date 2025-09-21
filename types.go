@@ -710,28 +710,64 @@ func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
 
 	for k, v := range tmpMap {
 		if strings.HasPrefix(k, "net") {
+			if vmc.Nets == nil {
+				vmc.Nets = make(map[string]string)
+			}
 			vmc.Nets[k] = v.(string)
 		} else if strings.HasPrefix(k, "numa") {
+			if vmc.Numas == nil {
+				vmc.Numas = make(map[string]string)
+			}
 			vmc.Numas[k] = v.(string)
 		} else if strings.HasPrefix(k, "unused") {
+			if vmc.Unuseds == nil {
+				vmc.Unuseds = make(map[string]string)
+			}
 			vmc.Unuseds[k] = v.(string)
 		} else if strings.HasPrefix(k, "ide") {
+			if vmc.IDEs == nil {
+				vmc.IDEs = make(map[string]string)
+			}
 			vmc.IDEs[k] = v.(string)
 		} else if strings.HasPrefix(k, "scsi") {
+			if vmc.SCSIs == nil {
+				vmc.SCSIs = make(map[string]string)
+			}
 			vmc.SCSIs[k] = v.(string)
 		} else if strings.HasPrefix(k, "sata") {
+			if vmc.SATAs == nil {
+				vmc.SATAs = make(map[string]string)
+			}
 			vmc.SATAs[k] = v.(string)
 		} else if strings.HasPrefix(k, "virtio") {
+			if vmc.VirtIOs == nil {
+				vmc.VirtIOs = make(map[string]string)
+			}
 			vmc.VirtIOs[k] = v.(string)
 		} else if strings.HasPrefix(k, "hostpci") {
+			if vmc.HostPCIs == nil {
+				vmc.HostPCIs = make(map[string]string)
+			}
 			vmc.HostPCIs[k] = v.(string)
 		} else if strings.HasPrefix(k, "serial") {
+			if vmc.Serials == nil {
+				vmc.Serials = make(map[string]string)
+			}
 			vmc.Serials[k] = v.(string)
 		} else if strings.HasPrefix(k, "usb") {
+			if vmc.USBs == nil {
+				vmc.USBs = make(map[string]string)
+			}
 			vmc.USBs[k] = v.(string)
 		} else if strings.HasPrefix(k, "parallel") {
+			if vmc.Parallels == nil {
+				vmc.Parallels = make(map[string]string)
+			}
 			vmc.Parallels[k] = v.(string)
 		} else if strings.HasPrefix(k, "ipconfig") {
+			if vmc.IPConfigs == nil {
+				vmc.IPConfigs = make(map[string]string)
+			}
 			vmc.IPConfigs[k] = v.(string)
 		}
 	}
@@ -917,12 +953,24 @@ func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
 
 	for k, v := range tmpMap {
 		if strings.HasPrefix(k, "dev") {
+			if cc.Devs == nil {
+				cc.Devs = make(map[string]string)
+			}
 			cc.Devs[k] = v.(string)
 		} else if strings.HasPrefix(k, "mp") {
+			if cc.Mps == nil {
+				cc.Mps = make(map[string]string)
+			}
 			cc.Mps[k] = v.(string)
 		} else if strings.HasPrefix(k, "net") {
+			if cc.Nets == nil {
+				cc.Nets = make(map[string]string)
+			}
 			cc.Nets[k] = v.(string)
 		} else if strings.HasPrefix(k, "unused") {
+			if cc.Unuseds == nil {
+				cc.Unuseds = make(map[string]string)
+			}
 			cc.Unuseds[k] = v.(string)
 		}
 	}
