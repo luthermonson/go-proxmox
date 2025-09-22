@@ -614,9 +614,6 @@ type VirtualMachineConfig struct {
 	// Network devices
 	Nets map[string]string `json:"-"`
 
-	// NUMA topology
-	Numas map[string]string `json:"-"`
-
 	// Host PCI devices
 	HostPCIs map[string]string `json:"-"`
 
@@ -714,11 +711,6 @@ func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
 				vmc.Nets = make(map[string]string)
 			}
 			vmc.Nets[k] = v.(string)
-		} else if strings.HasPrefix(k, "numa") {
-			if vmc.Numas == nil {
-				vmc.Numas = make(map[string]string)
-			}
-			vmc.Numas[k] = v.(string)
 		} else if strings.HasPrefix(k, "unused") {
 			if vmc.Unuseds == nil {
 				vmc.Unuseds = make(map[string]string)
