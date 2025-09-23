@@ -165,8 +165,8 @@ func (c *Client) NewUser(ctx context.Context, user *NewUser) (err error) {
 	return c.Post(ctx, "/access/users", user, nil)
 }
 
-func (u *User) Update(ctx context.Context) error {
-	return u.client.Put(ctx, fmt.Sprintf("/access/users/%s", u.UserID), u, nil)
+func (u *User) Update(ctx context.Context, options UserOptions) error {
+	return u.client.Put(ctx, fmt.Sprintf("/access/users/%s", u.UserID), &options, nil)
 }
 
 func (u *User) Delete(ctx context.Context) error {
