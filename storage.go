@@ -180,6 +180,25 @@ func (s *Storage) DeleteContent(ctx context.Context, content string) (*Task, err
 	return NewTask(upid, s.client), nil
 }
 
+func (s *Storage) ChangeProtection(ctx context.Context, protect bool, content string) (bool, error) {
+	var sprotect string
+	if protect {
+		sprotect = "1"
+	} else {
+		sprotect = "0"
+	}
+
+	jsonData := map[string]string{
+		"protected": sprotect,
+	}
+
+	err := s.client.Put(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s", s.Node, s.Name, content), jsonData, nil)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Storage) ISO(ctx context.Context, name string) (iso *ISO, err error) {
 	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "iso", name), &iso)
 	if err != nil {
