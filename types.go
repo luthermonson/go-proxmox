@@ -1465,7 +1465,7 @@ type StorageContent struct {
 	Encryption   string `json:"encryption,omitempty"`
 	Notes        string `json:"notes,omitempty"`
 	Parent       string `json:"parent,omitempty"`
-	Protection   bool   `json:"protection,omitempty"`
+	Protected    bool   `json:"protected,omitempty"`
 	Used         uint64 `json:"used,omitempty"`
 	Verification string `json:"verification,omitempty"`
 	VMID         uint64 `json:"vmid,omitempty"`
