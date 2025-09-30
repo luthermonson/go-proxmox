@@ -237,6 +237,10 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	return
 }
 
+func (v *VirtualMachine) RegenerateCloudInitImage(ctx context.Context) error {
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/cloudinit", v.Node, v.VMID), nil, nil)
+}
+
 func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
 		v.Node, v.VMID, term.Port, url.QueryEscape(term.Ticket))
