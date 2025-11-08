@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/buger/goterm"
@@ -25,7 +26,11 @@ const (
 	TagFormat        = "go-proxmox+%s"
 )
 
-var ErrNotAuthorized = errors.New("not authorized to access endpoint")
+var (
+	ErrNotAuthorized = errors.New("not authorized to access endpoint")
+
+	ErrSessionExists = errors.New("session already exists")
+)
 
 func IsNotAuthorized(err error) bool {
 	return errors.Is(err, ErrNotAuthorized)
@@ -62,6 +67,8 @@ type Client struct {
 	version     *Version
 	session     *Session
 	log         LeveledLoggerInterface
+
+	sessionMux sync.Mutex
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -129,9 +136,13 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 			return ErrNotAuthorized
 		}
 
-		if c.credentials != nil && c.session == nil {
-			// credentials passed but no session started, try a login and retry the request
-			if _, err = c.Ticket(ctx, c.credentials); err != nil {
+		if c.credentials != nil {
+			// credentials passed but we need to check/create session
+			err = c.CreateSession(ctx)
+			if err != nil {
+				if errors.Is(err, ErrSessionExists) {
+					return ErrNotAuthorized
+				}
 				return err
 			}
 			return c.Req(ctx, method, path, data, v)

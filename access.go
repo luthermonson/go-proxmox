@@ -9,6 +9,9 @@ import (
 
 // Deprecated: Use WithCredentials Option
 func (c *Client) Login(ctx context.Context, username, password string) error {
+	c.sessionMux.Lock()
+	defer c.sessionMux.Unlock()
+
 	_, err := c.Ticket(ctx, &Credentials{
 		Username: username,
 		Password: password,
@@ -20,6 +23,21 @@ func (c *Client) Login(ctx context.Context, username, password string) error {
 // Deprecated: Use the WithAPIToken Option
 func (c *Client) APIToken(tokenID, secret string) {
 	c.token = fmt.Sprintf("%s=%s", tokenID, secret)
+}
+
+func (c *Client) CreateSession(ctx context.Context) error {
+	c.sessionMux.Lock()
+	defer c.sessionMux.Unlock()
+
+	if c.session != nil {
+		return ErrSessionExists
+	}
+
+	if _, err := c.Ticket(ctx, c.credentials); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Client) Ticket(ctx context.Context, credentials *Credentials) (*Session, error) {
