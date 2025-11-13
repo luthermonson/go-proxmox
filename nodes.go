@@ -26,7 +26,7 @@ func (n *Node) Version(ctx context.Context) (version *Version, err error) {
 	return version, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
 
-func (n *Node) Report(ctx context.Context) (report *Report, err error) {
+func (n *Node) Report(ctx context.Context) (report string, err error) {
 	return report, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/report", n.Name), &report)
 }
 

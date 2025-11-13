@@ -50,10 +50,6 @@ type Version struct {
 	Version string `json:"version"`
 }
 
-type Report struct {
-	Data string `json:"data"`
-}
-
 type Term struct {
 	Port   StringOrInt
 	Ticket string
