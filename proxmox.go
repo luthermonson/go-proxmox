@@ -68,7 +68,8 @@ type Client struct {
 	session     *Session
 	log         LeveledLoggerInterface
 
-	sessionMux sync.Mutex
+	sessionExpiresAt time.Time
+	sessionMux       sync.Mutex
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
