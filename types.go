@@ -1080,6 +1080,8 @@ type ClusterStorage struct {
 	Digest   string
 	Storage  string
 	Type     string
+	Shared   int    `json:",omitempty"`
+	Nodes    string `json:",omitempty"`
 	Thinpool string `json:",omitempty"`
 	Path     string `json:",omitempty"`
 	VgName   string `json:",omitempty"`
