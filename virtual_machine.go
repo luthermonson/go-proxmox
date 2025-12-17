@@ -590,6 +590,11 @@ func (v *VirtualMachine) AgentSetUserPassword(ctx context.Context, password stri
 	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
 }
 
+func (v *VirtualMachine) SendKey(ctx context.Context, key string) error {
+	data := map[string]interface{}{"key": key}
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/sendkey", v.Node, v.VMID), data, nil)
+}
+
 func (v *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPSet, err error) {
 	return ipsets, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", v.Node, v.VMID), &ipsets)
 }
