@@ -12,14 +12,22 @@ func (c *Client) Nodes(ctx context.Context) (ns NodeStatuses, err error) {
 	return ns, c.Get(ctx, "/nodes", &ns)
 }
 
-func (c *Client) Node(ctx context.Context, name string) (node *Node, err error) {
-	if err = c.Get(ctx, fmt.Sprintf("/nodes/%s/status", name), &node); err != nil {
-		return nil, err
+func (c *Client) Node(ctx context.Context, name string) (*Node, error) {
+	node := &Node{
+		Name:   name,
+		client: c,
 	}
-	node.Name = name
-	node.client = c
 
-	return
+	// requires (/, Sys.Audit), do not error out if no access to still get the node
+	if err := node.Status(ctx); !IsNotAuthorized(err) {
+		return node, err
+	}
+
+	return node, nil
+}
+
+func (n *Node) Status(ctx context.Context) error {
+	return n.client.Get(ctx, fmt.Sprintf("/nodes/%s/status", n.Name), n)
 }
 
 func (n *Node) Version(ctx context.Context) (version *Version, err error) {
