@@ -1530,17 +1530,17 @@ type StorageDownloadURLOptions struct {
 }
 
 type StorageContent struct {
-	Format       string `json:"format,omitempty"`
-	Size         uint64 `json:"size,omitempty"`
-	Volid        string `json:"volid,omitempty"`
-	Ctime        uint64 `json:"ctime,omitempty"`
-	Encryption   string `json:"encryption,omitempty"`
-	Notes        string `json:"notes,omitempty"`
-	Parent       string `json:"parent,omitempty"`
-	Protection   bool   `json:"protection,omitempty"`
-	Used         uint64 `json:"used,omitempty"`
-	Verification string `json:"verification,omitempty"`
-	VMID         uint64 `json:"vmid,omitempty"`
+	Format       string         `json:"format,omitempty"`
+	Size         uint64         `json:"size,omitempty"`
+	Volid        string         `json:"volid,omitempty"`
+	Ctime        StringOrUint64 `json:"ctime,omitempty"`
+	Encryption   string         `json:"encryption,omitempty"`
+	Notes        string         `json:"notes,omitempty"`
+	Parent       string         `json:"parent,omitempty"`
+	Protection   IntOrBool      `json:"protection,omitempty"`
+	Used         uint64         `json:"used,omitempty"`
+	Verification string         `json:"verification,omitempty"`
+	VMID         uint64         `json:"vmid,omitempty"`
 }
 
 type NodeCertificates []*NodeCertificate
