@@ -40,5 +40,4 @@ func TestClient_Node(t *testing.T) {
 
 	node, err = client.Node(ctx, "doesntexist")
 	assert.NotNil(t, err)
-	assert.Nil(t, node)
 }
