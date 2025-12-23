@@ -29,6 +29,12 @@ const (
 // DefaultAgentWaitInterval is the polling interval when waiting for agent exec commands
 var DefaultAgentWaitInterval = 100 * time.Millisecond
 
+func (v *VirtualMachine) New(c *Client, nodeName string, vmid int) {
+	v.client = c
+	v.Node = nodeName
+	v.VMID = StringOrUint64(vmid)
+}
+
 func (v *VirtualMachine) Ping(ctx context.Context) error {
 	return v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/current", v.Node, v.VMID), &v)
 }
