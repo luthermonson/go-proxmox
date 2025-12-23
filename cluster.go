@@ -21,6 +21,12 @@ func (c *Client) Cluster(ctx context.Context) (*Cluster, error) {
 	return cluster, nil
 }
 
+func (cl *Cluster) New(c *Client) *Cluster {
+	return &Cluster{
+		client: c,
+	}
+}
+
 func (cl *Cluster) Status(ctx context.Context) error {
 	return cl.client.Get(ctx, "/cluster/status", cl)
 }
