@@ -39,10 +39,6 @@ func (n *Node) New(c *Client, name string) *Node {
 	return node
 }
 
-func (n *Node) Status(ctx context.Context) error {
-	return n.client.Get(ctx, fmt.Sprintf("/nodes/%s/status", n.Name), n)
-}
-
 func (n *Node) Version(ctx context.Context) (version *Version, err error) {
 	return version, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
