@@ -26,10 +26,6 @@ func (c *Client) Node(ctx context.Context, name string) (*Node, error) {
 	return node, nil
 }
 
-func (n *Node) Status(ctx context.Context) error {
-	return n.client.Get(ctx, fmt.Sprintf("/nodes/%s/status", n.Name), n)
-}
-
 func (n *Node) New(c *Client, name string) *Node {
 	node := &Node{
 		Name:   name,
