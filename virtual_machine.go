@@ -484,13 +484,8 @@ func (v *VirtualMachine) MoveDisk(ctx context.Context, disk string, params *Virt
 }
 
 func (v *VirtualMachine) AgentGetNetworkIFaces(ctx context.Context) (iFaces []*AgentNetworkIface, err error) {
-	node, err := v.client.Node(ctx, v.Node)
-	if err != nil {
-		return
-	}
-
 	networks := map[string][]*AgentNetworkIface{}
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", node.Name, v.VMID), &networks)
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", v.Node, v.VMID), &networks)
 	if err != nil {
 		return
 	}
