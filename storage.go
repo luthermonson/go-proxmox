@@ -10,6 +10,7 @@ import (
 var validContent = map[string]struct{}{
 	"iso":    {},
 	"vztmpl": {},
+	"import": {},
 }
 
 func (c *Client) ClusterStorages(ctx context.Context) (storages ClusterStorages, err error) {
@@ -97,7 +98,7 @@ func (s *Storage) UploadWithHash(content, file string, storageFilename *string, 
 
 func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso and vztmpl allowed")
+		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
 	}
 
 	stat, err := os.Stat(file)
@@ -144,7 +145,7 @@ func (s *Storage) DownloadURLWithHash(ctx context.Context, content, filename, ur
 
 func (s *Storage) downloadURL(ctx context.Context, content, filename, url string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso and vztmpl allowed")
+		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
 	}
 
 	var upid UPID
@@ -206,6 +207,21 @@ func (s *Storage) VzTmpl(ctx context.Context, name string) (vztmpl *VzTmpl, err 
 	vztmpl.Storage = s.Name
 	if vztmpl.VolID == "" {
 		vztmpl.VolID = fmt.Sprintf("%s:vztmpl/%s", vztmpl.Storage, name)
+	}
+	return
+}
+
+func (s *Storage) Import(ctx context.Context, name string) (imp *Import, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content/%s:%s/%s", s.Node, s.Name, s.Name, "import", name), &imp)
+	if err != nil {
+		return nil, err
+	}
+
+	imp.client = s.client
+	imp.Node = s.Node
+	imp.Storage = s.Name
+	if imp.VolID == "" {
+		imp.VolID = fmt.Sprintf("%s:import/%s", imp.Storage, name)
 	}
 	return
 }
