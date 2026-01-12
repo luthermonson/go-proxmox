@@ -1287,13 +1287,13 @@ type AgentOsInfo struct {
 }
 
 type AgentExecStatus struct {
-	Exited       int    `json:"exited"`
-	ErrData      string `json:"err-data"`
-	ErrTruncated bool   `json:"err-truncated"`
-	ExitCode     int    `json:"exitcode"`
-	OutData      string `json:"out-data"`
-	OutTruncated string `json:"out-truncated"`
-	Signal       bool   `json:"signal"`
+	Exited       int       `json:"exited"`
+	ErrData      string    `json:"err-data"`
+	ErrTruncated bool      `json:"err-truncated"`
+	ExitCode     int       `json:"exitcode"`
+	OutData      string    `json:"out-data"`
+	OutTruncated IntOrBool `json:"out-truncated"`
+	Signal       bool      `json:"signal"`
 }
 
 type FirewallSecurityGroup struct {
