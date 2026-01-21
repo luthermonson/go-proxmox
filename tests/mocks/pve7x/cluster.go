@@ -428,4 +428,95 @@ func cluster() {
 		JSON(`{
 		"data": {"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10}
 		}`)
+
+	// GET /cluster/firewall/groups - List firewall security groups
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/groups$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{
+				"group": "test-group",
+				"comment": "Test security group"
+			},
+			{
+				"group": "web-servers",
+				"comment": "Web server security group"
+			}
+		]
+	}`)
+
+	// GET /cluster/firewall/groups/{group} - Get firewall group rules
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/groups/test-group$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{
+				"pos": 0,
+				"type": "in",
+				"action": "ACCEPT",
+				"enable": 1,
+				"proto": "tcp",
+				"dport": "22",
+				"comment": "Allow SSH"
+			},
+			{
+				"pos": 1,
+				"type": "in",
+				"action": "ACCEPT",
+				"enable": 1,
+				"proto": "tcp",
+				"dport": "80",
+				"comment": "Allow HTTP"
+			}
+		]
+	}`)
+
+	// POST /cluster/firewall/groups - Create new firewall group
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/groups$").
+		Reply(200).
+		JSON(`{
+		"data": null
+	}`)
+
+	// POST /cluster/firewall/groups/{group} - Create rule in group
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/groups/test-group$").
+		Reply(200).
+		JSON(`{
+		"data": null
+	}`)
+
+	// PUT /cluster/firewall/groups/{group}/{pos} - Update rule in group
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/firewall/groups/test-group/[0-9]+$").
+		Reply(200).
+		JSON(`{
+		"data": null
+	}`)
+
+	// DELETE /cluster/firewall/groups/{group}/{pos} - Delete rule from group
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/firewall/groups/test-group/[0-9]+$").
+		Reply(200).
+		JSON(`{
+		"data": null
+	}`)
+
+	// DELETE /cluster/firewall/groups/{group} - Delete firewall group
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/firewall/groups/test-group$").
+		Reply(200).
+		JSON(`{
+		"data": null
+	}`)
 }
