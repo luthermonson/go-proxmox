@@ -732,4 +732,56 @@ func virtualMachines() {
 		JSON(`{
     "data": "UPID:node1:0000000C:0000000C:0000000C:qmdestroy:999:root@pam:"
 }`)
+
+	// GET /nodes/{node}/qemu/{vmid}/snapshot - List VM snapshots
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/snapshot$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "name": "current",
+            "description": "You are here!",
+            "snaptime": 0
+        },
+        {
+            "name": "snap1",
+            "description": "Before upgrade",
+            "snaptime": 1693252591,
+            "vmstate": 1,
+            "parent": "current"
+        },
+        {
+            "name": "snap2",
+            "description": "After upgrade",
+            "snaptime": 1693252600,
+            "parent": "snap1"
+        }
+    ]
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/snapshot - Create VM snapshot
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/snapshot$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000D:0000000D:0000000D:qmsnapshot:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/snapshot/{snapname}/rollback - Rollback snapshot
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/snapshot/snap1/rollback$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000E:0000000E:0000000E:qmrollback:100:root@pam:"
+}`)
+
+	// DELETE /nodes/{node}/qemu/{vmid}/snapshot/{snapname} - Delete snapshot
+	gock.New(config.C.URI).
+		Delete("^/nodes/node1/qemu/100/snapshot/snap2$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000F:0000000F:0000000F:qmdelsnapshot:100:root@pam:"
+}`)
 }

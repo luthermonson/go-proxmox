@@ -313,3 +313,62 @@ func TestVirtualMachine_Delete(t *testing.T) {
 	assert.Equal(t, "qmdestroy", task.Type)
 	assert.Equal(t, "999", task.ID)
 }
+
+func TestVirtualMachine_Snapshots(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	snapshots, err := vm.Snapshots(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshots)
+	assert.Len(t, snapshots, 3)
+	assert.Equal(t, "current", snapshots[0].Name)
+	assert.Equal(t, "snap1", snapshots[1].Name)
+	assert.Equal(t, "Before upgrade", snapshots[1].Description)
+	assert.Equal(t, "snap2", snapshots[2].Name)
+}
+
+func TestVirtualMachine_NewSnapshot(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.NewSnapshot(ctx, "test-snapshot")
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmsnapshot", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_SnapshotRollback(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.SnapshotRollback(ctx, "snap1")
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmrollback", task.Type)
+	assert.Equal(t, "100", task.ID)
+}

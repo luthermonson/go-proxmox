@@ -335,4 +335,311 @@ func nodes() {
         }
     ]
 }`)
+
+	// GET /nodes/{node}/report - Get node report
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/report$").
+		Reply(200).
+		JSON(`{
+    "data": "pve-manager: 8.4-1\nkernel: 6.8.0-1-pve\nproxmox-ve: 8.4-1\nqemu-server: 8.4-1\nlxc-pve: 5.0.0-1"
+}`)
+
+	// POST /nodes/{node}/termproxy - Create terminal proxy
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/termproxy$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "port": 5900,
+        "ticket": "PVE:termproxy:12345678",
+        "upid": "UPID:node1:00001234:00005678:12345678:termproxy:root@pam:",
+        "user": "root@pam"
+    }
+}`)
+
+	// GET /nodes/{node}/aplinfo - List appliances
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/aplinfo$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "template": "ubuntu-22.04-standard",
+            "type": "lxc",
+            "package": "ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
+            "os": "ubuntu",
+            "version": "22.04",
+            "headline": "Ubuntu 22.04 LTS",
+            "infopage": "https://pve.proxmox.com/wiki/Linux_Container",
+            "description": "Ubuntu 22.04 LTS (Jammy Jellyfish) standard system",
+            "section": "system"
+        },
+        {
+            "template": "debian-12-standard",
+            "type": "lxc",
+            "package": "debian-12-standard_12.0-1_amd64.tar.zst",
+            "os": "debian",
+            "version": "12.0",
+            "headline": "Debian 12 (Bookworm)",
+            "infopage": "https://pve.proxmox.com/wiki/Linux_Container",
+            "description": "Debian 12 (Bookworm) standard system",
+            "section": "system"
+        }
+    ]
+}`)
+
+	// POST /nodes/{node}/aplinfo - Download appliance
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/aplinfo$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:download:root@pam:"
+}`)
+
+	// GET /nodes/{node}/storage - List storages
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "storage": "local",
+            "content": "images,rootdir,vztmpl,backup,iso,snippets",
+            "type": "dir",
+            "active": 1,
+            "avail": 50000000000,
+            "used": 10000000000,
+            "total": 60000000000,
+            "enabled": 1,
+            "shared": 0
+        },
+        {
+            "storage": "local-lvm",
+            "content": "images,rootdir",
+            "type": "lvmthin",
+            "active": 1,
+            "avail": 100000000000,
+            "used": 20000000000,
+            "total": 120000000000,
+            "enabled": 1,
+            "shared": 0
+        }
+    ]
+}`)
+
+	// GET /nodes/{node}/storage/{storage}/status - Get storage status
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/status$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "storage": "local",
+        "content": "images,rootdir,vztmpl,backup,iso,snippets",
+        "type": "dir",
+        "active": 1,
+        "avail": 50000000000,
+        "used": 10000000000,
+        "total": 60000000000,
+        "enabled": 1,
+        "shared": 0
+    }
+}`)
+
+	// GET /nodes/{node}/storage/{storage}/content - List storage content
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content").
+		MatchParam("content", "vztmpl").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "volid": "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
+            "content": "vztmpl",
+            "format": "tgz",
+            "size": 123456789,
+            "ctime": 1234567890
+        },
+        {
+            "volid": "local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst",
+            "content": "vztmpl",
+            "format": "tgz",
+            "size": 98765432,
+            "ctime": 1234567890
+        }
+    ]
+}`)
+
+	// POST /nodes/{node}/storage/{storage}/download-url - Download from URL
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local/download-url$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:download:root@pam:"
+}`)
+
+	// GET /nodes/{node}/firewall/options - Get firewall options
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/firewall/options$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "enable": 1,
+        "log_level_in": "info",
+        "log_level_out": "info",
+        "ndp": 1,
+        "nf_conntrack_allow_invalid": 0,
+        "nf_conntrack_max": 262144,
+        "nf_conntrack_tcp_timeout_established": 432000,
+        "nosmurfs": 1,
+        "protection_synflood": 0,
+        "protection_synflood_burst": 1000,
+        "protection_synflood_rate": 200,
+        "smurf_log_level": "info",
+        "tcp_flags_log_level": "nolog",
+        "tcpflags": 0
+    }
+}`)
+
+	// PUT /nodes/{node}/firewall/options - Update firewall options
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/firewall/options$").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	// GET /nodes/{node}/firewall/rules - Get firewall rules
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/firewall/rules$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "pos": 0,
+            "type": "in",
+            "action": "ACCEPT",
+            "enable": 1,
+            "iface": "vmbr0",
+            "source": "192.168.1.0/24",
+            "dest": "192.168.1.100",
+            "proto": "tcp",
+            "dport": "22",
+            "comment": "Allow SSH from LAN"
+        },
+        {
+            "pos": 1,
+            "type": "in",
+            "action": "DROP",
+            "enable": 1,
+            "proto": "tcp",
+            "dport": "22",
+            "comment": "Block all other SSH"
+        }
+    ]
+}`)
+
+	// POST /nodes/{node}/firewall/rules - Create firewall rule
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/firewall/rules$").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	// PUT /nodes/{node}/firewall/rules/{pos} - Update firewall rule
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/firewall/rules/[0-9]+$").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	// DELETE /nodes/{node}/firewall/rules/{pos} - Delete firewall rule
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/firewall/rules/[0-9]+$").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	// GET /nodes/{node}/certificates/info - Get certificates
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/certificates/info$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "filename": "/etc/pve/nodes/node1/pve-ssl.pem",
+            "fingerprint": "80:D4:F2:DF:64:95:CD:8D:A0:82:82:AC:48:BA:C0:7A:1B:6B:87:8B:FE:B9:83:1C:95:4E:79:58:77:99:69:F5",
+            "issuer": "Proxmox Virtual Environment",
+            "notafter": 1735689600,
+            "notbefore": 1704153600,
+            "subject": "node1.example.com",
+            "san": [
+                "DNS:node1",
+                "DNS:node1.example.com",
+                "IP:192.168.1.100"
+            ],
+            "pem": "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAKZx...\n-----END CERTIFICATE-----"
+        }
+    ]
+}`)
+
+	// POST /nodes/{node}/certificates/custom - Upload custom certificate
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/certificates/custom$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "filename": "/etc/pve/nodes/node1/pve-ssl.pem",
+        "fingerprint": "AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90",
+        "issuer": "Custom CA",
+        "notafter": 1767225600,
+        "notbefore": 1735689600,
+        "subject": "node1.example.com"
+    }
+}`)
+
+	// DELETE /nodes/{node}/certificates/custom - Delete custom certificate
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/certificates/custom$").
+		Reply(200).
+		JSON(`{
+    "data": null
+}`)
+
+	// POST /nodes/{node}/vzdump - Backup VMs
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/vzdump$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:vzdump:root@pam:"
+}`)
+
+	// GET /nodes/{node}/vzdump/extractconfig - Extract backup config
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/vzdump/extractconfig").
+		Reply(200).
+		JSON(`{
+    "data": "cores: 2\nmemory: 2048\nostype: debian\nrootfs: local-lvm:vm-100-disk-0,size=8G\nnet0: name=eth0,bridge=vmbr0,ip=dhcp"
+}`)
 }
