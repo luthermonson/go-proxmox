@@ -260,11 +260,7 @@ func TestNode_FirewallOptionGet(t *testing.T) {
 	assert.Nil(t, err)
 
 	options, err := node.FirewallOptionGet(ctx)
-	// Note: FirewallOptionGet has a bug where it doesn't initialize the pointer
-	// This test will pass when that bug is fixed
-	if err != nil {
-		t.Skip("FirewallOptionGet returns error - likely due to nil pointer bug in implementation")
-	}
+	assert.Nil(t, err)
 	assert.NotNil(t, options)
 }
 

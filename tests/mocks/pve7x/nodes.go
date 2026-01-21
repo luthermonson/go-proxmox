@@ -1254,20 +1254,20 @@ func nodes() {
 		Reply(200).
 		JSON(`{
     "data": {
-        "enable": 1,
+        "enable": true,
         "log_level_in": "info",
         "log_level_out": "info",
-        "ndp": 1,
-        "nf_conntrack_allow_invalid": 0,
+        "ndp": true,
+        "nf_conntrack_allow_invalid": false,
         "nf_conntrack_max": 262144,
         "nf_conntrack_tcp_timeout_established": 432000,
-        "nosmurfs": 1,
-        "protection_synflood": 0,
+        "nosmurfs": true,
+        "protection_synflood": false,
         "protection_synflood_burst": 1000,
         "protection_synflood_rate": 200,
         "smurf_log_level": "info",
         "tcp_flags_log_level": "nolog",
-        "tcpflags": 0
+        "tcpflags": false
     }
 }`)
 
