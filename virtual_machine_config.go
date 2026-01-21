@@ -82,7 +82,7 @@ func (vmc *VirtualMachineConfig) MergeSerials() map[string]string {
 
 func (vmc *VirtualMachineConfig) MergeUSBs() map[string]string {
 	if nil == vmc.USBs {
-		vmc.HostPCIs = vmc.mergeIndexedDevices("USB")
+		vmc.USBs = vmc.mergeIndexedDevices("USB")
 	}
 	return vmc.USBs
 }
@@ -96,7 +96,7 @@ func (vmc *VirtualMachineConfig) MergeHostPCIs() map[string]string {
 
 func (vmc *VirtualMachineConfig) MergeNumas() map[string]string {
 	if nil == vmc.Numas {
-		vmc.HostPCIs = vmc.mergeIndexedDevices("Numa")
+		vmc.Numas = vmc.mergeIndexedDevices("Numa")
 	}
 	return vmc.Numas
 }
