@@ -1,6 +1,6 @@
 module github.com/luthermonson/go-proxmox
 
-go 1.22
+go 1.25
 
 require (
 	github.com/buger/goterm v1.0.4
