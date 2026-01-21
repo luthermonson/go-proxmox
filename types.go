@@ -1090,40 +1090,40 @@ func (s *Storage) UnmarshalJSON(b []byte) error {
 		Used         json.Number `json:"used,omitempty"`
 		Total        json.Number `json:"total,omitempty"`
 	}{}
-	
+
 	// Decode with UseNumber to preserve precision
 	decoder := json.NewDecoder(bytes.NewReader(b))
 	decoder.UseNumber()
 	if err := decoder.Decode(&aux); err != nil {
 		return err
 	}
-	
+
 	// Copy string fields
 	s.Node = aux.Node
 	s.Name = aux.Name
 	s.Storage = aux.Name // Storage field gets same value as Name
 	s.Content = aux.Content
 	s.Type = aux.Type
-	
+
 	// Convert json.Number values to appropriate types
 	if aux.Enabled != "" {
 		if val, err := aux.Enabled.Int64(); err == nil {
 			s.Enabled = int(val)
 		}
 	}
-	
+
 	if aux.Active != "" {
 		if val, err := aux.Active.Int64(); err == nil {
 			s.Active = int(val)
 		}
 	}
-	
+
 	if aux.Shared != "" {
 		if val, err := aux.Shared.Int64(); err == nil {
 			s.Shared = int(val)
 		}
 	}
-	
+
 	if aux.Avail != "" {
 		// Try int64 first, then fall back to float64 for scientific notation
 		if val, err := aux.Avail.Int64(); err == nil {
@@ -1132,7 +1132,7 @@ func (s *Storage) UnmarshalJSON(b []byte) error {
 			s.Avail = uint64(val)
 		}
 	}
-	
+
 	if aux.Used != "" {
 		// Try int64 first, then fall back to float64 for scientific notation
 		if val, err := aux.Used.Int64(); err == nil {
@@ -1141,7 +1141,7 @@ func (s *Storage) UnmarshalJSON(b []byte) error {
 			s.Used = uint64(val)
 		}
 	}
-	
+
 	if aux.Total != "" {
 		// Try int64 first, then fall back to float64 for scientific notation
 		if val, err := aux.Total.Int64(); err == nil {
@@ -1150,13 +1150,13 @@ func (s *Storage) UnmarshalJSON(b []byte) error {
 			s.Total = uint64(val)
 		}
 	}
-	
+
 	if aux.UsedFraction != "" {
 		if val, err := aux.UsedFraction.Float64(); err == nil {
 			s.UsedFraction = val
 		}
 	}
-	
+
 	return nil
 }
 
