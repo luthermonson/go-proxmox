@@ -6,4 +6,6 @@ func Load() {
 	nodes()
 	cluster()
 	pool()
+	storage()
+	tasks()
 }
