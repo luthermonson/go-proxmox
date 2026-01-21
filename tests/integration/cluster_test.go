@@ -23,6 +23,8 @@ func TestClusterResources(t *testing.T) {
 
 	// Check a call without parameters
 	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
 	rs, err := cluster.Resources(ctx)
 	assert.Nil(t, err)
 	assert.GreaterOrEqual(t, len(rs), 1)
@@ -60,17 +62,17 @@ func TestClusterResources(t *testing.T) {
 	}
 
 	// Check a call with more than one parameter
-	rs, err = cluster.Resources(ctx, "bad", "call")
+	_, err = cluster.Resources(ctx, "bad", "call")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "value 'badcall' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is not a single word
-	rs, err = cluster.Resources(ctx, "bad filter")
+	_, err = cluster.Resources(ctx, "bad filter")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "value 'badfilter' does not have a value in the enumeration 'vm, storage, node, sdn'")
 
 	// Check a call with a string parameter which is a word
-	rs, err = cluster.Resources(ctx, "unknownword")
+	_, err = cluster.Resources(ctx, "unknownword")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "bad request: 400 Parameter verification failed")
 }

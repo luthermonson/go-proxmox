@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luthermonson/go-proxmox"
+	proxmox "github.com/luthermonson/go-proxmox"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -123,7 +123,9 @@ func TestNode_TermProxy(t *testing.T) {
 	assert.Nil(t, err)
 	send, recv, errs, close, err := td.node.TermWebSocket(term)
 	assert.Nil(t, err)
-	defer close()
+	defer func() {
+		assert.NoError(t, close())
+	}()
 
 	go func() {
 		for {
@@ -160,7 +162,9 @@ func TestNode_VncProxy(t *testing.T) {
 
 	send, recv, errs, close, err := vm.VNCWebSocket(vnc)
 	assert.Nil(t, err)
-	defer close()
+	defer func() {
+		assert.NoError(t, close())
+	}()
 
 	go func() {
 		for {

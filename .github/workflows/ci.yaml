@@ -11,7 +11,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.22"
+          go-version: "1.25"
       - name: Continuous Integration
         uses: magefile/mage-action@v2
         with:

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	GolangCILintVersion = "v1.50.1"
+	GolangCILintVersion = "v2.8.0"
 )
 
 // Dependencies install all dependencies
@@ -22,6 +22,6 @@ func Dependencies() error {
 // Golangcilint install golangci-lint
 func Golangcilint() error {
 	fmt.Println("Installing GolangCI Lint...")
-	cmd := exec.Command("go", "install", "github.com/golangci/golangci-lint/cmd/golangci-lint@"+GolangCILintVersion)
+	cmd := exec.Command("go", "install", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@"+GolangCILintVersion)
 	return cmd.Run()
 }
