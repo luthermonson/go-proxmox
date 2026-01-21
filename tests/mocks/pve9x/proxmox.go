@@ -9,4 +9,6 @@ func Load() {
 	ceph()
 	containers()
 	virtualMachines()
+	storage()
+	tasks()
 }

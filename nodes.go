@@ -278,7 +278,7 @@ func (n *Node) findStorageByContent(ctx context.Context, content string) (storag
 }
 
 func (n *Node) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallNodeOption, err error) {
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption)
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/options", n.Name), &firewallOption)
 	return
 }
 
