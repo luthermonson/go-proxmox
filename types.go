@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -1070,6 +1071,103 @@ type Storage struct {
 	Used         uint64
 	Total        uint64
 	Storage      string
+}
+
+// UnmarshalJSON implements custom unmarshaling for Storage to handle large values
+// that may be returned as floats in scientific notation (e.g., values > 1PB)
+func (s *Storage) UnmarshalJSON(b []byte) error {
+	// Temporary struct to capture raw JSON with json.Number for numeric fields
+	aux := &struct {
+		Node         string      `json:"node,omitempty"`
+		Name         string      `json:"storage,omitempty"`
+		Enabled      json.Number `json:"enabled,omitempty"`
+		UsedFraction json.Number `json:"used_fraction,omitempty"`
+		Active       json.Number `json:"active,omitempty"`
+		Content      string      `json:"content,omitempty"`
+		Shared       json.Number `json:"shared,omitempty"`
+		Avail        json.Number `json:"avail,omitempty"`
+		Type         string      `json:"type,omitempty"`
+		Used         json.Number `json:"used,omitempty"`
+		Total        json.Number `json:"total,omitempty"`
+	}{}
+
+	// Decode with UseNumber to preserve precision
+	decoder := json.NewDecoder(bytes.NewReader(b))
+	decoder.UseNumber()
+	if err := decoder.Decode(&aux); err != nil {
+		return err
+	}
+
+	// Copy string fields
+	s.Node = aux.Node
+	s.Name = aux.Name
+	s.Storage = aux.Name // Storage field gets same value as Name
+	s.Content = aux.Content
+	s.Type = aux.Type
+
+	// Convert json.Number values to appropriate types
+	if aux.Enabled != "" {
+		if val, err := aux.Enabled.Int64(); err == nil {
+			s.Enabled = int(val)
+		}
+	}
+
+	if aux.Active != "" {
+		if val, err := aux.Active.Int64(); err == nil {
+			s.Active = int(val)
+		}
+	}
+
+	if aux.Shared != "" {
+		if val, err := aux.Shared.Int64(); err == nil {
+			s.Shared = int(val)
+		}
+	}
+
+	if aux.Avail != "" {
+		// Try int64 first, then fall back to float64 for scientific notation
+		if val, err := aux.Avail.Int64(); err == nil {
+			s.Avail = uint64(val)
+		} else if val, err := aux.Avail.Float64(); err == nil {
+			s.Avail = uint64(val)
+		}
+	}
+
+	if aux.Used != "" {
+		// Try int64 first, then fall back to float64 for scientific notation
+		if val, err := aux.Used.Int64(); err == nil {
+			s.Used = uint64(val)
+		} else if val, err := aux.Used.Float64(); err == nil {
+			s.Used = uint64(val)
+		}
+	}
+
+	if aux.Total != "" {
+		// Try int64 first, then fall back to float64 for scientific notation
+		if val, err := aux.Total.Int64(); err == nil {
+			s.Total = uint64(val)
+		} else if val, err := aux.Total.Float64(); err == nil {
+			s.Total = uint64(val)
+		}
+	}
+
+	if aux.UsedFraction != "" {
+		if val, err := aux.UsedFraction.Float64(); err == nil {
+			s.UsedFraction = val
+		}
+	}
+
+	return nil
+}
+
+// UnmarshalJSON implements custom unmarshaling for Storages slice
+func (storages *Storages) UnmarshalJSON(b []byte) error {
+	var items []*Storage
+	if err := json.Unmarshal(b, &items); err != nil {
+		return err
+	}
+	*storages = items
+	return nil
 }
 
 type ClusterStorages []*ClusterStorage

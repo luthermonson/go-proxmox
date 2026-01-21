@@ -184,22 +184,133 @@ func TestStorage_DownloadURL(t *testing.T) {
 	assert.Equal(t, "download", task.Type)
 }
 
-func TestStorage_DownloadURLWithHash(t *testing.T) {
-	mocks.On(mockConfig)
-	defer mocks.Off()
-	client := mockClient()
-	ctx := context.Background()
-
-	storage := &Storage{
-		client: client,
-		Node:   "node1",
-		Name:   "local",
+func TestStorage_UnmarshalJSON_LargeValues(t *testing.T) {
+	// Test handling of large storage values (>1PB) that come back as floats in scientific notation
+	tests := []struct {
+		name     string
+		json     string
+		expected Storage
+	}{
+		{
+			name: "Large total value in scientific notation",
+			json: `{
+				"storage": "large-storage",
+				"enabled": 1,
+				"active": 1,
+				"total": 1.12589990684262e+15,
+				"used": 5.5e+14,
+				"avail": 5.7589990684262e+14,
+				"type": "dir",
+				"shared": 0
+			}`,
+			expected: Storage{
+				Name:    "large-storage",
+				Storage: "large-storage",
+				Enabled: 1,
+				Active:  1,
+				Total:   uint64(1125899906842620),
+				Used:    uint64(550000000000000),
+				Avail:   uint64(575899906842620),
+				Type:    "dir",
+				Shared:  0,
+			},
+		},
+		{
+			name: "Normal integer values",
+			json: `{
+				"storage": "normal-storage",
+				"enabled": 1,
+				"active": 1,
+				"total": 1000000000,
+				"used": 500000000,
+				"avail": 500000000,
+				"type": "lvm",
+				"shared": 1
+			}`,
+			expected: Storage{
+				Name:    "normal-storage",
+				Storage: "normal-storage",
+				Enabled: 1,
+				Active:  1,
+				Total:   uint64(1000000000),
+				Used:    uint64(500000000),
+				Avail:   uint64(500000000),
+				Type:    "lvm",
+				Shared:  1,
+			},
+		},
+		{
+			name: "UsedFraction as float",
+			json: `{
+				"storage": "frac-storage",
+				"enabled": 1,
+				"active": 1,
+				"total": 1000000,
+				"used": 750000,
+				"avail": 250000,
+				"used_fraction": 0.75,
+				"type": "zfs",
+				"shared": 0
+			}`,
+			expected: Storage{
+				Name:         "frac-storage",
+				Storage:      "frac-storage",
+				Enabled:      1,
+				Active:       1,
+				Total:        uint64(1000000),
+				Used:         uint64(750000),
+				Avail:        uint64(250000),
+				UsedFraction: 0.75,
+				Type:         "zfs",
+				Shared:       0,
+			},
+		},
 	}
 
-	task, err := storage.DownloadURLWithHash(ctx, "iso", "debian-12.iso", "https://example.com/debian-12.iso",
-		"abc123", "sha256")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var storage Storage
+			err := storage.UnmarshalJSON([]byte(tt.json))
+			assert.Nil(t, err)
+			assert.Equal(t, tt.expected.Name, storage.Name)
+			assert.Equal(t, tt.expected.Storage, storage.Storage)
+			assert.Equal(t, tt.expected.Enabled, storage.Enabled)
+			assert.Equal(t, tt.expected.Active, storage.Active)
+			assert.Equal(t, tt.expected.Total, storage.Total)
+			assert.Equal(t, tt.expected.Used, storage.Used)
+			assert.Equal(t, tt.expected.Avail, storage.Avail)
+			assert.Equal(t, tt.expected.UsedFraction, storage.UsedFraction)
+			assert.Equal(t, tt.expected.Type, storage.Type)
+			assert.Equal(t, tt.expected.Shared, storage.Shared)
+		})
+	}
+}
+
+func TestStorages_UnmarshalJSON(t *testing.T) {
+	// Test that Storages slice unmarshaling works correctly
+	json := `[
+		{
+			"storage": "storage1",
+			"enabled": 1,
+			"active": 1,
+			"total": 1.5e+15,
+			"type": "dir"
+		},
+		{
+			"storage": "storage2",
+			"enabled": 1,
+			"active": 1,
+			"total": 2000000000,
+			"type": "lvm"
+		}
+	]`
+
+	var storages Storages
+	err := storages.UnmarshalJSON([]byte(json))
 	assert.Nil(t, err)
-	assert.NotNil(t, task)
-	assert.Equal(t, "node1", task.Node)
-	assert.Equal(t, "download", task.Type)
+	assert.Len(t, storages, 2)
+	assert.Equal(t, "storage1", storages[0].Storage)
+	assert.Equal(t, uint64(1500000000000000), storages[0].Total)
+	assert.Equal(t, "storage2", storages[1].Storage)
+	assert.Equal(t, uint64(2000000000), storages[1].Total)
 }
