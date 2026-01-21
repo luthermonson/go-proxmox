@@ -91,6 +91,17 @@ func TestClient_Version6(t *testing.T) {
 	assert.Equal(t, "6.6", v.Release)
 }
 
+func TestClient_Version9(t *testing.T) {
+	mocks.ProxmoxVE9x(mockConfig)
+	defer mocks.Off()
+
+	v, err := mockClient().Version(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, "9.1-1", v.Version)
+	assert.Equal(t, "9a1b2c3d", v.RepoID)
+	assert.Equal(t, "9.1", v.Release)
+}
+
 func TestClientMethods(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -101,19 +112,19 @@ func TestClientMethods(t *testing.T) {
 	var v Version
 	err = client.Get(ctx, "/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "8.4", v.Release)
+	assert.Equal(t, "9.1", v.Release)
 
 	err = client.Post(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "8.4", v.Release)
+	assert.Equal(t, "9.1", v.Release)
 
 	err = client.Put(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "8.4", v.Release)
+	assert.Equal(t, "9.1", v.Release)
 
 	err = client.Delete(ctx, "/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "8.4", v.Release)
+	assert.Equal(t, "9.1", v.Release)
 }
 
 func TestClient_handleResponse(t *testing.T) {

@@ -24,7 +24,7 @@ func TestNetwork(t *testing.T) {
 }
 
 func TestNode1Networks(t *testing.T) {
-	mocks.ProxmoxVE7x(mockConfig)
+	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
 	ctx := context.Background()
@@ -35,7 +35,7 @@ func TestNode1Networks(t *testing.T) {
 
 	networks, err := node.Networks(ctx)
 	assert.Nil(t, err)
-	assert.Len(t, networks, 2)
+	assert.Len(t, networks, 5)
 }
 
 func TestNode2Networks(t *testing.T) {
