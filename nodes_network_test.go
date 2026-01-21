@@ -24,7 +24,7 @@ func TestNetwork(t *testing.T) {
 }
 
 func TestNode1Networks(t *testing.T) {
-	mocks.On(mockConfig)
+	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
 	ctx := context.Background()

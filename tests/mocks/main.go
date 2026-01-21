@@ -9,7 +9,7 @@ import (
 )
 
 func On(c config.Config) {
-	ProxmoxVE7x(c) // default pve7
+	ProxmoxVE8x(c) // default pve8
 }
 
 func Off() {

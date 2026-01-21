@@ -101,19 +101,19 @@ func TestClientMethods(t *testing.T) {
 	var v Version
 	err = client.Get(ctx, "/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "7.7", v.Release)
+	assert.Equal(t, "8.4", v.Release)
 
 	err = client.Post(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "7.7", v.Release)
+	assert.Equal(t, "8.4", v.Release)
 
 	err = client.Put(ctx, "/version", struct{}{}, &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "7.7", v.Release)
+	assert.Equal(t, "8.4", v.Release)
 
 	err = client.Delete(ctx, "/version", &v)
 	assert.Nil(t, err)
-	assert.Equal(t, "7.7", v.Release)
+	assert.Equal(t, "8.4", v.Release)
 }
 
 func TestClient_handleResponse(t *testing.T) {

@@ -36,7 +36,7 @@ func TestClient_Node(t *testing.T) {
 
 	v, err := node.Version(ctx)
 	assert.Nil(t, err)
-	assert.Equal(t, "7.4", v.Release)
+	assert.Equal(t, "8.4", v.Release)
 
 	node, err = client.Node(ctx, "doesntexist")
 	assert.NotNil(t, err)
