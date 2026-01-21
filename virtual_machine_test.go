@@ -140,3 +140,176 @@ func TestVirtualMachineStateWithoutQMPStatus(t *testing.T) {
 	assert.True(t, hibernatedVM.IsHibernated())
 	assert.False(t, hibernatedVM.IsRunning())
 }
+
+
+func TestVirtualMachine_Config(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	// Config() with options updates the config and returns a task
+	task, err := vm.Config(ctx, VirtualMachineOption{Name: "tags", Value: "test;demo"})
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmconfig", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Start(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Start(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmstart", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Stop(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Stop(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmstop", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Shutdown(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Shutdown(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmshutdown", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Reboot(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Reboot(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmreboot", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Reset(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Reset(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmreset", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Pause(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Pause(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmsuspend", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Resume(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	task, err := vm.Resume(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmresume", task.Type)
+	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Delete(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   999,
+		Node:   "node1",
+	}
+
+	task, err := vm.Delete(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmdestroy", task.Type)
+	assert.Equal(t, "999", task.ID)
+}

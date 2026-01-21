@@ -637,4 +637,99 @@ func virtualMachines() {
 		JSON(`{
     "data": null
 }`)
+
+	// GET /nodes/{node}/qemu/{vmid}/config - Get VM config
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "digest": "abc123def456",
+        "name": "test-vm",
+        "vmid": 100,
+        "cores": 2,
+        "memory": 2048,
+        "sockets": 1,
+        "ostype": "l26",
+        "boot": "order=scsi0;ide2;net0",
+        "scsi0": "local-lvm:vm-100-disk-0,size=32G",
+        "ide2": "local:iso/debian-12.iso,media=cdrom",
+        "net0": "virtio=BC:24:11:2E:C5:4A,bridge=vmbr0",
+        "scsihw": "virtio-scsi-pci",
+        "tags": "production;webserver"
+    }
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/config - Update VM config (for tag management)
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/config$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000004:00000004:00000004:qmconfig:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/start - Start VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/start$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000005:00000005:00000005:qmstart:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/stop - Stop VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/stop$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000006:00000006:00000006:qmstop:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/shutdown - Shutdown VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/shutdown$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000007:00000007:00000007:qmshutdown:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/reboot - Reboot VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/reboot$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000008:00000008:00000008:qmreboot:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/reset - Reset VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/reset$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000009:00000009:00000009:qmreset:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/suspend - Pause VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/suspend$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000A:0000000A:0000000A:qmsuspend:100:root@pam:"
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/status/resume - Resume VM
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/100/status/resume$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000B:0000000B:0000000B:qmresume:100:root@pam:"
+}`)
+
+	// DELETE /nodes/{node}/qemu/{vmid} - Delete VM
+	gock.New(config.C.URI).
+		Delete("^/nodes/node1/qemu/999$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:0000000C:0000000C:0000000C:qmdestroy:999:root@pam:"
+}`)
 }
