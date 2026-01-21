@@ -320,7 +320,8 @@ func TestContainer_AddTag(t *testing.T) {
 	container, err := node.Container(ctx, 101)
 	assert.Nil(t, err)
 
-	container.AddTag(ctx, "newTag")
+	_, err = container.AddTag(ctx, "newTag")
+	assert.Nil(t, err)
 	assert.True(t, container.HasTag("newTag"))
 }
 
@@ -351,6 +352,7 @@ func TestContainer_RemoveTag(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.True(t, container.HasTag("tag1"))
-	container.RemoveTag(ctx, "tag1")
+	_, err = container.RemoveTag(ctx, "tag1")
+	assert.Nil(t, err)
 	assert.False(t, container.HasTag("tag1"))
 }

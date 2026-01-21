@@ -63,7 +63,7 @@ func (cl *Cluster) Resources(ctx context.Context, filters ...string) (rs Cluster
 
 	// filters are variadic because they're optional, munging everything passed into one big string to make
 	// a good request and the api will error out if there's an issue
-	if f := strings.Replace(strings.Join(filters, ""), " ", "", -1); f != "" {
+	if f := strings.ReplaceAll(strings.Join(filters, ""), " ", ""); f != "" {
 		params := url.Values{}
 		params.Add("type", f)
 		u.RawQuery = params.Encode()

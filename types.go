@@ -1,7 +1,6 @@
 package proxmox
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -1136,7 +1135,7 @@ func (it *IsTemplate) UnmarshalJSON(b []byte) error {
 type StringOrInt int
 
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
-	str := strings.Replace(string(b), "\"", "", -1)
+	str := strings.ReplaceAll(string(b), "\"", "")
 	if str == "" {
 		*d = StringOrInt(0)
 		return nil
@@ -1158,7 +1157,7 @@ func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 type StringOrUint64 uint64
 
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
-	str := strings.Replace(string(b), "\"", "", -1)
+	str := strings.ReplaceAll(string(b), "\"", "")
 	if str == "" {
 		*d = StringOrUint64(0)
 		return nil
@@ -1181,7 +1180,7 @@ func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 type StringOrFloat64 float64
 
 func (d *StringOrFloat64) UnmarshalJSON(b []byte) error {
-	str := strings.Replace(string(b), "\"", "", -1)
+	str := strings.ReplaceAll(string(b), "\"", "")
 	if str == "" {
 		*d = StringOrFloat64(0)
 		return nil
@@ -1367,7 +1366,6 @@ type Snapshot struct {
 type Pools []*Pool
 type Pool struct {
 	client  *Client
-	context context.Context
 	PoolID  string            `json:"poolid,omitempty"`
 	Comment string            `json:"comment,omitempty"`
 	Members []ClusterResource `json:"members,omitempty"`
