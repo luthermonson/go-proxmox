@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
