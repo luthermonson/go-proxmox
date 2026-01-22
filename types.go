@@ -1366,6 +1366,10 @@ type AgentNetworkIPAddress struct {
 	MacAddress    string `json:"mac-address"`
 }
 
+type AgentHostName struct {
+	HostName string `json:"host-name"`
+}
+
 type AgentNetworkIface struct {
 	Name            string                   `json:"name"`
 	HardwareAddress string                   `json:"hardware-address"`
