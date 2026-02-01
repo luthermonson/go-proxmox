@@ -41,6 +41,10 @@ func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
 	return NewTask(upid, c.client), nil
 }
 
+func (c *Container) Ping(ctx context.Context) error {
+	return c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", c.Node, c.VMID), &c)
+}
+
 // Config sets ContainerOptions for Container
 // see https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/lxc/{vmid}/config for available attributes
 func (c *Container) Config(ctx context.Context, options ...ContainerOption) (*Task, error) {
