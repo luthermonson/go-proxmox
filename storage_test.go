@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
@@ -313,4 +314,32 @@ func TestStorages_UnmarshalJSON(t *testing.T) {
 	assert.Equal(t, uint64(1500000000000000), storages[0].Total)
 	assert.Equal(t, "storage2", storages[1].Storage)
 	assert.Equal(t, uint64(2000000000), storages[1].Total)
+}
+
+func TestStorage_MarshalUnmarshalRoundTrip(t *testing.T) {
+	// Verify that marshaling a Storage struct and unmarshaling the
+	// result maintains consistency between Name and Storage fields.
+
+	original := Storage{
+		Name:    "test-storage",
+		Content: "iso",
+		Enabled: 1,
+	}
+
+	data, err := json.Marshal(original)
+	assert.Nil(t, err)
+
+	// Verify the JSON contains the expected "storage" field from Name
+	var jsonData map[string]interface{}
+	err = json.Unmarshal(data, &jsonData)
+	assert.Nil(t, err)
+	assert.Equal(t, "test-storage", jsonData["storage"], "JSON should contain storage field from Name")
+
+	var decoded Storage
+	err = json.Unmarshal(data, &decoded)
+	assert.Nil(t, err)
+
+	// Both Name and Storage fields should have the same value after unmarshaling
+	assert.Equal(t, "test-storage", decoded.Name, "Name field should be preserved")
+	assert.Equal(t, decoded.Name, decoded.Storage, "Name and Storage fields should be identical")
 }
