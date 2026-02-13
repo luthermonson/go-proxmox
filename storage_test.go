@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
@@ -288,7 +289,7 @@ func TestStorage_UnmarshalJSON_LargeValues(t *testing.T) {
 
 func TestStorages_UnmarshalJSON(t *testing.T) {
 	// Test that Storages slice unmarshaling works correctly
-	json := `[
+	jsonStr := `[
 		{
 			"storage": "storage1",
 			"enabled": 1,
@@ -306,11 +307,37 @@ func TestStorages_UnmarshalJSON(t *testing.T) {
 	]`
 
 	var storages Storages
-	err := storages.UnmarshalJSON([]byte(json))
+	err := storages.UnmarshalJSON([]byte(jsonStr))
 	assert.Nil(t, err)
 	assert.Len(t, storages, 2)
 	assert.Equal(t, "storage1", storages[0].Storage)
 	assert.Equal(t, uint64(1500000000000000), storages[0].Total)
 	assert.Equal(t, "storage2", storages[1].Storage)
 	assert.Equal(t, uint64(2000000000), storages[1].Total)
+}
+
+func TestStorage_MarshalUnmarshalRoundTrip(t *testing.T) {
+	// Test that marshalling and unmarshalling preserves the Name field
+	// This tests the bug reported in issue #241 where the Storage field
+	// (which marshals to "Storage" in JSON) would overwrite the Name field
+	// (which marshals to "storage" in JSON) during round-trip.
+	original := Storage{
+		Name:    "iso",
+		Content: "iso",
+		Enabled: 1,
+	}
+
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(original)
+	assert.Nil(t, err)
+
+	// Unmarshal back to Storage
+	var unmarshalled Storage
+	err = json.Unmarshal(jsonBytes, &unmarshalled)
+	assert.Nil(t, err)
+
+	// The Name field should be preserved after round-trip
+	assert.Equal(t, original.Name, unmarshalled.Name, "Name field should be preserved after marshal/unmarshal round-trip")
+	assert.Equal(t, original.Content, unmarshalled.Content)
+	assert.Equal(t, original.Enabled, unmarshalled.Enabled)
 }

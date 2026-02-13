@@ -1069,7 +1069,7 @@ type Storage struct {
 	Type         string
 	Used         uint64
 	Total        uint64
-	Storage      string
+	Storage      string `json:"-"` // Deprecated: Use Name instead. Excluded from JSON to prevent marshal/unmarshal issues.
 }
 
 // UnmarshalJSON implements custom unmarshaling for Storage to handle large values
