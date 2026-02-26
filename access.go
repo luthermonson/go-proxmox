@@ -122,7 +122,7 @@ func (d *Domain) Sync(ctx context.Context, options DomainSyncOptions) error {
 	if d.Realm == "" {
 		return errors.New("realm can not be empty")
 	}
-	return d.client.Post(ctx, fmt.Sprintf("/access/domains/%s", d.Realm), options, nil)
+	return d.client.Post(ctx, fmt.Sprintf("/access/domains/%s/sync", d.Realm), options, nil)
 }
 
 // NewGroup makes a new group, comment is option and can be left empty
