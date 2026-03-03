@@ -1,9 +1,12 @@
 package proxmox
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/luthermonson/go-proxmox/tests/mocks"
 )
 
 func TestVirtualMachineConfig_MergeIDEs(t *testing.T) {
@@ -209,7 +212,7 @@ func TestVirtualMachineConfig_MergeIndexedDevices_IgnoresNonNumeric(t *testing.T
 	// This tests that fields like SCSIHW (which starts with SCSI but has non-numeric suffix)
 	// are correctly ignored by the merge function
 	config := &VirtualMachineConfig{
-		SCSI0:   "local-lvm:vm-100-disk-0,size=32G",
+		SCSI0:  "local-lvm:vm-100-disk-0,size=32G",
 		SCSIHW: "virtio-scsi-pci",
 	}
 
@@ -219,4 +222,82 @@ func TestVirtualMachineConfig_MergeIndexedDevices_IgnoresNonNumeric(t *testing.T
 	assert.Equal(t, "local-lvm:vm-100-disk-0,size=32G", scsis["scsi0"])
 	_, hasSCSIHW := scsis["scsihw"]
 	assert.False(t, hasSCSIHW, "SCSIHW should not be included in merge")
+}
+
+func TestNode_VirtualMachineConfig_AllMergedMapsPopulated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	vm, err := node.VirtualMachine(ctx, 101)
+	assert.Nil(t, err)
+	assert.NotNil(t, vm)
+	assert.NotNil(t, vm.VirtualMachineConfig)
+
+	cfg := vm.VirtualMachineConfig
+
+	// IDEs
+	assert.NotNil(t, cfg.IDEs)
+	assert.Len(t, cfg.IDEs, 2)
+	assert.Equal(t, "local:100/vm-101-disk-0.qcow2", cfg.IDEs["ide0"])
+	assert.Equal(t, "local:iso/debian-12.iso,media=cdrom", cfg.IDEs["ide2"])
+
+	// SCSIs
+	assert.NotNil(t, cfg.SCSIs)
+	assert.Len(t, cfg.SCSIs, 1)
+	assert.Equal(t, "local-lvm:vm-101-disk-0,size=32G", cfg.SCSIs["scsi0"])
+
+	// SATAs
+	assert.NotNil(t, cfg.SATAs)
+	assert.Len(t, cfg.SATAs, 1)
+	assert.Equal(t, "local-lvm:vm-101-disk-1,size=32G", cfg.SATAs["sata0"])
+
+	// VirtIOs
+	assert.NotNil(t, cfg.VirtIOs)
+	assert.Len(t, cfg.VirtIOs, 1)
+	assert.Equal(t, "local-lvm:vm-101-disk-2,size=64G", cfg.VirtIOs["virtio0"])
+
+	// Unuseds
+	assert.NotNil(t, cfg.Unuseds)
+	assert.Len(t, cfg.Unuseds, 1)
+	assert.Equal(t, "local-lvm:vm-101-unused", cfg.Unuseds["unused0"])
+
+	// Nets
+	assert.NotNil(t, cfg.Nets)
+	assert.Len(t, cfg.Nets, 1)
+	assert.Equal(t, "virtio=BC:24:11:2E:C5:4A,bridge=vmbr0", cfg.Nets["net0"])
+
+	// Numas
+	assert.NotNil(t, cfg.Numas)
+	assert.Len(t, cfg.Numas, 1)
+	assert.Equal(t, "cpus=0-1,memory=2048", cfg.Numas["numa0"])
+
+	// HostPCIs
+	assert.NotNil(t, cfg.HostPCIs)
+	assert.Len(t, cfg.HostPCIs, 1)
+	assert.Equal(t, "0000:01:00.0", cfg.HostPCIs["hostpci0"])
+
+	// Serials
+	assert.NotNil(t, cfg.Serials)
+	assert.Len(t, cfg.Serials, 1)
+	assert.Equal(t, "socket", cfg.Serials["serial0"])
+
+	// USBs
+	assert.NotNil(t, cfg.USBs)
+	assert.Len(t, cfg.USBs, 1)
+	assert.Equal(t, "host=1234:5678", cfg.USBs["usb0"])
+
+	// Parallels
+	assert.NotNil(t, cfg.Parallels)
+	assert.Len(t, cfg.Parallels, 1)
+	assert.Equal(t, "/dev/parport0", cfg.Parallels["parallel0"])
+
+	// IPConfigs
+	assert.NotNil(t, cfg.IPConfigs)
+	assert.Len(t, cfg.IPConfigs, 1)
+	assert.Equal(t, "ip=192.168.1.10/24,gw=192.168.1.1", cfg.IPConfigs["ipconfig0"])
 }
