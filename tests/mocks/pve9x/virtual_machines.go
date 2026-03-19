@@ -6,6 +6,39 @@ import (
 )
 
 func virtualMachines() {
+	// GET /nodes/{node}/qemu/{vmid}/config - Get VM config (vmid 101, all merged device types for tests)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "digest": "abc123def456",
+        "name": "matt",
+        "vmid": 101,
+        "cores": 2,
+        "memory": 2048,
+        "sockets": 1,
+        "ostype": "l26",
+        "boot": "order=scsi0;ide2;net0",
+        "scsihw": "virtio-scsi-pci",
+        "tags": "production;webserver",
+        "ide0": "local:100/vm-101-disk-0.qcow2",
+        "ide2": "local:iso/debian-12.iso,media=cdrom",
+        "scsi0": "local-lvm:vm-101-disk-0,size=32G",
+        "sata0": "local-lvm:vm-101-disk-1,size=32G",
+        "virtio0": "local-lvm:vm-101-disk-2,size=64G",
+        "unused0": "local-lvm:vm-101-unused",
+        "net0": "virtio=BC:24:11:2E:C5:4A,bridge=vmbr0",
+        "numa0": "cpus=0-1,memory=2048",
+        "hostpci0": "0000:01:00.0",
+        "serial0": "socket",
+        "usb0": "host=1234:5678",
+        "parallel0": "/dev/parport0",
+        "ipconfig0": "ip=192.168.1.10/24,gw=192.168.1.1"
+    }
+}`)
+
 	// GET /nodes/{node}/qemu/{vmid}/status/current - VM status
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/qemu/101/status/current$").

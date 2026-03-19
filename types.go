@@ -772,6 +772,41 @@ type VirtualMachineConfig struct {
 	IPConfig9 string            `json:"ipconfig9,omitempty"`
 }
 
+func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
+	type tmpVirtualMachineConfig VirtualMachineConfig
+
+	// create a struct and embed temporary alias of VirtualMachineConfig to avoid recursion
+	// this will also populate the rest of the fields using the built in unmarshal function
+	tmp := &struct {
+		*tmpVirtualMachineConfig
+	}{
+		tmpVirtualMachineConfig: (*tmpVirtualMachineConfig)(vmc),
+	}
+
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	// Split the tags on TagSeparator and populate TagsSlice
+	vmc.TagsSlice = strings.Split(vmc.Tags, TagSeperator)
+
+	// Populate the indexed fields into helper maps
+	vmc.MergeIDEs()
+	vmc.MergeSCSIs()
+	vmc.MergeSATAs()
+	vmc.MergeVirtIOs()
+	vmc.MergeUnuseds()
+	vmc.MergeNets()
+	vmc.MergeNumas()
+	vmc.MergeHostPCIs()
+	vmc.MergeSerials()
+	vmc.MergeUSBs()
+	vmc.MergeParallels()
+	vmc.MergeIPConfigs()
+
+	return nil
+}
+
 type VirtualMachineMigrateOptions struct {
 	Target           string    `json:"target"`
 	BWLimit          uint64    `json:"bwlimit,omitempty"`
