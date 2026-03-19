@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 )
 
 // Deprecated: Use WithCredentials Option
@@ -29,13 +30,15 @@ func (c *Client) CreateSession(ctx context.Context) error {
 	c.sessionMux.Lock()
 	defer c.sessionMux.Unlock()
 
-	if c.session != nil {
+	if c.session != nil && time.Now().Before(c.sessionExpiresAt) {
 		return ErrSessionExists
 	}
 
 	if _, err := c.Ticket(ctx, c.credentials); err != nil {
 		return err
 	}
+
+	c.sessionExpiresAt = time.Now().Add(time.Hour)
 
 	return nil
 }
