@@ -980,8 +980,8 @@ type ContainerConfig struct {
 	OSType       string            `json:"ostype,omitempty"`
 	Protection   IntOrBool         `json:"protection,omitempty"`
 	RootFS       string            `json:"rootfs,omitempty"`
-	SearchDomain string            `json:"searchdomain:omitempty"`
-	Startup      string            `json:"startup:omitempty"`
+	SearchDomain string            `json:"searchdomain,omitempty"`
+	Startup      string            `json:"startup,omitempty"`
 	Swap         int               `json:"swap,omitempty"`
 	TagsSlice    []string          `json:"-"` // internal helper to manage tags easier
 	Tags         string            `json:"tags,omitempty"`
