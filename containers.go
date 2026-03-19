@@ -146,7 +146,7 @@ func (c *Container) Migrate(ctx context.Context, params *ContainerMigrateOptions
 
 func (c *Container) Resize(ctx context.Context, disk, size string) (task *Task, err error) {
 	var upid UPID
-	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/resize", c.Node, c.VMID), map[string]interface{}{"disk": disk, "size": size}, &upid); err != nil {
+	if err := c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/resize", c.Node, c.VMID), map[string]interface{}{"disk": disk, "size": size}, &upid); err != nil {
 		return nil, err
 	}
 	return NewTask(upid, c.client), nil
