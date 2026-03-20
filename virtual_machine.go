@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -137,10 +139,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		// _ = os.Remove(iso.Name())
-	}()
+	defer os.Remove(isofilename)
 
 	node, err := v.client.Node(ctx, v.Node)
 	if err != nil {
@@ -181,8 +180,32 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	return task.WaitFor(ctx, 2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
-	isopath = filepath.Join(os.TempDir(), filename)
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (string, error) {
+	cifiles := map[string]string{
+		"user-data": userdata,
+		"meta-data": metadata,
+	}
+	if vendordata != "" {
+		cifiles["vendor-data"] = vendordata
+	}
+	if networkconfig != "" {
+		cifiles["network-config"] = networkconfig
+	}
+
+	isopath := filepath.Join(os.TempDir(), filename)
+
+	// create the iso with the xorriso command.
+	// NB xorriso supports the joliet extension, which is required to make a
+	//    usable iso on windows (lift filename character-set limitation).
+	//    more-or-less what the rock ridge extension accomplishes on
+	//    non-windows hosts.
+	if _, err := exec.LookPath("xorriso"); err == nil {
+		return xorriso(isopath, cifiles)
+	}
+
+	// fallback to create the iso with the go-diskfs library.
+	// NB it does not support the joliet extension, so the iso might not be
+	//    usable on windows.
 
 	isoFile, err := os.Create(isopath)
 	if err != nil {
@@ -211,17 +234,6 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		return "", err
 	}
 
-	cifiles := map[string]string{
-		"user-data": userdata,
-		"meta-data": metadata,
-	}
-	if vendordata != "" {
-		cifiles["vendor-data"] = vendordata
-	}
-	if networkconfig != "" {
-		cifiles["network-config"] = networkconfig
-	}
-
 	for filename, content := range cifiles {
 		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
@@ -240,7 +252,37 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		return "", err
 	}
 
-	return
+	return isopath, nil
+}
+
+func xorriso(isopath string, cifiles map[string]string) (string, error) {
+	tempDir, err := os.MkdirTemp("", "cidata")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(tempDir)
+
+	for filename, content := range cifiles {
+		err := os.WriteFile(path.Join(tempDir, filename), []byte(content), 0640)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	cmd := exec.Command(
+		"xorriso",
+		"-as", "genisoimage",
+		"-output", isopath,
+		"-volid", "cidata",
+		"-joliet",
+		"-rock",
+		tempDir)
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return isopath, nil
 }
 
 func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {

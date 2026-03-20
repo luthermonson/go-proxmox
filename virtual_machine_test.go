@@ -1,7 +1,13 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -140,7 +146,6 @@ func TestVirtualMachineStateWithoutQMPStatus(t *testing.T) {
 	assert.True(t, hibernatedVM.IsHibernated())
 	assert.False(t, hibernatedVM.IsRunning())
 }
-
 
 func TestVirtualMachine_Config(t *testing.T) {
 	mocks.On(mockConfig)
@@ -371,4 +376,61 @@ func TestVirtualMachine_SnapshotRollback(t *testing.T) {
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmrollback", task.Type)
 	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_makeCloudInitISO(t *testing.T) {
+	f, err := os.CreateTemp("", "test-cidata-*.iso")
+	assert.NoError(t, err)
+	f.Close()
+	defer os.Remove(f.Name())
+
+	isoPath, err := makeCloudInitISO(path.Base(f.Name()), "#userdata", "#metadata", "", "")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	if !assert.FileExists(t, isoPath) {
+		t.FailNow()
+	}
+
+	cmd := exec.Command(
+		"xorriso",
+		"-dev", isoPath,
+		"-find", "/",
+		"-type", "f")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if !assert.NoError(t, err, fmt.Sprintf("xorriso list failed stdout=%s stderr=%s", stdout.String(), stderr.String())) {
+		t.FailNow()
+	}
+	expectedFiles := []string{
+		"'/meta-data'",
+		"'/user-data'",
+	}
+	assert.Equal(t, expectedFiles, strings.Split(strings.TrimSpace(stdout.String()), "\n"))
+
+	tocCmd := exec.Command(
+		"xorriso",
+		"-dev", isoPath,
+		"-toc")
+	var tocStdout, tocStderr bytes.Buffer
+	tocCmd.Stdout = &tocStdout
+	tocCmd.Stderr = &tocStderr
+	err = tocCmd.Run()
+	if !assert.NoError(t, err, fmt.Sprintf("xorriso toc failed stdout=%s stderr=%s", tocStdout.String(), tocStderr.String())) {
+		t.FailNow()
+	}
+	toc := strings.Split(strings.TrimSpace(tocStdout.String()), "\n")
+	isoOffers := ""
+	for _, l := range toc {
+		if k, v, f := strings.Cut(l, ":"); f {
+			key := strings.TrimSpace(k)
+			if key == "ISO offers" {
+				isoOffers = strings.TrimSpace(v)
+			}
+		}
+	}
+	assert.Contains(t, isoOffers, "Rock_Ridge")
+	assert.Contains(t, isoOffers, "Joliet")
 }
