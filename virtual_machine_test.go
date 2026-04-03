@@ -59,6 +59,21 @@ func TestVirtualMachineClone(t *testing.T) {
 	assert.Equal(t, cloneOptions.NewID, newID)
 }
 
+func TestVirtualMachineMonitor(t *testing.T) {
+	mocks.On(mockConfig)
+	client := mockClient()
+	defer mocks.Off()
+	ctx := context.Background()
+	vmTemplate := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+	out, err := vmTemplate.Monitor(ctx, "help")
+	assert.Nil(t, err)
+	assert.Equal(t, "help text", out)
+}
+
 func TestVirtualMachineCloneWithoutNewID(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -352,6 +367,21 @@ func TestVirtualMachine_NewSnapshot(t *testing.T) {
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmsnapshot", task.Type)
 	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_DeleteSnapshot(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		Node:   "node1",
+		VMID:   100,
+	}
+	task, err := vm.DeleteSnapshot(ctx, "snap2")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, task)
 }
 
 func TestVirtualMachine_SnapshotRollback(t *testing.T) {

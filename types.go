@@ -2023,6 +2023,7 @@ type VNet struct {
 	Name      string `json:"vnet,omitempty"`
 	Type      string `json:"type,omitempty"`
 	Zone      string `json:"zone,omitempty"`
+	Alias     string `json:"alias,omitempty"`
 	VlanAware int    `json:"vlanaware,omitempty"`
 	Tag       uint32 `json:"tag,omitempty"`
 }

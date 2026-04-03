@@ -414,7 +414,7 @@ func cluster() {
 		Reply(200).
 		JSON(`{
 		"data": [
-				{"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10},
+				{"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10,"alias":"myuser1's network"},
 				{"vnet":"user10","type":"vnet","zone":"test1","vlanaware":1,"tag":30},
 				{"vnet":"user11","type":"vnet","zone":"test1","vlanaware":1,"tag":31},
 				{"vnet":"user2","type":"vnet","zone":"test3","vlanaware":1,"tag":11},
@@ -426,7 +426,7 @@ func cluster() {
 		Get("^/cluster/sdn/vnets/user1$").
 		Reply(200).
 		JSON(`{
-		"data": {"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10}
+		"data": {"vnet":"user1","type":"vnet","zone":"test1","vlanaware":1,"tag":10,"alias":"myuser1's network"}
 		}`)
 
 	gock.New(config.C.URI).

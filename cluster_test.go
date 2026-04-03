@@ -116,6 +116,7 @@ func TestCluster_SDNVNets(t *testing.T) {
 	assert.Equal(t, "user1", vnet.Name)
 	assert.Equal(t, "vnet", vnet.Type)
 	assert.Equal(t, "test1", vnet.Zone)
+	assert.Equal(t, "myuser1's network", vnet.Alias)
 	assert.Equal(t, 1, vnet.VlanAware)
 	assert.Equal(t, uint32(10), vnet.Tag)
 

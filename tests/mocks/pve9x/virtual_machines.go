@@ -671,6 +671,14 @@ func virtualMachines() {
     "data": null
 }`)
 
+	// POST /nodes/{node}/qemu/{vmid}/monitor - Access the Virtual Machine monitor
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/qemu/101/monitor").
+		Reply(200).
+		JSON(`{
+    "data": "help text"
+}`)
+
 	// GET /nodes/{node}/qemu/{vmid}/config - Get VM config
 	gock.New(config.C.URI).
 		Persist().

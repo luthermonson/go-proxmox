@@ -36,7 +36,12 @@ func (v *VirtualMachine) New(c *Client, nodeName string, vmid int) {
 }
 
 func (v *VirtualMachine) Ping(ctx context.Context) error {
-	return v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/current", v.Node, v.VMID), &v)
+	if err := v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status/current", v.Node, v.VMID), &v); err != nil {
+		return err
+	}
+	// New, empty config in case something was deleted
+	v.VirtualMachineConfig = &VirtualMachineConfig{}
+	return v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), &v.VirtualMachineConfig)
 }
 
 func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOption) (*Task, error) {
@@ -47,6 +52,13 @@ func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOp
 	}
 	err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), data, &upid)
 	return NewTask(upid, v.client), err
+}
+
+func (v *VirtualMachine) Monitor(ctx context.Context, command string) (s string, err error) {
+	data := make(map[string]interface{})
+	data["command"] = command
+	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/monitor", v.Node, v.VMID), data, &s)
+	return s, err
 }
 
 func (v *VirtualMachine) TermProxy(ctx context.Context) (term *Term, err error) {
@@ -677,6 +689,14 @@ func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (tas
 		return nil, err
 	}
 
+	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) DeleteSnapshot(ctx context.Context, snapshot string) (task *Task, err error) {
+	var upid UPID
+	if err := v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", v.Node, v.VMID, snapshot), &upid); err != nil {
+		return nil, err
+	}
 	return NewTask(upid, v.client), nil
 }
 
