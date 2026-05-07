@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/stretchr/testify/assert"
@@ -410,19 +411,33 @@ func TestVirtualMachine_SnapshotRollback(t *testing.T) {
 	assert.Equal(t, "100", task.ID)
 }
 
+func cleanupISO(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Remove(path); err != nil {
+		t.Logf("removing test iso %s: %v", path, err)
+	}
+}
+
+func closeBackend(t *testing.T, bk backend.Storage) {
+	t.Helper()
+	if err := bk.Close(); err != nil {
+		t.Logf("closing iso backend: %v", err)
+	}
+}
+
 func TestMakeCloudInitISO(t *testing.T) {
 	userdata := "#cloud-config\npassword: test\n"
 	metadata := "instance-id: test-vm\nlocal-hostname: test\n"
 
 	isoPath, err := makeCloudInitISO("test-cloudinit.iso", userdata, metadata, "", "")
 	require.NoError(t, err)
-	defer os.Remove(isoPath)
+	defer cleanupISO(t, isoPath)
 
 	assert.FileExists(t, isoPath)
 
 	bk, err := file.OpenFromPath(isoPath, true)
 	require.NoError(t, err)
-	defer bk.Close()
+	defer closeBackend(t, bk)
 
 	fs, err := iso9660.Read(bk, 0, 0, blockSize)
 	require.NoError(t, err)
@@ -447,11 +462,11 @@ func TestMakeCloudInitISO_AllFiles(t *testing.T) {
 
 	isoPath, err := makeCloudInitISO("test-allfiles.iso", userdata, metadata, vendordata, networkconfig)
 	require.NoError(t, err)
-	defer os.Remove(isoPath)
+	defer cleanupISO(t, isoPath)
 
 	bk, err := file.OpenFromPath(isoPath, true)
 	require.NoError(t, err)
-	defer bk.Close()
+	defer closeBackend(t, bk)
 
 	fs, err := iso9660.Read(bk, 0, 0, blockSize)
 	require.NoError(t, err)
@@ -474,7 +489,7 @@ func TestMakeCloudInitISO_AllFiles(t *testing.T) {
 func TestMakeCloudInitISO_JolietSVD(t *testing.T) {
 	isoPath, err := makeCloudInitISO("test-joliet.iso", "userdata", "metadata", "", "")
 	require.NoError(t, err)
-	defer os.Remove(isoPath)
+	defer cleanupISO(t, isoPath)
 
 	isoBytes, err := os.ReadFile(isoPath)
 	require.NoError(t, err)
@@ -514,7 +529,7 @@ func TestMakeCloudInitISO_JolietSVD(t *testing.T) {
 func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
 	isoPath, err := makeCloudInitISO("test-volid.iso", "userdata", "metadata", "", "")
 	require.NoError(t, err)
-	defer os.Remove(isoPath)
+	defer cleanupISO(t, isoPath)
 
 	isoBytes, err := os.ReadFile(isoPath)
 	require.NoError(t, err)

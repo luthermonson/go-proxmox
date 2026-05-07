@@ -150,7 +150,11 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	defer os.Remove(isofilename)
+	defer func() {
+		if rerr := os.Remove(isofilename); rerr != nil {
+			v.client.log.Warnf("failed to remove temp cloud-init iso %s: %v", isofilename, rerr)
+		}
+	}()
 
 	node, err := v.client.Node(ctx, v.Node)
 	if err != nil {
@@ -191,7 +195,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	return task.WaitFor(ctx, 2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (string, error) {
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
 	cifiles := map[string]string{
 		"user-data": userdata,
 		"meta-data": metadata,
@@ -207,7 +211,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(workspace)
+	defer func() {
+		if rerr := os.RemoveAll(workspace); rerr != nil && err == nil {
+			err = fmt.Errorf("removing cloud-init workspace %s: %w", workspace, rerr)
+		}
+	}()
 
 	for name, content := range cifiles {
 		if err := os.WriteFile(filepath.Join(workspace, name), []byte(content), 0644); err != nil {
@@ -215,7 +223,7 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		}
 	}
 
-	isopath := filepath.Join(os.TempDir(), filename)
+	isopath = filepath.Join(os.TempDir(), filename)
 
 	isoFile, err := os.Create(isopath)
 	if err != nil {
@@ -223,7 +231,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	}
 
 	bk := file.New(isoFile, false)
-	defer bk.Close()
+	defer func() {
+		if cerr := bk.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("closing iso file %s: %w", isopath, cerr)
+		}
+	}()
 
 	fs, err := iso9660.Create(bk, 0, 0, blockSize, workspace)
 	if err != nil {
