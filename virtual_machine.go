@@ -150,9 +150,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	defer func() {
-		// _ = os.Remove(iso.Name())
-	}()
+	defer os.Remove(isofilename)
 
 	node, err := v.client.Node(ctx, v.Node)
 	if err != nil {
@@ -193,36 +191,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	return task.WaitFor(ctx, 2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
-	isopath = filepath.Join(os.TempDir(), filename)
-
-	isoFile, err := os.Create(isopath)
-	if err != nil {
-		return "", err
-	}
-
-	if err := isoFile.Close(); err != nil {
-		return "", err
-	}
-
-	iso, err := file.OpenFromPath(isopath, false)
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		err = iso.Close()
-	}()
-
-	fs, err := iso9660.Create(iso, 0, 0, blockSize, "")
-	if err != nil {
-		return "", err
-	}
-
-	if err = fs.Mkdir("/"); err != nil {
-		return "", err
-	}
-
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (string, error) {
 	cifiles := map[string]string{
 		"user-data": userdata,
 		"meta-data": metadata,
@@ -234,25 +203,42 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		cifiles["network-config"] = networkconfig
 	}
 
-	for filename, content := range cifiles {
-		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
-		if err != nil {
-			return "", err
-		}
+	workspace, err := os.MkdirTemp("", "cloudinit")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(workspace)
 
-		if _, err = rw.Write([]byte(content)); err != nil {
+	for name, content := range cifiles {
+		if err := os.WriteFile(filepath.Join(workspace, name), []byte(content), 0644); err != nil {
 			return "", err
 		}
 	}
 
-	if err = fs.Finalize(iso9660.FinalizeOptions{
+	isopath := filepath.Join(os.TempDir(), filename)
+
+	isoFile, err := os.Create(isopath)
+	if err != nil {
+		return "", err
+	}
+
+	bk := file.New(isoFile, false)
+	defer bk.Close()
+
+	fs, err := iso9660.Create(bk, 0, 0, blockSize, workspace)
+	if err != nil {
+		return "", err
+	}
+
+	if err := fs.Finalize(iso9660.FinalizeOptions{
 		RockRidge:        true,
+		Joliet:           true,
 		VolumeIdentifier: volumeIdentifier,
 	}); err != nil {
 		return "", err
 	}
 
-	return
+	return isopath, nil
 }
 
 func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
