@@ -1,16 +1,17 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"mime"
 	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -363,92 +364,93 @@ func TestStorage_UploadString_InvalidContent(t *testing.T) {
 	assert.Contains(t, err.Error(), "snippets")
 }
 
-func TestStorage_UploadString(t *testing.T) {
-	const want = "#cloud-config\nhostname: test\n"
+// captureMultipart returns a gock matcher that drains the multipart request
+// body and stores each form field in the supplied map. Files are stored as
+// "<field-name>:filename" (the uploaded filename) and "<field-name>:body"
+// (the file contents). It always matches; field-level assertions belong in
+// the test using assert.Equal afterwards.
+func captureMultipart(t *testing.T, captured map[string]string) func(*http.Request, *gock.Request) (bool, error) {
+	t.Helper()
+	return func(req *http.Request, _ *gock.Request) (bool, error) {
+		_, params, err := mime.ParseMediaType(req.Header.Get("Content-Type"))
+		if err != nil {
+			return false, err
+		}
+		// Buffer the body so gock can still see it for any other matchers.
+		raw, err := io.ReadAll(req.Body)
+		if err != nil {
+			return false, err
+		}
+		req.Body = io.NopCloser(bytes.NewReader(raw))
 
-	var (
-		gotContent  string
-		gotFilename string
-		gotBody     string
-	)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodPost, r.Method)
-		require.Equal(t, "/nodes/node1/storage/local/upload", r.URL.Path)
-
-		_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		require.NoError(t, err)
-		mr := multipart.NewReader(r.Body, params["boundary"])
+		mr := multipart.NewReader(bytes.NewReader(raw), params["boundary"])
 		for {
 			part, err := mr.NextPart()
 			if err == io.EOF {
 				break
 			}
-			require.NoError(t, err)
+			if err != nil {
+				return false, err
+			}
 			data, err := io.ReadAll(part)
-			require.NoError(t, err)
-			switch part.FormName() {
-			case "content":
-				gotContent = string(data)
-			case "filename":
-				gotFilename = part.FileName()
-				gotBody = string(data)
+			if err != nil {
+				return false, err
+			}
+			if part.FileName() != "" {
+				captured[part.FormName()+":filename"] = part.FileName()
+				captured[part.FormName()+":body"] = string(data)
+			} else {
+				captured[part.FormName()] = string(data)
 			}
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":"UPID:node1:00000000:00000000:00000000:imgcopy:user-data:root@pam:"}`))
-	}))
-	defer srv.Close()
+		return true, nil
+	}
+}
 
-	client := NewClient(srv.URL)
+func TestStorage_UploadString(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	const want = "#cloud-config\nhostname: test\n"
+	captured := map[string]string{}
+
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/storage/local/upload$").
+		AddMatcher(captureMultipart(t, captured)).
+		Reply(200).
+		JSON(`{"data":"UPID:node1:00000000:00000000:00000000:imgcopy:user-data:root@pam:"}`)
+
+	client := mockClient()
 	storage := &Storage{client: client, Node: "node1", Name: "local"}
 
 	task, err := storage.UploadString("snippets", "test-user-data.yaml", want)
 	require.NoError(t, err)
 	assert.NotNil(t, task)
 
-	assert.Equal(t, "snippets", gotContent)
-	assert.Equal(t, "test-user-data.yaml", gotFilename)
-	assert.Equal(t, want, gotBody)
+	assert.Equal(t, "snippets", captured["content"])
+	assert.Equal(t, "test-user-data.yaml", captured["filename:filename"])
+	assert.Equal(t, want, captured["filename:body"])
 }
 
 func TestClient_UploadReader(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
 	const payload = "the body"
+	captured := map[string]string{}
 
-	var (
-		gotFilename string
-		gotBody     string
-		gotLength   int64
-	)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotLength = r.ContentLength
+	gock.New(mockConfig.URI).
+		Post("^/test$").
+		AddMatcher(captureMultipart(t, captured)).
+		Reply(200).
+		JSON(`{"data":null}`)
 
-		_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		require.NoError(t, err)
-		mr := multipart.NewReader(r.Body, params["boundary"])
-		for {
-			part, err := mr.NextPart()
-			if err == io.EOF {
-				break
-			}
-			require.NoError(t, err)
-			data, err := io.ReadAll(part)
-			require.NoError(t, err)
-			if part.FormName() == "filename" {
-				gotFilename = part.FileName()
-				gotBody = string(data)
-			}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":null}`))
-	}))
-	defer srv.Close()
-
-	client := NewClient(srv.URL)
+	client := mockClient()
 	body := strings.NewReader(payload)
 	err := client.UploadReader("/test", map[string]string{"content": "snippets"}, "hello.txt", body, int64(body.Len()), nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, "hello.txt", gotFilename)
-	assert.Equal(t, payload, gotBody)
-	assert.Greater(t, gotLength, int64(len(payload)))
+	assert.Equal(t, "snippets", captured["content"])
+	assert.Equal(t, "hello.txt", captured["filename:filename"])
+	assert.Equal(t, payload, captured["filename:body"])
 }
