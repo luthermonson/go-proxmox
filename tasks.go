@@ -71,11 +71,10 @@ func (t *Task) Log(ctx context.Context, start, limit int) (l Log, err error) {
 
 func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 	t.client.log.Debugf("starting watcher on %s", t.UPID)
-	watch := make(chan string)
 
 	log, err := t.Log(ctx, start, 50)
 	if err != nil {
-		return watch, err
+		return nil, err
 	}
 
 	for i := 0; i < 3; i++ {
@@ -88,15 +87,18 @@ func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 
 		log, err = t.Log(ctx, start, 50)
 		if err != nil {
-			return watch, err
+			return nil, err
 		}
 	}
 
 	if len(log) == 0 {
-		return watch, fmt.Errorf("no logs available for %s", t.UPID)
+		return nil, fmt.Errorf("no logs available for %s", t.UPID)
 	}
 
+	watch := make(chan string)
+
 	go func() {
+		defer close(watch)
 		t.client.log.Debugf("logs found for task %s", t.UPID)
 		for _, ln := range log {
 			watch <- ln
@@ -121,7 +123,6 @@ func tasktail(ctx context.Context, start int, watch chan string, task *Task) err
 
 		if task.Status != TaskRunning {
 			task.client.log.Debugf("task %s is no longer running, closing down watcher", task.UPID)
-			close(watch)
 			return nil
 		}
 
