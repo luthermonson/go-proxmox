@@ -506,6 +506,26 @@ func (v *VirtualMachine) MoveDisk(ctx context.Context, disk string, params *Virt
 	return NewTask(upid, v.client), nil
 }
 
+func (v *VirtualMachine) AgentGetHostName(ctx context.Context) (hostname string, err error) {
+	node, err := v.client.Node(ctx, v.Node)
+	if err != nil {
+		return
+	}
+
+	results := map[string]*AgentHostName{}
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-host-name", node.Name, v.VMID), &results)
+	if err != nil {
+		return
+	}
+	result, ok := results["result"]
+	if !ok {
+		err = fmt.Errorf("result is empty")
+		return
+	}
+	hostname = result.HostName
+	return
+}
+
 func (v *VirtualMachine) AgentGetNetworkIFaces(ctx context.Context) (iFaces []*AgentNetworkIface, err error) {
 	networks := map[string][]*AgentNetworkIface{}
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", v.Node, v.VMID), &networks)
