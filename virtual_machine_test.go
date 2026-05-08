@@ -1,10 +1,18 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/diskfs/go-diskfs/backend"
+	"github.com/diskfs/go-diskfs/backend/file"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 )
@@ -401,4 +409,139 @@ func TestVirtualMachine_SnapshotRollback(t *testing.T) {
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmrollback", task.Type)
 	assert.Equal(t, "100", task.ID)
+}
+
+func cleanupISO(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Remove(path); err != nil {
+		t.Logf("removing test iso %s: %v", path, err)
+	}
+}
+
+func closeBackend(t *testing.T, bk backend.Storage) {
+	t.Helper()
+	if err := bk.Close(); err != nil {
+		t.Logf("closing iso backend: %v", err)
+	}
+}
+
+func TestMakeCloudInitISO(t *testing.T) {
+	userdata := "#cloud-config\npassword: test\n"
+	metadata := "instance-id: test-vm\nlocal-hostname: test\n"
+
+	isoPath, err := makeCloudInitISO("test-cloudinit.iso", userdata, metadata, "", "")
+	require.NoError(t, err)
+	defer cleanupISO(t, isoPath)
+
+	assert.FileExists(t, isoPath)
+
+	bk, err := file.OpenFromPath(isoPath, true)
+	require.NoError(t, err)
+	defer closeBackend(t, bk)
+
+	fs, err := iso9660.Read(bk, 0, 0, blockSize)
+	require.NoError(t, err)
+
+	for filename, want := range map[string]string{
+		"/user-data": userdata,
+		"/meta-data": metadata,
+	} {
+		f, err := fs.OpenFile(filename, os.O_RDONLY)
+		require.NoError(t, err, "opening %s", filename)
+		got, err := io.ReadAll(f)
+		require.NoError(t, err, "reading %s", filename)
+		assert.Equal(t, want, string(got))
+	}
+}
+
+func TestMakeCloudInitISO_AllFiles(t *testing.T) {
+	userdata := "#cloud-config\n"
+	metadata := "instance-id: vm-100\n"
+	vendordata := "vendor: test\n"
+	networkconfig := "network:\n  version: 2\n"
+
+	isoPath, err := makeCloudInitISO("test-allfiles.iso", userdata, metadata, vendordata, networkconfig)
+	require.NoError(t, err)
+	defer cleanupISO(t, isoPath)
+
+	bk, err := file.OpenFromPath(isoPath, true)
+	require.NoError(t, err)
+	defer closeBackend(t, bk)
+
+	fs, err := iso9660.Read(bk, 0, 0, blockSize)
+	require.NoError(t, err)
+
+	expected := map[string]string{
+		"/user-data":      userdata,
+		"/meta-data":      metadata,
+		"/vendor-data":    vendordata,
+		"/network-config": networkconfig,
+	}
+	for filename, want := range expected {
+		f, err := fs.OpenFile(filename, os.O_RDONLY)
+		require.NoError(t, err, "opening %s", filename)
+		got, err := io.ReadAll(f)
+		require.NoError(t, err, "reading %s", filename)
+		assert.Equal(t, want, string(got))
+	}
+}
+
+func TestMakeCloudInitISO_JolietSVD(t *testing.T) {
+	isoPath, err := makeCloudInitISO("test-joliet.iso", "userdata", "metadata", "", "")
+	require.NoError(t, err)
+	defer cleanupISO(t, isoPath)
+
+	isoBytes, err := os.ReadFile(isoPath)
+	require.NoError(t, err)
+
+	// Scan volume descriptors starting at sector 16 for a Joliet SVD.
+	// Type 0x02 + "CD001" signature + Joliet escape sequence at bytes 88-90.
+	jolietEscapes := [][]byte{
+		{0x25, 0x2F, 0x40}, // UCS-2 Level 1
+		{0x25, 0x2F, 0x43}, // UCS-2 Level 2
+		{0x25, 0x2F, 0x45}, // UCS-2 Level 3
+	}
+
+	var foundJoliet bool
+	for i := 0; ; i++ {
+		offset := int64(16+i) * blockSize
+		if offset+blockSize > int64(len(isoBytes)) {
+			break
+		}
+		vd := isoBytes[offset : offset+blockSize]
+		if vd[0] == 0xFF {
+			break
+		}
+		if vd[0] == 0x02 && string(vd[1:6]) == "CD001" {
+			esc := vd[88:91]
+			for _, valid := range jolietEscapes {
+				if bytes.Equal(esc, valid) {
+					foundJoliet = true
+					break
+				}
+			}
+		}
+	}
+
+	assert.True(t, foundJoliet, "Joliet Supplementary Volume Descriptor not found in ISO")
+}
+
+func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
+	isoPath, err := makeCloudInitISO("test-volid.iso", "userdata", "metadata", "", "")
+	require.NoError(t, err)
+	defer cleanupISO(t, isoPath)
+
+	isoBytes, err := os.ReadFile(isoPath)
+	require.NoError(t, err)
+
+	// PVD is at sector 16, volume identifier is at bytes 40-72 (32 bytes, space-padded).
+	pvdOffset := int64(16) * blockSize
+	require.Greater(t, int64(len(isoBytes)), pvdOffset+blockSize)
+
+	pvd := isoBytes[pvdOffset : pvdOffset+blockSize]
+	assert.Equal(t, byte(0x01), pvd[0], "expected PVD type")
+	assert.Equal(t, "CD001", string(pvd[1:6]))
+
+	volID := strings.TrimRight(string(pvd[40:72]), " \x00")
+	assert.Equal(t, volumeIdentifier, volID)
 }

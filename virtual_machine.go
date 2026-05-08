@@ -151,7 +151,9 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	}
 
 	defer func() {
-		// _ = os.Remove(iso.Name())
+		if rerr := os.Remove(isofilename); rerr != nil {
+			v.client.log.Warnf("failed to remove temp cloud-init iso %s: %v", isofilename, rerr)
+		}
 	}()
 
 	node, err := v.client.Node(ctx, v.Node)
@@ -211,7 +213,9 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	}
 
 	defer func() {
-		err = iso.Close()
+		if cerr := iso.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
 	}()
 
 	fs, err := iso9660.Create(iso, 0, 0, blockSize, "")
@@ -234,8 +238,8 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		cifiles["network-config"] = networkconfig
 	}
 
-	for filename, content := range cifiles {
-		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
+	for name, content := range cifiles {
+		rw, err := fs.OpenFile("/"+name, os.O_CREATE|os.O_RDWR)
 		if err != nil {
 			return "", err
 		}
@@ -243,10 +247,17 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		if _, err = rw.Write([]byte(content)); err != nil {
 			return "", err
 		}
+
+		// Joliet finalization in go-diskfs v1.9+ requires the file handle to
+		// be closed before Finalize so its size is recorded correctly.
+		if err = rw.Close(); err != nil {
+			return "", err
+		}
 	}
 
 	if err = fs.Finalize(iso9660.FinalizeOptions{
 		RockRidge:        true,
+		Joliet:           true,
 		VolumeIdentifier: volumeIdentifier,
 	}); err != nil {
 		return "", err
