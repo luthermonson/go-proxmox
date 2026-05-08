@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/luthermonson/go-proxmox/tests/mocks/pve6x"
 	"github.com/luthermonson/go-proxmox/tests/mocks/pve7x"
@@ -10,6 +11,7 @@ import (
 )
 
 func On(c config.Config) {
+	capture.Reset()
 	ProxmoxVE9x(c) // default pve9
 }
 

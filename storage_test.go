@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -362,23 +363,36 @@ func TestStorage_UploadString(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 
+	const want = "#cloud-config\nhostname: test\n"
 	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
-	task, err := storage.UploadString("snippets", "test-user-data.yaml", "#cloud-config\nhostname: test\n")
+
+	task, err := storage.UploadString("snippets", "test-user-data.yaml", want)
 	require.NoError(t, err)
 	require.NotNil(t, task)
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "imgcopy", task.Type)
+
+	require.NotNil(t, capture.LastUpload, "upload matcher did not run")
+	assert.Equal(t, "snippets", capture.LastUpload.Fields["content"])
+	assert.Equal(t, "test-user-data.yaml", capture.LastUpload.Filename)
+	assert.Equal(t, want, capture.LastUpload.Body)
 }
 
 func TestClient_UploadReader(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 
-	body := strings.NewReader("the body")
+	const payload = "the body"
+	body := strings.NewReader(payload)
 	err := mockClient().UploadReader(
 		"/nodes/node1/storage/local/upload",
 		map[string]string{"content": "snippets"},
 		"hello.txt", body, int64(body.Len()), nil,
 	)
 	require.NoError(t, err)
+
+	require.NotNil(t, capture.LastUpload)
+	assert.Equal(t, "snippets", capture.LastUpload.Fields["content"])
+	assert.Equal(t, "hello.txt", capture.LastUpload.Filename)
+	assert.Equal(t, payload, capture.LastUpload.Body)
 }
