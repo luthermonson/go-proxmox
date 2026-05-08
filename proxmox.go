@@ -232,6 +232,17 @@ func (c *Client) Delete(ctx context.Context, p string, v interface{}) error {
 // the task returned is the imgcopy from the tmp file to where the node actually wants the iso and you should wait for that
 // to complete before using the iso
 func (c *Client) Upload(path string, fields map[string]string, file *os.File, v interface{}) error {
+	fi, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	return c.UploadReader(path, fields, filepath.Base(file.Name()), file, fi.Size(), v)
+}
+
+// UploadReader is the io.Reader-based variant of Upload. Use it when the
+// payload is already in memory (e.g., a snippet) or otherwise not backed by an
+// *os.File. size must be the exact byte length of body.
+func (c *Client) UploadReader(path string, fields map[string]string, filename string, body io.Reader, size int64, v interface{}) error {
 	if strings.HasPrefix(path, "/") {
 		path = c.baseURL + path
 	}
@@ -245,7 +256,7 @@ func (c *Client) Upload(path string, fields map[string]string, file *os.File, v 
 		}
 	}
 
-	if _, err := w.CreateFormFile("filename", filepath.Base(file.Name())); err != nil {
+	if _, err := w.CreateFormFile("filename", filename); err != nil {
 		return err
 	}
 
@@ -254,22 +265,17 @@ func (c *Client) Upload(path string, fields map[string]string, file *os.File, v 
 		return err
 	}
 
-	body := io.MultiReader(bytes.NewReader(b.Bytes()[:header]),
-		file,
+	multi := io.MultiReader(bytes.NewReader(b.Bytes()[:header]),
+		body,
 		bytes.NewReader(b.Bytes()[header:]))
 
-	req, err := http.NewRequest(http.MethodPost, path, body)
-	if err != nil {
-		return err
-	}
-
-	fi, err := file.Stat()
+	req, err := http.NewRequest(http.MethodPost, path, multi)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.ContentLength = int64(b.Len()) + fi.Size()
+	req.ContentLength = int64(b.Len()) + size
 	c.authHeaders(&req.Header)
 
 	res, err := c.httpClient.Do(req)

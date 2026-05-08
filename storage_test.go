@@ -3,10 +3,17 @@ package proxmox
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClusterStorages(t *testing.T) {
@@ -340,4 +347,108 @@ func TestStorage_MarshalUnmarshalRoundTrip(t *testing.T) {
 	assert.Equal(t, original.Name, unmarshalled.Name, "Name field should be preserved after marshal/unmarshal round-trip")
 	assert.Equal(t, original.Content, unmarshalled.Content)
 	assert.Equal(t, original.Enabled, unmarshalled.Enabled)
+}
+
+func TestStorage_Upload_InvalidContent(t *testing.T) {
+	storage := &Storage{Node: "node1", Name: "local"}
+	_, err := storage.Upload("not-a-real-content-type", "some-file")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "snippets")
+}
+
+func TestStorage_UploadString_InvalidContent(t *testing.T) {
+	storage := &Storage{Node: "node1", Name: "local"}
+	_, err := storage.UploadString("not-a-real-content-type", "user-data", "#cloud-config\n")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "snippets")
+}
+
+func TestStorage_UploadString(t *testing.T) {
+	const want = "#cloud-config\nhostname: test\n"
+
+	var (
+		gotContent  string
+		gotFilename string
+		gotBody     string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "/nodes/node1/storage/local/upload", r.URL.Path)
+
+		_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		require.NoError(t, err)
+		mr := multipart.NewReader(r.Body, params["boundary"])
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			require.NoError(t, err)
+			data, err := io.ReadAll(part)
+			require.NoError(t, err)
+			switch part.FormName() {
+			case "content":
+				gotContent = string(data)
+			case "filename":
+				gotFilename = part.FileName()
+				gotBody = string(data)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":"UPID:node1:00000000:00000000:00000000:imgcopy:user-data:root@pam:"}`))
+	}))
+	defer srv.Close()
+
+	client := NewClient(srv.URL)
+	storage := &Storage{client: client, Node: "node1", Name: "local"}
+
+	task, err := storage.UploadString("snippets", "test-user-data.yaml", want)
+	require.NoError(t, err)
+	assert.NotNil(t, task)
+
+	assert.Equal(t, "snippets", gotContent)
+	assert.Equal(t, "test-user-data.yaml", gotFilename)
+	assert.Equal(t, want, gotBody)
+}
+
+func TestClient_UploadReader(t *testing.T) {
+	const payload = "the body"
+
+	var (
+		gotFilename string
+		gotBody     string
+		gotLength   int64
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotLength = r.ContentLength
+
+		_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		require.NoError(t, err)
+		mr := multipart.NewReader(r.Body, params["boundary"])
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			require.NoError(t, err)
+			data, err := io.ReadAll(part)
+			require.NoError(t, err)
+			if part.FormName() == "filename" {
+				gotFilename = part.FileName()
+				gotBody = string(data)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":null}`))
+	}))
+	defer srv.Close()
+
+	client := NewClient(srv.URL)
+	body := strings.NewReader(payload)
+	err := client.UploadReader("/test", map[string]string{"content": "snippets"}, "hello.txt", body, int64(body.Len()), nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, "hello.txt", gotFilename)
+	assert.Equal(t, payload, gotBody)
+	assert.Greater(t, gotLength, int64(len(payload)))
 }

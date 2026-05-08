@@ -247,6 +247,10 @@ func (n *Node) StorageBackup(ctx context.Context) (*Storage, error) {
 	return n.findStorageByContent(ctx, "backup")
 }
 
+func (n *Node) StorageSnippets(ctx context.Context) (*Storage, error) {
+	return n.findStorageByContent(ctx, "snippets")
+}
+
 func (n *Node) StorageRootDir(ctx context.Context) (*Storage, error) {
 	return n.findStorageByContent(ctx, "rootdir")
 }

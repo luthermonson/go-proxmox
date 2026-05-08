@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var validContent = map[string]struct{}{
-	"iso":    {},
-	"vztmpl": {},
-	"import": {},
+	"iso":      {},
+	"vztmpl":   {},
+	"import":   {},
+	"snippets": {},
 }
 
 func (c *Client) ClusterStorages(ctx context.Context) (storages ClusterStorages, err error) {
@@ -98,7 +100,7 @@ func (s *Storage) UploadWithHash(content, file string, storageFilename *string, 
 
 func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
+		return nil, validContentError()
 	}
 
 	stat, err := os.Stat(file)
@@ -132,6 +134,39 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	return NewTask(upid, s.client), nil
 }
 
+// UploadString uploads contents directly as a file with the given storage filename
+// without writing to a temporary file. Useful for snippets (cloud-init user-data,
+// hookscripts, etc.) where the content is already in memory.
+func (s *Storage) UploadString(content, storageFilename, contents string) (*Task, error) {
+	if _, ok := validContent[content]; !ok {
+		return nil, validContentError()
+	}
+
+	body := strings.NewReader(contents)
+	data := map[string]string{
+		"content":  content,
+		"filename": storageFilename,
+	}
+
+	var upid UPID
+	if err := s.client.UploadReader(
+		fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
+		data, storageFilename, body, int64(body.Len()), &upid,
+	); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, s.client), nil
+}
+
+func validContentError() error {
+	keys := make([]string, 0, len(validContent))
+	for k := range validContent {
+		keys = append(keys, k)
+	}
+	return fmt.Errorf("invalid content type, allowed: %s", strings.Join(keys, ", "))
+}
+
 func (s *Storage) DownloadURL(ctx context.Context, content, filename, url string) (*Task, error) {
 	return s.downloadURL(ctx, content, filename, url, nil)
 }
@@ -145,7 +180,7 @@ func (s *Storage) DownloadURLWithHash(ctx context.Context, content, filename, ur
 
 func (s *Storage) downloadURL(ctx context.Context, content, filename, url string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
+		return nil, validContentError()
 	}
 
 	var upid UPID
