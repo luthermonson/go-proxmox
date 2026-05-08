@@ -144,4 +144,13 @@ func storage() {
 		JSON(`{
     "data": "UPID:node1:00000003:00000003:00000003:download:iso:root@pam:"
 }`)
+
+	// POST /nodes/{node}/storage/{storage}/upload - Upload content (iso, vztmpl, snippets, ...)
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local/upload$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000004:00000004:00000004:imgcopy:upload:root@pam:"
+}`)
 }
