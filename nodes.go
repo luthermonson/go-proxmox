@@ -247,6 +247,11 @@ func (n *Node) StorageBackup(ctx context.Context) (*Storage, error) {
 	return n.findStorageByContent(ctx, "backup")
 }
 
+// StorageSnippets returns a storage configured for the "snippets" content
+// type. Note that Proxmox does not expose a REST upload endpoint for
+// snippets — they must be written to the storage path directly (e.g. via
+// SCP/SFTP). This helper is for read-side discovery (e.g. resolving the
+// storage's path so a caller can write to it out-of-band).
 func (n *Node) StorageSnippets(ctx context.Context) (*Storage, error) {
 	return n.findStorageByContent(ctx, "snippets")
 }

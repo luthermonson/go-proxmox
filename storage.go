@@ -8,11 +8,15 @@ import (
 	"strings"
 )
 
+// validContent enumerates the values Proxmox's
+// /nodes/{node}/storage/{storage}/upload endpoint accepts. The Proxmox API
+// rejects everything else (including "snippets" — those have to be placed
+// on the storage path directly, e.g. via SCP/SFTP, since there is no REST
+// upload path for them as of PVE 9.x).
 var validContent = map[string]struct{}{
-	"iso":      {},
-	"vztmpl":   {},
-	"import":   {},
-	"snippets": {},
+	"iso":    {},
+	"vztmpl": {},
+	"import": {},
 }
 
 func (c *Client) ClusterStorages(ctx context.Context) (storages ClusterStorages, err error) {
@@ -139,9 +143,10 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	return NewTask(upid, s.client), nil
 }
 
-// UploadString uploads contents directly as a file with the given storage filename
-// without writing to a temporary file. Useful for snippets (cloud-init user-data,
-// hookscripts, etc.) where the content is already in memory.
+// UploadString uploads contents directly as a file with the given storage
+// filename without writing to a temporary file. Useful when the payload is
+// already in memory. content must be one of the values accepted by the
+// Proxmox upload endpoint (iso, vztmpl, import).
 func (s *Storage) UploadString(content, storageFilename, contents string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
 		return nil, validContentError()
