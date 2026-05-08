@@ -2,6 +2,7 @@ package pve7x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
@@ -143,5 +144,17 @@ func storage() {
 		Reply(200).
 		JSON(`{
     "data": "UPID:node1:00000003:00000003:00000003:download:iso:root@pam:"
+}`)
+
+	// POST /nodes/{node}/storage/{storage}/upload - Upload content (iso, vztmpl, snippets, ...)
+	// Multipart bodies are recorded by capture.UploadMatcher so tests can
+	// assert on the content/filename/body fields.
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local/upload$").
+		AddMatcher(capture.UploadMatcher()).
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000004:00000004:00000004:imgcopy:upload:root@pam:"
 }`)
 }

@@ -237,6 +237,12 @@ func TestNode_StorageByContent(t *testing.T) {
 	assert.NotNil(t, storage)
 	assert.Contains(t, storage.Content, "backup")
 
+	// Test StorageSnippets
+	storage, err = node.StorageSnippets(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, storage)
+	assert.Contains(t, storage.Content, "snippets")
+
 	// Test StorageRootDir
 	storage, err = node.StorageRootDir(ctx)
 	assert.Nil(t, err)

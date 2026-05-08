@@ -5,8 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
+// validContent enumerates the values Proxmox's
+// /nodes/{node}/storage/{storage}/upload endpoint accepts. The Proxmox API
+// rejects everything else (including "snippets" — those have to be placed
+// on the storage path directly, e.g. via SCP/SFTP, since there is no REST
+// upload path for them as of PVE 9.x).
 var validContent = map[string]struct{}{
 	"iso":    {},
 	"vztmpl": {},
@@ -88,17 +94,12 @@ func (s *Storage) UploadWithHash(content, file string, storageFilename *string, 
 	if storageFilename != nil {
 		extraArgs["filename"] = *storageFilename
 	}
-
-	if storageFilename != nil {
-		return s.upload(content, file, &map[string]string{"filename": *storageFilename})
-	}
-
-	return s.upload(content, file, nil)
+	return s.upload(content, file, &extraArgs)
 }
 
 func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
+		return nil, validContentError()
 	}
 
 	stat, err := os.Stat(file)
@@ -116,20 +117,63 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	}
 	defer func() { _ = f.Close() }()
 
-	var upid UPID
+	// The upload's filename goes in the file part's Content-Disposition.
+	// It must NOT also be sent as a form field — Proxmox treats both as
+	// the same parameter and rejects the request when they collide.
+	filename := filepath.Base(file)
 	data := map[string]string{"content": content}
 	if extraArgs != nil {
 		for k, v := range *extraArgs {
+			if k == "filename" {
+				filename = v
+				continue
+			}
 			data[k] = v
 		}
 	}
 
-	if err := s.client.Upload(fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
-		data, f, &upid); err != nil {
+	var upid UPID
+	if err := s.client.UploadReader(
+		fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
+		data, filename, f, stat.Size(), &upid,
+	); err != nil {
 		return nil, err
 	}
 
 	return NewTask(upid, s.client), nil
+}
+
+// UploadString uploads contents directly as a file with the given storage
+// filename without writing to a temporary file. Useful when the payload is
+// already in memory. content must be one of the values accepted by the
+// Proxmox upload endpoint (iso, vztmpl, import).
+func (s *Storage) UploadString(content, storageFilename, contents string) (*Task, error) {
+	if _, ok := validContent[content]; !ok {
+		return nil, validContentError()
+	}
+
+	body := strings.NewReader(contents)
+	// storageFilename is communicated via the file part's Content-Disposition
+	// (UploadReader's filename arg) — it must not also be a form field.
+	data := map[string]string{"content": content}
+
+	var upid UPID
+	if err := s.client.UploadReader(
+		fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
+		data, storageFilename, body, int64(body.Len()), &upid,
+	); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, s.client), nil
+}
+
+func validContentError() error {
+	keys := make([]string, 0, len(validContent))
+	for k := range validContent {
+		keys = append(keys, k)
+	}
+	return fmt.Errorf("invalid content type, allowed: %s", strings.Join(keys, ", "))
 }
 
 func (s *Storage) DownloadURL(ctx context.Context, content, filename, url string) (*Task, error) {
@@ -145,7 +189,7 @@ func (s *Storage) DownloadURLWithHash(ctx context.Context, content, filename, ur
 
 func (s *Storage) downloadURL(ctx context.Context, content, filename, url string, extraArgs *map[string]string) (*Task, error) {
 	if _, ok := validContent[content]; !ok {
-		return nil, fmt.Errorf("only iso, vztmpl and import allowed")
+		return nil, validContentError()
 	}
 
 	var upid UPID

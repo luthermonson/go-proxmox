@@ -3,10 +3,14 @@ package proxmox
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClusterStorages(t *testing.T) {
@@ -340,4 +344,81 @@ func TestStorage_MarshalUnmarshalRoundTrip(t *testing.T) {
 	assert.Equal(t, original.Name, unmarshalled.Name, "Name field should be preserved after marshal/unmarshal round-trip")
 	assert.Equal(t, original.Content, unmarshalled.Content)
 	assert.Equal(t, original.Enabled, unmarshalled.Enabled)
+}
+
+func TestStorage_Upload_InvalidContent(t *testing.T) {
+	storage := &Storage{Node: "node1", Name: "local"}
+	_, err := storage.Upload("not-a-real-content-type", "some-file")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "iso")
+}
+
+func TestStorage_UploadString_InvalidContent(t *testing.T) {
+	storage := &Storage{Node: "node1", Name: "local"}
+	_, err := storage.UploadString("not-a-real-content-type", "user-data", "#cloud-config\n")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "iso")
+}
+
+func TestStorage_UploadString(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	const want = "fake iso payload"
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+
+	task, err := storage.UploadString("iso", "tiny.iso", want)
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "imgcopy", task.Type)
+
+	require.NotNil(t, capture.LastUpload, "upload matcher did not run")
+	assert.Equal(t, "iso", capture.LastUpload.Fields["content"])
+	assert.Equal(t, "tiny.iso", capture.LastUpload.Filename)
+	assert.Equal(t, want, capture.LastUpload.Body)
+	// Proxmox treats "filename" as a single parameter; sending it both as a
+	// form field and as the file part name causes empty-body 4xx responses.
+	_, ok := capture.LastUpload.Fields["filename"]
+	assert.False(t, ok, "filename must not appear as a form field; it lives in the file part's Content-Disposition")
+}
+
+func TestStorage_UploadWithName_FilenameNotDuplicated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	tmp, err := os.CreateTemp("", "upload-test-*.iso")
+	require.NoError(t, err)
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	_, err = tmp.WriteString("fake iso data")
+	require.NoError(t, err)
+	require.NoError(t, tmp.Close())
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	_, err = storage.UploadWithName("iso", tmp.Name(), "renamed.iso")
+	require.NoError(t, err)
+
+	require.NotNil(t, capture.LastUpload)
+	assert.Equal(t, "renamed.iso", capture.LastUpload.Filename)
+	_, ok := capture.LastUpload.Fields["filename"]
+	assert.False(t, ok, "filename must not appear as a form field")
+}
+
+func TestClient_UploadReader(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	const payload = "the body"
+	body := strings.NewReader(payload)
+	err := mockClient().UploadReader(
+		"/nodes/node1/storage/local/upload",
+		map[string]string{"content": "iso"},
+		"hello.txt", body, int64(body.Len()), nil,
+	)
+	require.NoError(t, err)
+
+	require.NotNil(t, capture.LastUpload)
+	assert.Equal(t, "iso", capture.LastUpload.Fields["content"])
+	assert.Equal(t, "hello.txt", capture.LastUpload.Filename)
+	assert.Equal(t, payload, capture.LastUpload.Body)
 }
