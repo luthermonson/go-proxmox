@@ -90,12 +90,7 @@ func (s *Storage) UploadWithHash(content, file string, storageFilename *string, 
 	if storageFilename != nil {
 		extraArgs["filename"] = *storageFilename
 	}
-
-	if storageFilename != nil {
-		return s.upload(content, file, &map[string]string{"filename": *storageFilename})
-	}
-
-	return s.upload(content, file, nil)
+	return s.upload(content, file, &extraArgs)
 }
 
 func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*Task, error) {
@@ -118,16 +113,26 @@ func (s *Storage) upload(content, file string, extraArgs *map[string]string) (*T
 	}
 	defer func() { _ = f.Close() }()
 
-	var upid UPID
+	// The upload's filename goes in the file part's Content-Disposition.
+	// It must NOT also be sent as a form field — Proxmox treats both as
+	// the same parameter and rejects the request when they collide.
+	filename := filepath.Base(file)
 	data := map[string]string{"content": content}
 	if extraArgs != nil {
 		for k, v := range *extraArgs {
+			if k == "filename" {
+				filename = v
+				continue
+			}
 			data[k] = v
 		}
 	}
 
-	if err := s.client.Upload(fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
-		data, f, &upid); err != nil {
+	var upid UPID
+	if err := s.client.UploadReader(
+		fmt.Sprintf("/nodes/%s/storage/%s/upload", s.Node, s.Name),
+		data, filename, f, stat.Size(), &upid,
+	); err != nil {
 		return nil, err
 	}
 
@@ -143,10 +148,9 @@ func (s *Storage) UploadString(content, storageFilename, contents string) (*Task
 	}
 
 	body := strings.NewReader(contents)
-	data := map[string]string{
-		"content":  content,
-		"filename": storageFilename,
-	}
+	// storageFilename is communicated via the file part's Content-Disposition
+	// (UploadReader's filename arg) — it must not also be a form field.
+	data := map[string]string{"content": content}
 
 	var upid UPID
 	if err := s.client.UploadReader(

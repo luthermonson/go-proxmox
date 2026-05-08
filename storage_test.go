@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -376,6 +377,31 @@ func TestStorage_UploadString(t *testing.T) {
 	assert.Equal(t, "snippets", capture.LastUpload.Fields["content"])
 	assert.Equal(t, "test-user-data.yaml", capture.LastUpload.Filename)
 	assert.Equal(t, want, capture.LastUpload.Body)
+	// Proxmox treats "filename" as a single parameter; sending it both as a
+	// form field and as the file part name causes empty-body 4xx responses.
+	_, ok := capture.LastUpload.Fields["filename"]
+	assert.False(t, ok, "filename must not appear as a form field; it lives in the file part's Content-Disposition")
+}
+
+func TestStorage_UploadWithName_FilenameNotDuplicated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	tmp, err := os.CreateTemp("", "upload-test-*.iso")
+	require.NoError(t, err)
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	_, err = tmp.WriteString("fake iso data")
+	require.NoError(t, err)
+	require.NoError(t, tmp.Close())
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	_, err = storage.UploadWithName("iso", tmp.Name(), "renamed.iso")
+	require.NoError(t, err)
+
+	require.NotNil(t, capture.LastUpload)
+	assert.Equal(t, "renamed.iso", capture.LastUpload.Filename)
+	_, ok := capture.LastUpload.Fields["filename"]
+	assert.False(t, ok, "filename must not appear as a form field")
 }
 
 func TestClient_UploadReader(t *testing.T) {
