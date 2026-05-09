@@ -310,6 +310,51 @@ func TestIndexedDeviceKey(t *testing.T) {
 	}
 }
 
+// TestNode_VirtualMachineConfig_HighIndices is the integration-shaped regression
+// test for issue #211: it goes through node.VirtualMachine(ctx, 102), which hits
+// the gock mock returning net15..net31, scsi30, unused255, hostpci15, ipconfig20,
+// plus prefix-collision keys (scsihw, bare numa).
+func TestNode_VirtualMachineConfig_HighIndices(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	vm, err := node.VirtualMachine(ctx, 102)
+	assert.Nil(t, err)
+	assert.NotNil(t, vm)
+	assert.NotNil(t, vm.VirtualMachineConfig)
+
+	cfg := vm.VirtualMachineConfig
+
+	assert.Equal(t, "virtio=00:00:00:00:00:00,bridge=vmbr0", cfg.Nets["net0"])
+	assert.Equal(t, "virtio=00:00:00:00:00:15,bridge=vmbr15", cfg.Nets["net15"])
+	assert.Equal(t, "virtio=00:00:00:00:00:31,bridge=vmbr31", cfg.Nets["net31"])
+	assert.Equal(t, "local-lvm:vm-102-disk-30,size=32G", cfg.SCSIs["scsi30"])
+	assert.Equal(t, "local-lvm:vm-102-unused-15", cfg.Unuseds["unused15"])
+	assert.Equal(t, "local-lvm:vm-102-unused-255", cfg.Unuseds["unused255"])
+	assert.Equal(t, "0000:0f:00.0", cfg.HostPCIs["hostpci15"])
+	assert.Equal(t, "ip=10.0.0.20/24,gw=10.0.0.1", cfg.IPConfigs["ipconfig20"])
+	assert.Equal(t, "cpus=0-1,memory=2048", cfg.Numas["numa0"])
+
+	// Net0/Scsi0 keep the explicit-field mirror for back-compat.
+	assert.Equal(t, "virtio=00:00:00:00:00:00,bridge=vmbr0", cfg.Net0)
+	assert.Equal(t, "local-lvm:vm-102-disk-0,size=32G", cfg.SCSI0)
+
+	// scsihw must remain in the SCSIHW scalar — never in SCSIs.
+	assert.Equal(t, "virtio-scsi-pci", cfg.SCSIHW)
+	_, hasSCSIHW := cfg.SCSIs["scsihw"]
+	assert.False(t, hasSCSIHW)
+
+	// Bare numa scalar must remain in Numa — never in Numas.
+	assert.Equal(t, 1, cfg.Numa)
+	_, hasBareNuma := cfg.Numas["numa"]
+	assert.False(t, hasBareNuma)
+}
+
 func TestNode_VirtualMachineConfig_AllMergedMapsPopulated(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

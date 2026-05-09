@@ -48,6 +48,52 @@ func containers() {
     ]
 }`)
 
+	// GET /nodes/node1/lxc/102/status/current — minimal payload to support
+	// the high-index regression test for issue #211.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/102/status/current$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "vmid": 102,
+        "status": "running",
+        "name": "ct-wide",
+        "cpus": 2,
+        "maxmem": 2147483648,
+        "maxdisk": 17179869184,
+        "maxswap": 536870912,
+        "uptime": 100
+    }
+}`)
+
+	// GET /nodes/node1/lxc/102/config — high-index entries (mp42, mp255, dev15,
+	// net20, unused100) so node.Container(ctx, 102) verifies the maps capture
+	// indices >9 for LXC too.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/102/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "arch": "amd64",
+        "cores": 2,
+        "hostname": "ct-wide",
+        "memory": 2048,
+        "ostype": "ubuntu",
+        "rootfs": "local-lvm:vm-102-disk-0,size=8G",
+        "swap": 512,
+        "digest": "wideabcdef1234567890",
+        "net0": "name=eth0,bridge=vmbr0",
+        "net20": "name=eth20,bridge=vmbr20",
+        "mp0": "/srv/data,mp=/data",
+        "mp42": "/srv/forty-two,mp=/forty-two",
+        "mp255": "/srv/last,mp=/last",
+        "dev15": "/dev/sdb15",
+        "unused100": "local-lvm:subvol-102-unused-100"
+    }
+}`)
+
 	// GET /nodes/{node}/lxc/{vmid}/status/current - Get container current status
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/lxc/101/status/current$").
