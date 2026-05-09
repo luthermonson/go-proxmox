@@ -54,6 +54,18 @@ func IsErrNoop(err error) bool {
 	return errors.Is(err, ErrNoop)
 }
 
+// ErrAPITokenWebSocketUnsupported is returned by TermWebSocket and VNCWebSocket
+// when the client is authenticated with an API token. Proxmox's vncwebsocket
+// endpoint rejects the token-suffixed user (e.g. "root@pam!tokenname") during
+// the post-upgrade auth handshake, which surfaces here as "unexpected EOF" and
+// on the server as `failed waiting for client: timed out`. Use WithCredentials
+// or WithSession for terminal/VNC access.
+var ErrAPITokenWebSocketUnsupported = errors.New("proxmox does not accept API tokens for vncwebsocket; use WithCredentials or WithSession")
+
+func IsAPITokenWebSocketUnsupported(err error) bool {
+	return errors.Is(err, ErrAPITokenWebSocketUnsupported)
+}
+
 func MakeTag(v string) string {
 	return fmt.Sprintf(TagFormat, v)
 }
@@ -348,7 +360,17 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 	return json.Unmarshal(body, &v) // assume passed in type fully supports response
 }
 
+// TermWebSocket opens a terminal WebSocket connection to a previously created
+// termproxy session. It is invoked by Node.TermWebSocket, VirtualMachine.TermWebSocket,
+// and Container.TermWebSocket.
+//
+// Returns ErrAPITokenWebSocketUnsupported if the client is authenticated with
+// an API token; Proxmox does not accept tokens for /vncwebsocket — see issue
+// luthermonson/go-proxmox#221 and the linked Proxmox forum threads.
 func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	if c.token != "" {
+		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
+	}
 	if strings.HasPrefix(path, "/") {
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
@@ -363,6 +385,12 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 30 * time.Second,
 		TLSClientConfig:  tlsConfig,
+		// Proxmox's vncwebsocket handler requires the "binary" subprotocol —
+		// the web UI's xterm.js opens the socket with `new WebSocket(url, "binary")`.
+		// Without it the server closes the upgraded connection immediately,
+		// surfacing as "close 1006 (abnormal closure): unexpected EOF" on the
+		// first read.
+		Subprotocols: []string{"binary"},
 	}
 
 	dialerHeaders := http.Header{}
@@ -398,8 +426,9 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 		width:  goterm.Width(),
 	}
 
-	c.log.Debugf("sending terminal size: %d x %d", tsize.height, tsize.width)
-	if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", tsize.height, tsize.width))); err != nil {
+	// Proxmox's xterm.js resize protocol is "1:<cols>:<rows>:" — width first.
+	c.log.Debugf("sending terminal size: cols=%d rows=%d", tsize.width, tsize.height)
+	if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", tsize.width, tsize.height))); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
@@ -477,8 +506,8 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 					errs <- err
 				}
 			case resized := <-resize:
-				c.log.Debugf("resizing terminal window: %d x %d", resized.height, resized.width)
-				if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", resized.height, resized.width))); err != nil {
+				c.log.Debugf("resizing terminal window: cols=%d rows=%d", resized.width, resized.height)
+				if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", resized.width, resized.height))); err != nil {
 					errs <- err
 				}
 			case msg := <-send:
@@ -494,7 +523,16 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 	return send, recv, errs, closer, nil
 }
 
+// VNCWebSocket opens a VNC WebSocket connection to a previously created VNC
+// session. It is invoked by Node.VNCWebSocket, VirtualMachine.VNCWebSocket,
+// and Container.VNCWebSocket.
+//
+// Returns ErrAPITokenWebSocketUnsupported if the client is authenticated with
+// an API token; see TermWebSocket for the underlying Proxmox limitation.
 func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
+	if c.token != "" {
+		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
+	}
 	if strings.HasPrefix(path, "/") {
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
@@ -509,6 +547,12 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 30 * time.Second,
 		TLSClientConfig:  tlsConfig,
+		// Proxmox's vncwebsocket handler requires the "binary" subprotocol —
+		// the web UI's xterm.js opens the socket with `new WebSocket(url, "binary")`.
+		// Without it the server closes the upgraded connection immediately,
+		// surfacing as "close 1006 (abnormal closure): unexpected EOF" on the
+		// first read.
+		Subprotocols: []string{"binary"},
 	}
 
 	dialerHeaders := http.Header{}
