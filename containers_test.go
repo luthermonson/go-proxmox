@@ -2,11 +2,39 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
 )
+
+// TestContainerConfig_UnmarshalJSON_BeyondTen exercises issue #211 for LXC:
+// mp0..mp255 and dev0..dev255 in particular routinely exceed 9 in real setups.
+func TestContainerConfig_UnmarshalJSON_BeyondTen(t *testing.T) {
+	body := []byte(`{
+		"mp0": "/srv/data,mp=/data",
+		"mp42": "/srv/forty-two,mp=/forty-two",
+		"mp255": "/srv/last,mp=/last",
+		"net0": "name=eth0,bridge=vmbr0",
+		"net20": "name=eth20,bridge=vmbr20",
+		"dev15": "/dev/sdb15",
+		"unused100": "local-lvm:subvol-100-unused-100"
+	}`)
+
+	var cfg ContainerConfig
+	assert.NoError(t, json.Unmarshal(body, &cfg))
+
+	assert.Equal(t, "/srv/forty-two,mp=/forty-two", cfg.Mps["mp42"])
+	assert.Equal(t, "/srv/last,mp=/last", cfg.Mps["mp255"])
+	assert.Equal(t, "name=eth20,bridge=vmbr20", cfg.Nets["net20"])
+	assert.Equal(t, "/dev/sdb15", cfg.Devs["dev15"])
+	assert.Equal(t, "local-lvm:subvol-100-unused-100", cfg.Unuseds["unused100"])
+
+	// Net0 keeps the explicit-field mirror for back-compat.
+	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Net0)
+	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Nets["net0"])
+}
 
 func TestContainer(t *testing.T) {
 	mocks.On(mockConfig)
