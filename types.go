@@ -825,6 +825,20 @@ type ContainerMigrateOptions struct {
 	Restart IntOrBool `json:"restart,omitempty"`
 }
 
+// ContainerDeleteOptions maps to the optional query parameters that
+// DELETE /nodes/{node}/lxc/{vmid} accepts. A nil *ContainerDeleteOptions
+// passed to Container.Delete is equivalent to all defaults.
+type ContainerDeleteOptions struct {
+	// Force destroys the container even if it is currently running.
+	Force IntOrBool `json:"force,omitempty"`
+	// Purge also removes the container from all related configurations
+	// (backup jobs, replication jobs, HA), in addition to deleting it.
+	Purge IntOrBool `json:"purge,omitempty"`
+	// DestroyUnreferencedDisks also destroys disks across enabled storages
+	// that match the VMID but are not referenced by the container's config.
+	DestroyUnreferencedDisks IntOrBool `json:"destroy-unreferenced-disks,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`

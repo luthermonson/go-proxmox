@@ -225,6 +225,20 @@ func (c *Client) Delete(ctx context.Context, p string, v interface{}) error {
 	return c.Req(ctx, http.MethodDelete, p, nil, v)
 }
 
+// DeleteWithParams mirrors GetWithParams for DELETE: it serialises d into a
+// query string (Proxmox DELETE endpoints take options via query params, not
+// a request body) and unmarshals the response into v.
+func (c *Client) DeleteWithParams(ctx context.Context, p string, d interface{}, v interface{}) error {
+	if d != nil {
+		queryString, err := dataParserForURL(d)
+		if err != nil {
+			return err
+		}
+		p = p + "?" + queryString
+	}
+	return c.Req(ctx, http.MethodDelete, p, nil, v)
+}
+
 // Upload - There is some weird 16kb limit hardcoded in proxmox for the max POST size, hopefully in the future we make
 // a func to scp the file to the node directly as this API endpoint is kind of janky. For now big ISOs/vztmpl should
 // be put somewhere and a use DownloadUrl. code link for posterity, I think they meant to do 16mb and got the bit math wrong

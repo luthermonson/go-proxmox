@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,7 +81,65 @@ func TestContainerDelete(t *testing.T) {
 		Node:   "node1",
 		VMID:   101,
 	}
-	task, err := container.Delete(ctx)
+	task, err := container.Delete(ctx, nil)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, task)
+}
+
+// TestContainerDelete_ForceParam verifies issue #149: passing
+// ContainerDeleteOptions{Force: true} actually puts force=1 on the wire as a
+// query parameter to DELETE /nodes/{node}/lxc/{vmid}. The gock mock only
+// matches when the parameter is present, so a regression where the option is
+// silently dropped (as DeleteFirewallIPSet currently does, by passing the map
+// as the response target instead of via DeleteWithParams) makes this test fail
+// with "cannot match any request".
+func TestContainerDelete_ForceParam(t *testing.T) {
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Delete("^/nodes/node1/lxc/101$").
+		MatchParam("force", "1").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:vzdestroy:101:root@pam:"}`)
+
+	client := mockClient()
+	container := Container{
+		client: client,
+		Node:   "node1",
+		VMID:   101,
+	}
+	task, err := container.Delete(context.Background(), &ContainerDeleteOptions{Force: true})
+	assert.Nil(t, err)
+	assert.NotEmpty(t, task)
+}
+
+// TestContainerDelete_AllOptionsOnWire is the equivalent for purge and
+// destroy-unreferenced-disks: all three options must appear in the query
+// string when set, with the spec-correct hyphenated key for the last one.
+func TestContainerDelete_AllOptionsOnWire(t *testing.T) {
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Delete("^/nodes/node1/lxc/101$").
+		MatchParams(map[string]string{
+			"force":                      "1",
+			"purge":                      "1",
+			"destroy-unreferenced-disks": "1",
+		}).
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:vzdestroy:101:root@pam:"}`)
+
+	client := mockClient()
+	container := Container{
+		client: client,
+		Node:   "node1",
+		VMID:   101,
+	}
+	task, err := container.Delete(context.Background(), &ContainerDeleteOptions{
+		Force:                    true,
+		Purge:                    true,
+		DestroyUnreferencedDisks: true,
+	})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 }
