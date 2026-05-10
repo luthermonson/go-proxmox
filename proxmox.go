@@ -30,6 +30,8 @@ var (
 	ErrNotAuthorized = errors.New("not authorized to access endpoint")
 
 	ErrSessionExists = errors.New("session already exists")
+
+	ErrNoSession = errors.New("no current session to refresh")
 )
 
 func IsNotAuthorized(err error) bool {
