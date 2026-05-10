@@ -6,14 +6,18 @@
 //
 // Targets:
 //
-//	mage record:pve9     Record cassettes against a fresh PVE 9 install.
-//	mage record:pve8     Record cassettes against a fresh PVE 8 install.
-//	mage record:all      Record both pve9 and pve8 in series.
-//	mage record:verify   Replay every checked-in cassette without touching the
-//	                     network. Run in CI to guard against drift.
-//	mage record:plan     Print what mage record:all would do; touches nothing.
-//	mage record:smoke    Run only the recorder loop's hand-crafted smoke
-//	                     cassette (TestRecorder_Smoke). No outer host needed.
+//	mage record:preflight  Validate outer-host config + connectivity before
+//	                       provisioning. Run this first.
+//	mage record:pve9       Record cassettes against a fresh PVE 9 install.
+//	mage record:pve8       Record cassettes against a fresh PVE 8 install.
+//	mage record:all        Record both pve9 and pve8 in series.
+//	mage record:verify     Replay every checked-in cassette without touching
+//	                       the network. Run in CI to guard against drift.
+//	mage record:plan       Print what mage record:all would do; touches
+//	                       nothing.
+//	mage record:smoke      Run only the recorder loop's hand-crafted smoke
+//	                       cassette (TestRecorder_Smoke). No outer host
+//	                       needed.
 //
 // See tests/recorder/SEED.md for the deterministic state contract the nested
 // PVE produces, and the README of this package for env var configuration.
