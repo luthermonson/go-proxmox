@@ -94,6 +94,56 @@ parsing happens in `NewTask` (`tasks.go`).
 are name/value pairs flattened into the request body — this is how the
 package handles Proxmox's free-form, version-dependent config keys.
 
+### Required: don't clobber PVE-side defaults on config structs
+
+Background: see issue #199. Several config structs (e.g. `ContainerConfig`,
+`VirtualMachineConfig`) historically declared fields as plain values with
+`,omitempty`. That works only when Go's zero value matches Proxmox's
+documented default. When it doesn't — for example `Console IntOrBool` with
+a `json:"console,omitempty"` tag, where PVE defaults to `1` (true) but Go's
+zero is `0`/false — `omitempty` *cannot* tell "user left it unset" apart
+from "user wanted false", so the marshaller drops the field on the unset
+case and the API call silently flips a server-side default.
+
+**Rule for every new or modified config struct field:**
+
+1. **Look up the upstream default.** Cross-reference the field against the
+   [PVE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/index.html)
+   for that endpoint. The default is in the parameter description, e.g.
+   `console: <boolean> (default = 1)`.
+2. **If the upstream default differs from Go's zero value, use a pointer.**
+   That means:
+   - `*bool` when the PVE default is `true` (Go zero: `false`).
+   - `*int` / `*StringOrInt` / `*IntOrBool` when the PVE default is any
+     non-zero number, or when `0` is itself a meaningful value the user
+     might want to send explicitly.
+   - `*string` when the PVE default is a non-empty string, or when the empty
+     string is a meaningful value.
+   - Slices, maps, and pointer types are already nil-able and don't need
+     wrapping.
+3. **If Go's zero value matches the upstream default, leave it unboxed** with
+   `,omitempty`. Don't pointer-ify defensively — it just adds caller
+   ergonomics noise for no correctness gain.
+4. **Mirror the change on any sibling option/builder type.** If you add
+   `*bool` to `ContainerConfig.Console`, the matching
+   `ContainerOption`/`VirtualMachineOption` helpers and any test fixtures
+   that round-trip through the struct must agree.
+5. **Add a regression test.** Marshal the struct with the field unset and
+   assert the JSON does *not* contain the key — that's the failure mode this
+   rule exists to prevent. Cover the explicit-false / explicit-zero case
+   too: set the pointer and assert the key *is* present with the right
+   value.
+
+When in doubt: the question to ask is "if the user never touches this field,
+will an unintended value reach Proxmox?" If yes, the field needs to be a
+pointer.
+
+The `audit/` directory contains a tool that diffs the package's config
+structs against the live PVE API schema and writes `audit/report.md`. Run
+it (see the header comment in `audit/main.go` for the regen command) when
+adding fields or after a PVE release to catch new mismatches; existing
+known mismatches are tagged with `FIXME` comments in `types.go`.
+
 ### Mock-based unit tests (`tests/mocks/`)
 
 Unit tests use [`h2non/gock`](https://github.com/h2non/gock) to intercept HTTP
