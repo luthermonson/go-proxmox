@@ -526,4 +526,76 @@ func cluster() {
 		JSON(`{
 		"data": null
 	}`)
+
+	clusterBackup()
+}
+
+func clusterBackup() {
+	// GET /cluster/backup — list all backup schedules
+	gock.New(config.C.URI).
+		Get("^/cluster/backup$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "id": "backup-1",
+            "schedule": "*/30",
+            "mode": "snapshot",
+            "storage": "local",
+            "type": "vzdump",
+            "enabled": 1,
+            "all": 1,
+            "next-run": 1715299200,
+            "mailnotification": "always",
+            "notes-template": "{{guestname}}"
+        },
+        {
+            "id": "backup-2",
+            "schedule": "sat 02:00",
+            "mode": "stop",
+            "storage": "nfs-backups",
+            "type": "vzdump",
+            "enabled": 0,
+            "vmid": "101,102",
+            "mailto": "ops@example.com",
+            "prune-backups": "keep-daily=7,keep-weekly=4"
+        }
+    ]
+}`)
+
+	// GET /cluster/backup/{id} — single backup schedule
+	gock.New(config.C.URI).
+		Get("^/cluster/backup/backup-1$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "id": "backup-1",
+        "schedule": "*/30",
+        "mode": "snapshot",
+        "storage": "local",
+        "type": "vzdump",
+        "enabled": 1,
+        "all": 1
+    }
+}`)
+
+	// POST /cluster/backup — create
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/backup$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /cluster/backup/{id} — update
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/backup/backup-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/backup/{id} — delete
+	gock.New(config.C.URI).
+		Delete("^/cluster/backup/backup-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
