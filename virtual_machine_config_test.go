@@ -213,7 +213,7 @@ func TestVirtualMachineConfig_MergeIndexedDevices_IgnoresNonNumeric(t *testing.T
 	// are correctly ignored by the merge function
 	config := &VirtualMachineConfig{
 		SCSI0:  "local-lvm:vm-100-disk-0,size=32G",
-		SCSIHW: "virtio-scsi-pci",
+		SCSIHW: Ptr("virtio-scsi-pci"),
 	}
 
 	scsis := config.MergeSCSIs()
