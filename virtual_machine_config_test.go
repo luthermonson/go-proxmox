@@ -78,12 +78,14 @@ func TestVirtualMachineConfig_UnmarshalJSON_PrefixCollisions(t *testing.T) {
 	var cfg VirtualMachineConfig
 	assert.NoError(t, json.Unmarshal(body, &cfg))
 
-	assert.Equal(t, "virtio-scsi-pci", cfg.SCSIHW)
+	if assert.NotNil(t, cfg.SCSIHW) {
+		assert.Equal(t, "virtio-scsi-pci", *cfg.SCSIHW)
+	}
 	_, hasSCSIHW := cfg.SCSIs["scsihw"]
 	assert.False(t, hasSCSIHW, "SCSIHW must not be routed into SCSIs")
 	assert.Equal(t, "local-lvm:vm-100-disk-0,size=32G", cfg.SCSIs["scsi0"])
 
-	assert.Equal(t, 1, cfg.Numa)
+	assert.Equal(t, IntOrBool(true), cfg.Numa)
 	_, hasBareNuma := cfg.Numas["numa"]
 	assert.False(t, hasBareNuma, "bare numa scalar must not be routed into Numas")
 	assert.Equal(t, "cpus=0-1,memory=2048", cfg.Numas["numa0"])
@@ -147,12 +149,14 @@ func TestNode_VirtualMachineConfig_HighIndices(t *testing.T) {
 	assert.Equal(t, "cpus=0-1,memory=2048", cfg.Numas["numa0"])
 
 	// scsihw must remain in the SCSIHW scalar — never in SCSIs.
-	assert.Equal(t, "virtio-scsi-pci", cfg.SCSIHW)
+	if assert.NotNil(t, cfg.SCSIHW) {
+		assert.Equal(t, "virtio-scsi-pci", *cfg.SCSIHW)
+	}
 	_, hasSCSIHW := cfg.SCSIs["scsihw"]
 	assert.False(t, hasSCSIHW)
 
 	// Bare numa scalar must remain in Numa — never in Numas.
-	assert.Equal(t, 1, cfg.Numa)
+	assert.Equal(t, IntOrBool(true), cfg.Numa)
 	_, hasBareNuma := cfg.Numas["numa"]
 	assert.False(t, hasBareNuma)
 }
