@@ -1205,6 +1205,78 @@ func (storages *Storages) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type ClusterBackups []*ClusterBackup
+
+// ClusterBackup is a single configured cluster-wide backup schedule
+// (a vzdump job). See https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/backup
+type ClusterBackup struct {
+	client *Client
+
+	ID               string    `json:"id,omitempty"`
+	Schedule         string    `json:"schedule,omitempty"`
+	Enabled          IntOrBool `json:"enabled,omitempty"`
+	RepeatMissed     IntOrBool `json:"repeat-missed,omitempty"`
+	All              IntOrBool `json:"all,omitempty"`
+	NotesTemplate    string    `json:"notes-template,omitempty"`
+	MailNotification string    `json:"mailnotification,omitempty"`
+	MailTo           string    `json:"mailto,omitempty"`
+	Mode             string    `json:"mode,omitempty"`
+	Type             string    `json:"type,omitempty"`
+	NextRun          uint64    `json:"next-run,omitempty"`
+	Storage          string    `json:"storage,omitempty"`
+	VMID             string    `json:"vmid,omitempty"`
+	Exclude          string    `json:"exclude,omitempty"`
+	Node             string    `json:"node,omitempty"`
+	Pool             string    `json:"pool,omitempty"`
+	BwLimit          uint64    `json:"bwlimit,omitempty"`
+	Comment          string    `json:"comment,omitempty"`
+	PruneBackups     string    `json:"prune-backups,omitempty"`
+}
+
+// ClusterBackupOptions is the request body for POST /cluster/backup
+// (create) and PUT /cluster/backup/{id} (update). All fields are optional;
+// see the PVE API docs for semantics.
+type ClusterBackupOptions struct {
+	All                bool   `json:"all,omitempty"`
+	BwLimit            uint64 `json:"bwlimit,omitempty"`
+	Comment            string `json:"comment,omitempty"`
+	Compress           string `json:"compress,omitempty"`
+	Dow                string `json:"dow,omitempty"`
+	DumpDir            string `json:"dumpdir,omitempty"`
+	Enabled            bool   `json:"enabled,omitempty"`
+	Exclude            string `json:"exclude,omitempty"`
+	ExcludePath        string `json:"exclude-path,omitempty"`
+	ID                 string `json:"id,omitempty"`
+	IoNice             uint   `json:"ionice,omitempty"`
+	LockWait           uint   `json:"lockwait,omitempty"`
+	MailNotification   string `json:"mailnotification,omitempty"`
+	MailTo             string `json:"mailto,omitempty"`
+	MaxFiles           uint   `json:"maxfiles,omitempty"`
+	Mode               string `json:"mode,omitempty"`
+	Node               string `json:"node,omitempty"`
+	NotesTemplate      string `json:"notes-template,omitempty"`
+	NotificationMode   string `json:"notification-mode,omitempty"`
+	NotificationPolicy string `json:"notification-policy,omitempty"`
+	NotificationTarget string `json:"notification-target,omitempty"`
+	Performance        string `json:"performance,omitempty"`
+	Pigz               int    `json:"pigz,omitempty"`
+	Pool               string `json:"pool,omitempty"`
+	Protected          bool   `json:"protected,omitempty"`
+	PruneBackups       string `json:"prune-backups,omitempty"`
+	Quiet              bool   `json:"quiet,omitempty"`
+	Remove             bool   `json:"remove,omitempty"`
+	RepeatMissed       bool   `json:"repeat-missed,omitempty"`
+	Schedule           string `json:"schedule,omitempty"`
+	Script             string `json:"script,omitempty"`
+	StdExcludes        bool   `json:"stdexcludes,omitempty"`
+	Stop               bool   `json:"stop,omitempty"`
+	StopWait           uint   `json:"stopwait,omitempty"`
+	Storage            string `json:"storage,omitempty"`
+	TmpDir             string `json:"tmpdir,omitempty"`
+	VMID               string `json:"vmid,omitempty"`
+	Zstd               uint   `json:"zstd,omitempty"`
+}
+
 type ClusterStorages []*ClusterStorage
 
 type ClusterStorage struct {

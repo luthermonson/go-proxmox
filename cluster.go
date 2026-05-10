@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -70,6 +71,61 @@ func (cl *Cluster) Resources(ctx context.Context, filters ...string) (rs Cluster
 	}
 
 	return rs, cl.client.Get(ctx, u.String(), &rs)
+}
+
+// Backups returns all configured cluster backup schedules (vzdump jobs).
+// See https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/backup
+func (cl *Cluster) Backups(ctx context.Context) (ClusterBackups, error) {
+	var backups ClusterBackups
+	if err := cl.client.Get(ctx, "/cluster/backup", &backups); err != nil {
+		return nil, err
+	}
+	for _, b := range backups {
+		b.client = cl.client
+	}
+	return backups, nil
+}
+
+// Backup returns the cluster backup schedule with the given job ID.
+func (cl *Cluster) Backup(ctx context.Context, id string) (*ClusterBackup, error) {
+	if id == "" {
+		return nil, errors.New("backup id can not be empty")
+	}
+	backup := &ClusterBackup{}
+	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/backup/%s", id), backup); err != nil {
+		return nil, err
+	}
+	backup.client = cl.client
+	backup.ID = id
+	return backup, nil
+}
+
+// NewBackup creates a new cluster backup schedule. The created schedule is
+// not returned by the API; call Backups or Backup(id) to retrieve it.
+func (cl *Cluster) NewBackup(ctx context.Context, opts *ClusterBackupOptions) error {
+	if opts == nil {
+		opts = &ClusterBackupOptions{}
+	}
+	return cl.client.Post(ctx, "/cluster/backup", opts, nil)
+}
+
+// Update updates this backup schedule's configuration.
+func (b *ClusterBackup) Update(ctx context.Context, opts *ClusterBackupOptions) error {
+	if b.ID == "" {
+		return errors.New("backup id can not be empty")
+	}
+	if opts == nil {
+		opts = &ClusterBackupOptions{}
+	}
+	return b.client.Put(ctx, fmt.Sprintf("/cluster/backup/%s", b.ID), opts, nil)
+}
+
+// Delete removes this backup schedule.
+func (b *ClusterBackup) Delete(ctx context.Context) error {
+	if b.ID == "" {
+		return errors.New("backup id can not be empty")
+	}
+	return b.client.Delete(ctx, fmt.Sprintf("/cluster/backup/%s", b.ID), nil)
 }
 
 func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {
