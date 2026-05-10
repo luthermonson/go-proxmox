@@ -34,6 +34,16 @@ func (c *Client) CreateSession(ctx context.Context) error {
 		return ErrSessionExists
 	}
 
+	// If a session already exists, try renewing the ticket first. The Proxmox API
+	// accepts the previous ticket as the password on POST /access/ticket, so this
+	// avoids needing the original password and keeps OTP/2FA-authenticated sessions
+	// alive past the OTP's single-use window.
+	if c.session != nil {
+		if err := c.refreshTicketLocked(ctx); err == nil {
+			return nil
+		}
+	}
+
 	if _, err := c.Ticket(ctx, c.credentials); err != nil {
 		return err
 	}
@@ -45,6 +55,46 @@ func (c *Client) CreateSession(ctx context.Context) error {
 
 func (c *Client) Ticket(ctx context.Context, credentials *Credentials) (*Session, error) {
 	return c.session, c.Post(ctx, "/access/ticket", credentials, &c.session)
+}
+
+// Session returns a copy of the current authenticated session, or nil if the
+// client has not yet authenticated (or is using an API token instead).
+func (c *Client) Session() *Session {
+	c.sessionMux.Lock()
+	defer c.sessionMux.Unlock()
+	if c.session == nil {
+		return nil
+	}
+	s := *c.session
+	return &s
+}
+
+// RefreshTicket renews the existing PVE auth ticket by re-POSTing to
+// /access/ticket with the current ticket as the password. This is the documented
+// renewal mechanism that does not require the original password and works for
+// sessions originally authenticated with OTP/2FA. On success the client's
+// session is updated in place, so any callers holding pointers to this Client
+// (cached *VirtualMachine, *Container, etc.) automatically use the new ticket.
+//
+// Returns ErrNoSession if there is no session to renew.
+func (c *Client) RefreshTicket(ctx context.Context) error {
+	c.sessionMux.Lock()
+	defer c.sessionMux.Unlock()
+	return c.refreshTicketLocked(ctx)
+}
+
+func (c *Client) refreshTicketLocked(ctx context.Context) error {
+	if c.session == nil || c.session.Ticket == "" {
+		return ErrNoSession
+	}
+	if _, err := c.Ticket(ctx, &Credentials{
+		Username: c.session.Username,
+		Password: c.session.Ticket,
+	}); err != nil {
+		return err
+	}
+	c.sessionExpiresAt = time.Now().Add(time.Hour)
+	return nil
 }
 
 func (c *Client) ACL(ctx context.Context) (acl ACLs, err error) {

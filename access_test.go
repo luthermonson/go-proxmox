@@ -2,10 +2,14 @@ package proxmox
 
 import (
 	"context"
+	"regexp"
 	"testing"
+	"time"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTicket(t *testing.T) {
@@ -24,6 +28,140 @@ func TestTicket(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "root@pam", session.Username)
 	assert.Equal(t, "pve-cluster", session.ClusterName)
+}
+
+func TestSession_NilBeforeAuth(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	assert.Nil(t, client.Session())
+}
+
+func TestSession_ReturnsCopy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient(WithCredentials(&Credentials{Username: "root@pam", Password: "1234"}))
+	ctx := context.Background()
+
+	_, err := client.Ticket(ctx, client.credentials)
+	require.NoError(t, err)
+
+	s := client.Session()
+	require.NotNil(t, s)
+	originalTicket := s.Ticket
+	s.Ticket = "mutated-by-caller"
+
+	assert.Equal(t, originalTicket, client.Session().Ticket,
+		"mutating the value returned by Session() must not affect the client's internal session")
+}
+
+func TestRefreshTicket_NoSession(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	assert.ErrorIs(t, client.RefreshTicket(context.Background()), ErrNoSession)
+}
+
+func TestRefreshTicket_Success(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient(WithCredentials(&Credentials{Username: "root@pam", Password: "1234"}))
+	ctx := context.Background()
+
+	_, err := client.Ticket(ctx, client.credentials)
+	require.NoError(t, err)
+	require.NotNil(t, client.Session())
+
+	// Re-register the POST /access/ticket mock so a second call (the refresh) matches.
+	gock.New(TestURI).
+		Post("^/access/ticket$").
+		Reply(200).
+		JSON(`{"data": {"username": "root@pam", "ticket": "REFRESHED-TICKET", "CSRFPreventionToken": "REFRESHED-CSRF"}}`)
+
+	require.NoError(t, client.RefreshTicket(ctx))
+
+	s := client.Session()
+	require.NotNil(t, s)
+	assert.Equal(t, "REFRESHED-TICKET", s.Ticket)
+	assert.Equal(t, "REFRESHED-CSRF", s.CSRFPreventionToken)
+}
+
+// TestCreateSession_PrefersRefreshOverFullReauth proves that when an existing
+// session has expired, CreateSession sends the previous ticket as the password
+// (renewal) rather than the originally-stored credential password (full reauth).
+// Two distinct mocks are registered, each matching only one of the two possible
+// password values, so the test fails if the wrong path is taken.
+func TestCreateSession_PrefersRefreshOverFullReauth(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient(WithCredentials(&Credentials{Username: "root@pam", Password: "1234"}))
+	ctx := context.Background()
+
+	// Initial auth — consumes the default pve9x POST /access/ticket mock.
+	_, err := client.Ticket(ctx, client.credentials)
+	require.NoError(t, err)
+	originalTicket := client.Session().Ticket
+	require.NotEmpty(t, originalTicket)
+
+	// Force the session to look expired so CreateSession does not no-op.
+	client.sessionMux.Lock()
+	client.sessionExpiresAt = time.Now().Add(-time.Hour)
+	client.sessionMux.Unlock()
+
+	// Renewal path: matches when the body carries password=<previous ticket>.
+	gock.New(TestURI).
+		Post("^/access/ticket$").
+		BodyString(`"password":"` + regexp.QuoteMeta(originalTicket) + `"`).
+		Reply(200).
+		JSON(`{"data": {"username": "root@pam", "ticket": "RENEWED", "CSRFPreventionToken": "RENEWED-CSRF"}}`)
+
+	// Full-reauth path: matches when the body carries the original credential password.
+	// If this mock is hit, the test will catch it via the assertion below.
+	gock.New(TestURI).
+		Post("^/access/ticket$").
+		BodyString(`"password":"1234"`).
+		Reply(200).
+		JSON(`{"data": {"username": "root@pam", "ticket": "FULL-REAUTH", "CSRFPreventionToken": "FULL-REAUTH-CSRF"}}`)
+
+	require.NoError(t, client.CreateSession(ctx))
+	assert.Equal(t, "RENEWED", client.Session().Ticket,
+		"CreateSession should prefer ticket renewal when an existing session is present")
+}
+
+// TestCreateSession_FallsBackToFullReauth proves that when ticket renewal fails
+// (e.g., the previous ticket is past its renewable window), CreateSession falls
+// back to full credentials reauth instead of bubbling the renewal error.
+func TestCreateSession_FallsBackToFullReauth(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient(WithCredentials(&Credentials{Username: "root@pam", Password: "1234"}))
+	ctx := context.Background()
+
+	_, err := client.Ticket(ctx, client.credentials)
+	require.NoError(t, err)
+	originalTicket := client.Session().Ticket
+	require.NotEmpty(t, originalTicket)
+
+	client.sessionMux.Lock()
+	client.sessionExpiresAt = time.Now().Add(-time.Hour)
+	client.sessionMux.Unlock()
+
+	// Renewal attempt is rejected by PVE.
+	gock.New(TestURI).
+		Post("^/access/ticket$").
+		BodyString(`"password":"` + regexp.QuoteMeta(originalTicket) + `"`).
+		Reply(401).
+		JSON(`{"data": null, "errors": {"password": "ticket expired"}}`)
+
+	// Full-reauth attempt with the original credential password succeeds.
+	gock.New(TestURI).
+		Post("^/access/ticket$").
+		BodyString(`"password":"1234"`).
+		Reply(200).
+		JSON(`{"data": {"username": "root@pam", "ticket": "FRESH-AFTER-FALLBACK", "CSRFPreventionToken": "FRESH-CSRF"}}`)
+
+	require.NoError(t, client.CreateSession(ctx))
+	assert.Equal(t, "FRESH-AFTER-FALLBACK", client.Session().Ticket)
 }
 
 func TestPermissions(t *testing.T) {
