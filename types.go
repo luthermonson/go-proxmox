@@ -442,6 +442,7 @@ type VirtualMachine struct {
 	Node string
 
 	Agent          IntOrBool
+	Spice          IntOrBool
 	NetIn          uint64
 	CPUs           int
 	DiskWrite      uint64
