@@ -59,14 +59,16 @@ func CleanupVirtualMachine(t *testing.T, vm *proxmox.VirtualMachine) {
 	require.NoError(t, err)
 	require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 30*time.Second))
 
-	if vm.VirtualMachineConfig != nil && vm.VirtualMachineConfig.IDE2 != "" {
-		s := strings.Split(vm.VirtualMachineConfig.IDE2, ",")
-		if len(s) > 2 {
-			iso, err := td.storage.ISO(context.TODO(), filepath.Base(s[0]))
-			assert.Nil(t, err)
-			task, err := iso.Delete(context.TODO())
-			require.NoError(t, err)
-			require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
+	if vm.VirtualMachineConfig != nil {
+		if ide2 := vm.VirtualMachineConfig.IDEs["ide2"]; ide2 != "" {
+			s := strings.Split(ide2, ",")
+			if len(s) > 2 {
+				iso, err := td.storage.ISO(context.TODO(), filepath.Base(s[0]))
+				assert.Nil(t, err)
+				task, err := iso.Delete(context.TODO())
+				require.NoError(t, err)
+				require.NoError(t, task.Wait(context.TODO(), 1*time.Second, 10*time.Second))
+			}
 		}
 	}
 
