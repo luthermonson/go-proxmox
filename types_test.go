@@ -68,6 +68,10 @@ func TestStringOrUint64(t *testing.T) {
 			StringOrUint64(0),
 			nil,
 		}, {
+			nil, // JSON null — issue #198 (e.g. VM template returns pid: null)
+			StringOrUint64(0),
+			nil,
+		}, {
 			"bad-parse-1234-value", // parse error
 			StringOrUint64(0),
 			errors.New("failed to match ^[0-9.]*$: bad-parse-1234-value"),
@@ -81,6 +85,8 @@ func TestStringOrUint64(t *testing.T) {
 	for _, test := range cases {
 		var value string
 		switch v := test.input.(type) {
+		case nil:
+			value = "null"
 		case string:
 			value = fmt.Sprintf("\"%s\"", v)
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
@@ -157,6 +163,10 @@ func TestStringOrFloat64(t *testing.T) {
 			StringOrFloat64(0.1),
 			nil,
 		}, {
+			nil, // JSON null
+			StringOrFloat64(0),
+			nil,
+		}, {
 			"bad-parse-1234-value", // parse error
 			StringOrFloat64(0),
 			errors.New("failed to match ^[0-9.]*$: bad-parse-1234-value"),
@@ -170,6 +180,8 @@ func TestStringOrFloat64(t *testing.T) {
 	for _, test := range cases {
 		var value string
 		switch v := test.input.(type) {
+		case nil:
+			value = "null"
 		case string:
 			value = fmt.Sprintf("\"%s\"", v)
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
@@ -248,6 +260,10 @@ func TestStringOrInt(t *testing.T) {
 			"bad-parse-1234-value", // parse error
 			StringOrInt(0),
 			errors.New("failed to match ^[0-9.]*$: bad-parse-1234-value"),
+		}, {
+			nil, // JSON null
+			StringOrInt(0),
+			nil,
 		},
 	}
 
@@ -258,6 +274,8 @@ func TestStringOrInt(t *testing.T) {
 	for _, test := range cases {
 		var value string
 		switch v := test.input.(type) {
+		case nil:
+			value = "null"
 		case string:
 			value = fmt.Sprintf("\"%s\"", v)
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:

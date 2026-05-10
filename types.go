@@ -1269,7 +1269,10 @@ type StringOrInt int
 
 func (d *StringOrInt) UnmarshalJSON(b []byte) error {
 	str := strings.ReplaceAll(string(b), "\"", "")
-	if str == "" {
+	// Empty string and JSON null both yield the zero value. Proxmox returns
+	// null for fields that are simply absent on the resource (e.g. PID on a
+	// stopped VM template — see issue #198).
+	if str == "" || str == "null" {
 		*d = StringOrInt(0)
 		return nil
 	}
@@ -1291,7 +1294,7 @@ type StringOrUint64 uint64
 
 func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 	str := strings.ReplaceAll(string(b), "\"", "")
-	if str == "" {
+	if str == "" || str == "null" {
 		*d = StringOrUint64(0)
 		return nil
 	}
@@ -1314,7 +1317,7 @@ type StringOrFloat64 float64
 
 func (d *StringOrFloat64) UnmarshalJSON(b []byte) error {
 	str := strings.ReplaceAll(string(b), "\"", "")
-	if str == "" {
+	if str == "" || str == "null" {
 		*d = StringOrFloat64(0)
 		return nil
 	}

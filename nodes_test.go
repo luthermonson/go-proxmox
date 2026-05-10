@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClient_Nodes(t *testing.T) {
@@ -448,4 +450,79 @@ func TestNode_VzdumpExtractConfig(t *testing.T) {
 	assert.NotNil(t, config)
 	assert.Equal(t, uint64(2), config.Cores)
 	assert.Equal(t, "debian", config.OsType)
+}
+
+// TestNode_VirtualMachines_TemplateWithNullPID is the regression test for
+// issue #198: VM templates returned by GET /nodes/{node}/qemu carry "pid": null
+// and the listing previously failed with `failed to match ^[0-9.]*$: null`.
+func TestNode_VirtualMachines_TemplateWithNullPID(t *testing.T) {
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Get("^/nodes/node1/qemu$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "vmid": "113",
+            "name": "ubuntu24-template",
+            "status": "stopped",
+            "template": 1,
+            "pid": null,
+            "cpus": 1,
+            "mem": 0,
+            "maxmem": 2147483648,
+            "disk": 0,
+            "maxdisk": 34359738368,
+            "uptime": 0,
+            "netin": 0,
+            "netout": 0,
+            "diskread": 0,
+            "diskwrite": 0,
+            "cpu": 0
+        },
+        {
+            "vmid": "140",
+            "name": "os0107",
+            "status": "running",
+            "template": "",
+            "pid": "14558",
+            "cpus": 4,
+            "mem": 3007004179,
+            "maxmem": 17179869184,
+            "disk": 0,
+            "maxdisk": 119185342464,
+            "uptime": 16600781,
+            "netin": 6124487532,
+            "netout": 414087827,
+            "diskread": 0,
+            "diskwrite": 0,
+            "cpu": 0.0099720556493484
+        }
+    ]
+}`)
+
+	client := mockClient()
+	node := &Node{client: client, Name: "node1"}
+
+	vms, err := node.VirtualMachines(context.Background())
+	require.NoError(t, err, "listing VMs must not fail when a template returns pid:null")
+	require.Len(t, vms, 2)
+
+	var template, running *VirtualMachine
+	for _, vm := range vms {
+		if vm.VMID == StringOrUint64(113) {
+			template = vm
+		}
+		if vm.VMID == StringOrUint64(140) {
+			running = vm
+		}
+	}
+
+	require.NotNil(t, template, "template VM should be present in the listing")
+	assert.Equal(t, StringOrUint64(0), template.PID, "null PID should unmarshal to 0")
+	assert.Equal(t, IsTemplate(true), template.Template)
+
+	require.NotNil(t, running, "running VM should be present in the listing")
+	assert.Equal(t, StringOrUint64(14558), running.PID)
 }
