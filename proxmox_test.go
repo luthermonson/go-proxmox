@@ -69,6 +69,27 @@ func TestClient_authHeaders(t *testing.T) {
 	}
 }
 
+func TestClient_TermWebSocket_APITokenUnsupported(t *testing.T) {
+	c := NewClient(TestURI, WithAPIToken("root@pam!test", "secret"))
+	send, recv, errs, closer, err := c.TermWebSocket("/nodes/n/lxc/100/vncwebsocket?port=1&vncticket=t", &Term{})
+	assert.Nil(t, send)
+	assert.Nil(t, recv)
+	assert.Nil(t, errs)
+	assert.Nil(t, closer)
+	assert.ErrorIs(t, err, ErrAPITokenWebSocketUnsupported)
+	assert.True(t, IsAPITokenWebSocketUnsupported(err))
+}
+
+func TestClient_VNCWebSocket_APITokenUnsupported(t *testing.T) {
+	c := NewClient(TestURI, WithAPIToken("root@pam!test", "secret"))
+	send, recv, errs, closer, err := c.VNCWebSocket("/nodes/n/qemu/100/vncwebsocket?port=1&vncticket=t", &VNC{})
+	assert.Nil(t, send)
+	assert.Nil(t, recv)
+	assert.Nil(t, errs)
+	assert.Nil(t, closer)
+	assert.ErrorIs(t, err, ErrAPITokenWebSocketUnsupported)
+}
+
 func TestClient_Version7(t *testing.T) {
 	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
