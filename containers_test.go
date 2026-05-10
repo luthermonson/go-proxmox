@@ -25,15 +25,12 @@ func TestContainerConfig_UnmarshalJSON_BeyondTen(t *testing.T) {
 	var cfg ContainerConfig
 	assert.NoError(t, json.Unmarshal(body, &cfg))
 
+	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Nets["net0"])
 	assert.Equal(t, "/srv/forty-two,mp=/forty-two", cfg.Mps["mp42"])
 	assert.Equal(t, "/srv/last,mp=/last", cfg.Mps["mp255"])
 	assert.Equal(t, "name=eth20,bridge=vmbr20", cfg.Nets["net20"])
 	assert.Equal(t, "/dev/sdb15", cfg.Devs["dev15"])
 	assert.Equal(t, "local-lvm:subvol-100-unused-100", cfg.Unuseds["unused100"])
-
-	// Net0 keeps the explicit-field mirror for back-compat.
-	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Net0)
-	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Nets["net0"])
 }
 
 // TestNode_ContainerConfig_HighIndices is the integration-shaped regression
@@ -62,9 +59,6 @@ func TestNode_ContainerConfig_HighIndices(t *testing.T) {
 	assert.Equal(t, "name=eth20,bridge=vmbr20", cfg.Nets["net20"])
 	assert.Equal(t, "/dev/sdb15", cfg.Devs["dev15"])
 	assert.Equal(t, "local-lvm:subvol-102-unused-100", cfg.Unuseds["unused100"])
-
-	// Net0 keeps the explicit-field mirror for back-compat.
-	assert.Equal(t, "name=eth0,bridge=vmbr0", cfg.Net0)
 }
 
 func TestContainer(t *testing.T) {
