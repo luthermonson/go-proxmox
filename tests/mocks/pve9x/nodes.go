@@ -451,6 +451,27 @@ func nodes() {
     }
 }`)
 
+	// GET /nodes/{node}/storage/local-lvm/status — same listing entry as
+	// above's /storage but called by name. local-lvm only stores images and
+	// rootdir; used by tests that verify cloud-init refuses non-iso storages.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local-lvm/status$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "storage": "local-lvm",
+        "content": "images,rootdir",
+        "type": "lvmthin",
+        "active": 1,
+        "avail": 100000000000,
+        "used": 20000000000,
+        "total": 120000000000,
+        "enabled": 1,
+        "shared": 0
+    }
+}`)
+
 	// GET /nodes/{node}/storage/{storage}/content - List storage content
 	gock.New(config.C.URI).
 		Persist().
