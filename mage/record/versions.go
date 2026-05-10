@@ -41,20 +41,15 @@ var Releases = map[string]Release{
 	"pve9": {
 		Major:       "pve9",
 		CassetteDir: "pve9",
-		ISOURL:      "https://enterprise.proxmox.com/iso/proxmox-ve_9.0-1.iso",
-		ISOFilename: "proxmox-ve_9.0-1.iso",
-		// Replace with the real SHA-256 from
-		// https://www.proxmox.com/en/downloads/category/iso-images-pve
-		// before first record. Empty digest disables verification (NOT
-		// what you want in production); the validation step in iso.go
-		// fails loudly in that case.
-		ISOSHA256: "",
+		ISOURL:      "https://enterprise.proxmox.com/iso/proxmox-ve_9.1-1.iso",
+		ISOFilename: "proxmox-ve_9.1-1.iso",
+		ISOSHA256:   "6d8f5afc78c0c66812d7272cde7c8b98be7eb54401ceb045400db05eb5ae6d22",
 	},
 	"pve8": {
 		Major:       "pve8",
 		CassetteDir: "pve8",
 		ISOURL:      "https://enterprise.proxmox.com/iso/proxmox-ve_8.4-1.iso",
 		ISOFilename: "proxmox-ve_8.4-1.iso",
-		ISOSHA256:   "",
+		ISOSHA256:   "d237d70ca48a9f6eb47f95fd4fd337722c3f69f8106393844d027d28c26523d8",
 	},
 }
