@@ -37,24 +37,6 @@ func TestSession_NilBeforeAuth(t *testing.T) {
 	assert.Nil(t, client.Session())
 }
 
-func TestSession_ReturnsCopy(t *testing.T) {
-	mocks.On(mockConfig)
-	defer mocks.Off()
-	client := mockClient(WithCredentials(&Credentials{Username: "root@pam", Password: "1234"}))
-	ctx := context.Background()
-
-	_, err := client.Ticket(ctx, client.credentials)
-	require.NoError(t, err)
-
-	s := client.Session()
-	require.NotNil(t, s)
-	originalTicket := s.Ticket
-	s.Ticket = "mutated-by-caller"
-
-	assert.Equal(t, originalTicket, client.Session().Ticket,
-		"mutating the value returned by Session() must not affect the client's internal session")
-}
-
 func TestRefreshTicket_NoSession(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

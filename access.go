@@ -57,16 +57,15 @@ func (c *Client) Ticket(ctx context.Context, credentials *Credentials) (*Session
 	return c.session, c.Post(ctx, "/access/ticket", credentials, &c.session)
 }
 
-// Session returns a copy of the current authenticated session, or nil if the
-// client has not yet authenticated (or is using an API token instead).
+// Session returns the current authenticated session, or nil if the client has
+// not yet authenticated (or is using an API token). The returned pointer
+// references the client's live session — do not mutate its fields. The pointer
+// itself can be retained, but its contents may be updated in place by a
+// concurrent RefreshTicket or CreateSession call.
 func (c *Client) Session() *Session {
 	c.sessionMux.Lock()
 	defer c.sessionMux.Unlock()
-	if c.session == nil {
-		return nil
-	}
-	s := *c.session
-	return &s
+	return c.session
 }
 
 // RefreshTicket renews the existing PVE auth ticket by re-POSTing to
