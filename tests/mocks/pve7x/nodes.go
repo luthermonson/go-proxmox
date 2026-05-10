@@ -14,6 +14,7 @@ func nodes() {
         "pid": 1563102,
         "shares": 1000,
         "agent": 1,
+        "spice": 1,
         "diskwrite": 1515457024,
         "cpus": 8,
         "ha": {

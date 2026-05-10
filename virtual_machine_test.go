@@ -30,6 +30,7 @@ func TestVirtualMachine_Ping(t *testing.T) {
 
 	assert.Nil(t, vm.Ping(ctx))
 	assert.Equal(t, StringOrUint64(101), vm.VMID)
+	assert.Equal(t, IntOrBool(true), vm.Spice)
 }
 
 func TestVirtualMachine_RRDData(t *testing.T) {
