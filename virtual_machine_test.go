@@ -426,6 +426,59 @@ func closeBackend(t *testing.T, bk backend.Storage) {
 	}
 }
 
+func TestWithCloudInitStorage(t *testing.T) {
+	var cfg cloudInitConfig
+	WithCloudInitStorage("templates")(&cfg)
+	assert.Equal(t, "templates", cfg.storage)
+}
+
+func TestResolveCloudInitStorage_FallbackWhenUnset(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	storage, err := resolveCloudInitStorage(ctx, node, &cloudInitConfig{})
+	require.NoError(t, err)
+	require.NotNil(t, storage)
+	assert.Contains(t, storage.Content, "iso",
+		"fallback should resolve to an iso-capable storage")
+}
+
+func TestResolveCloudInitStorage_NamedISOCapable(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	storage, err := resolveCloudInitStorage(ctx, node, &cloudInitConfig{storage: "local"})
+	require.NoError(t, err)
+	require.NotNil(t, storage)
+	assert.Equal(t, "local", storage.Name)
+	assert.Contains(t, storage.Content, "iso")
+}
+
+func TestResolveCloudInitStorage_NamedRejectsNonISO(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	_, err = resolveCloudInitStorage(ctx, node, &cloudInitConfig{storage: "local-lvm"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "local-lvm")
+	assert.Contains(t, err.Error(), "iso content")
+}
+
 func TestMakeCloudInitISO(t *testing.T) {
 	userdata := "#cloud-config\npassword: test\n"
 	metadata := "instance-id: test-vm\nlocal-hostname: test\n"

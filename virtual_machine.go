@@ -138,11 +138,36 @@ func (v *VirtualMachine) SplitTags() {
 	v.VirtualMachineConfig.TagsSlice = strings.Split(v.VirtualMachineConfig.Tags, TagSeperator)
 }
 
+// CloudInitOption configures optional behavior on VirtualMachine.CloudInit.
+// Construct via the With*-prefixed CloudInit option helpers.
+type CloudInitOption func(*cloudInitConfig)
+
+type cloudInitConfig struct {
+	storage string
+}
+
+// WithCloudInitStorage selects a specific Proxmox storage (by name) to upload
+// the cloud-init ISO into. The storage must be enabled and accept "iso"
+// content. Without this option, CloudInit auto-selects the first enabled
+// iso-capable storage on the node, which is non-deterministic across nodes
+// with multiple iso-capable storages — see issue #119.
+func WithCloudInitStorage(name string) CloudInitOption {
+	return func(c *cloudInitConfig) { c.storage = name }
+}
+
 // CloudInit takes four yaml docs as a string and make an ISO, upload it to the data store as <vmid>-user-data.iso and will
 // mount it as a CD-ROM to be used with nocloud cloud-init. This is NOT how proxmox expects a user to do cloud-init
 // which can be found here: https://pve.proxmox.com/wiki/Cloud-Init_Support#:~:text=and%20meta.-,Cloud%2DInit%20specific%20Options,-cicustom%3A%20%5Bmeta
 // If you want to use the proxmox implementation you'll need to use the cloudinit APIs https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/cloudinit
-func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string) error {
+//
+// Pass WithCloudInitStorage("name") to control which storage receives the ISO.
+// Without it, the first enabled iso-capable storage returned by the node is used.
+func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string, opts ...CloudInitOption) error {
+	var cfg cloudInitConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
 	// create userdata iso file on the local fs
 	isofilename, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
@@ -161,7 +186,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	storage, err := node.StorageISO(ctx)
+	storage, err := resolveCloudInitStorage(ctx, node, &cfg)
 	if err != nil {
 		return err
 	}
@@ -193,6 +218,23 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	}
 
 	return task.WaitFor(ctx, 2)
+}
+
+// resolveCloudInitStorage picks the *Storage that CloudInit should upload to.
+// If cfg.storage is set, the named storage is fetched and validated to accept
+// iso content. Otherwise the node's auto-select for iso content is used.
+func resolveCloudInitStorage(ctx context.Context, node *Node, cfg *cloudInitConfig) (*Storage, error) {
+	if cfg.storage == "" {
+		return node.StorageISO(ctx)
+	}
+	s, err := node.Storage(ctx, cfg.storage)
+	if err != nil {
+		return nil, fmt.Errorf("cloud-init storage %q: %w", cfg.storage, err)
+	}
+	if !strings.Contains(s.Content, "iso") {
+		return nil, fmt.Errorf("cloud-init storage %q does not accept iso content (got %q)", cfg.storage, s.Content)
+	}
+	return s, nil
 }
 
 func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
@@ -384,32 +426,47 @@ func (v *VirtualMachine) Delete(ctx context.Context) (task *Task, err error) {
 	return NewTask(upid, v.client), nil
 }
 
+// deleteCloudInitISO scans every enabled iso-capable storage on the VM's node
+// for the cloud-init user-data ISO and removes it from the first one that has
+// it. Iterating across storages (rather than relying on the auto-selected one,
+// as the original code did) keeps deletion correct when CloudInit was called
+// with WithCloudInitStorage targeting a non-default storage.
 func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err error) {
-	if v.HasTag(MakeTag(TagCloudInit)) {
-		node, err := v.client.Node(ctx, v.Node)
-		if err != nil {
-			return false, err
-		}
-		isoStorage, err := node.StorageISO(ctx)
-		if err != nil {
-			return false, err
-		}
-
-		var iso *ISO
-		iso, err = isoStorage.ISO(ctx, fmt.Sprintf(UserDataISOFormat, v.VMID))
-		if err != nil {
-			// skipping, iso not found return no error.
-			return true, nil
-		}
-		task, err := iso.Delete(ctx)
-		if err != nil {
-			return false, err
-		}
-		if err := task.WaitFor(ctx, 5); err != nil {
-			return false, err
-		}
+	if !v.HasTag(MakeTag(TagCloudInit)) {
+		return true, nil
 	}
 
+	node, err := v.client.Node(ctx, v.Node)
+	if err != nil {
+		return false, err
+	}
+
+	storages, err := node.Storages(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	isoFilename := fmt.Sprintf(UserDataISOFormat, v.VMID)
+	for _, s := range storages {
+		if s.Enabled == 0 || !strings.Contains(s.Content, "iso") {
+			continue
+		}
+		iso, ierr := s.ISO(ctx, isoFilename)
+		if ierr != nil {
+			// not on this storage; try the next
+			continue
+		}
+		task, terr := iso.Delete(ctx)
+		if terr != nil {
+			return false, terr
+		}
+		if werr := task.WaitFor(ctx, 5); werr != nil {
+			return false, werr
+		}
+		return true, nil
+	}
+
+	// Not found anywhere — already gone, treat as no-op (matches prior behavior).
 	return true, nil
 }
 
