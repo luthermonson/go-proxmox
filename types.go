@@ -755,8 +755,10 @@ type VirtualMachineConfig struct {
 	CIPassword   string `json:"cipassword,omitempty"`
 	Nameserver   string `json:"nameserver,omitempty"`
 	Searchdomain string `json:"searchdomain,omitempty"`
-	SSHKeys      string `json:"sshkeys,omitempty"`
-	CICustom     string `json:"cicustom,omitempty"`
+	// SSHKeys must be encoded with EncodeSSHKeys — PVE's API validator
+	// rejects loose url-encoding (e.g. '+' for spaces). See issue #144.
+	SSHKeys  string `json:"sshkeys,omitempty"`
+	CICustom string `json:"cicustom,omitempty"`
 	CIUpgrade    int    `json:"ciupgrade,omitempty"` // FIXME(issue-199+178): PVE default 1, schema "boolean"; use *IntOrBool — type mismatch + default differs (unset would skip package upgrade).
 
 	// Cloud-init interfaces
@@ -1872,9 +1874,12 @@ type VzdumpConfig struct {
 	Numa       string `json:"numa"`
 	OsType     string `json:"ostype"`
 	Scsihw     string `json:"scsihw"`
-	Sockets    uint64 `json:"sockets,string"`
-	SSHKeys    string `json:"sshkeys"`
-	VmgenID    string `json:"vmgenid"`
+	Sockets uint64 `json:"sockets,string"`
+	// SSHKeys is reflected back from VzDump's recorded VM config; if you
+	// round-trip this into a VirtualMachineConfig.SSHKeys, the value is
+	// already PVE-encoded — re-encoding it would double-encode. See #144.
+	SSHKeys string `json:"sshkeys"`
+	VmgenID string `json:"vmgenid"`
 
 	IDE0 string `json:"ide0,omitempty"`
 	IDE1 string `json:"ide1,omitempty"`

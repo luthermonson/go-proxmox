@@ -72,6 +72,22 @@ func MakeTag(v string) string {
 	return fmt.Sprintf(TagFormat, v)
 }
 
+// EncodeSSHKeys returns the given SSH public keys encoded the way Proxmox's
+// sshkeys parameter requires. Multiple keys are joined with newlines (PVE's
+// documented separator) before encoding.
+//
+// PVE applies its own urlencoded-string validator that rejects '+' as a space
+// encoding and requires every reserved character to be percent-encoded — the
+// Python urllib.parse.quote(s, safe='') style. Go's net/url.QueryEscape emits
+// '+' for spaces (HTML form encoding), so its output alone fails validation
+// with "invalid format - invalid urlencoded string". See issue #144.
+//
+// Use the result as the Value on a VirtualMachineOption{Name: "sshkeys", ...}
+// or assign it to VirtualMachineConfig.SSHKeys.
+func EncodeSSHKeys(keys ...string) string {
+	return strings.ReplaceAll(url.QueryEscape(strings.Join(keys, "\n")), "+", "%20")
+}
+
 type Client struct {
 	httpClient  *http.Client
 	userAgent   string

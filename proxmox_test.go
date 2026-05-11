@@ -28,6 +28,48 @@ func TestMakeTag(t *testing.T) {
 	assert.Equal(t, "go-proxmox+tagname", MakeTag("tagname"))
 }
 
+func TestEncodeSSHKeys(t *testing.T) {
+	cases := []struct {
+		name string
+		in   []string
+		want string
+	}{
+		{
+			name: "empty",
+			in:   nil,
+			want: "",
+		},
+		{
+			name: "single key encodes spaces as %20 not +",
+			in:   []string{"ssh-rsa AAAAB3NzaC1yc2EAAAA user@host"},
+			want: "ssh-rsa%20AAAAB3NzaC1yc2EAAAA%20user%40host",
+		},
+		{
+			name: "literal plus in key is preserved as %2B, not turned into %20",
+			in:   []string{"ssh-rsa A+B C"},
+			want: "ssh-rsa%20A%2BB%20C",
+		},
+		{
+			name: "multiple keys are joined with newline before encoding",
+			in:   []string{"ssh-rsa AAA u@h1", "ssh-ed25519 BBB u@h2"},
+			want: "ssh-rsa%20AAA%20u%40h1%0Assh-ed25519%20BBB%20u%40h2",
+		},
+		{
+			name: "no plus signs leak through",
+			in:   []string{"a b c d"},
+			want: "a%20b%20c%20d",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := EncodeSSHKeys(tc.in...)
+			assert.Equal(t, tc.want, got)
+			assert.NotContains(t, got, "+",
+				"EncodeSSHKeys output must never contain '+'; PVE rejects it")
+		})
+	}
+}
+
 // options tested in options_test.go
 func TestNewClient(t *testing.T) {
 	v := NewClient(TestURI)
