@@ -69,6 +69,7 @@ func Preflight() error {
 
 	// Local sanity checks (no remote calls).
 	results = append(results, checkNestedNetwork(cfg))
+	results = append(results, checkHTTPBindIP(cfg))
 	results = append(results, checkReleases()...)
 
 	return reportResults(results)
@@ -220,6 +221,15 @@ func checkNestedNetwork(cfg *Config) checkResult {
 			"to a real LAN address unless you've explicitly bridged it")
 	}
 	return ok(name, fmt.Sprintf("in subnet %s, gateway %s", ipnet, gw))
+}
+
+func checkHTTPBindIP(cfg *Config) checkResult {
+	name := "HTTP server bind IP"
+	urls, err := PlanURLs(cfg)
+	if err != nil {
+		return fail(name, err.Error())
+	}
+	return ok(name, fmt.Sprintf("workstation will serve %s", urls.BaseURL))
 }
 
 func checkReleases() []checkResult {

@@ -11,10 +11,11 @@ import (
 //	https://pve.proxmox.com/pve-docs/chapter-pve-installation.html#unattended_installation
 //
 // We use static IPv4 addressing so the recorder knows the nested VM's
-// address ahead of time, and we embed the seed as a first-boot script in
-// the answer's [first-boot] section so the nested PVE comes up fully
-// seeded with no separate SSH-and-run step.
-func AnswerTOML(c *Config) string {
+// address ahead of time. The [first-boot] section points at firstBootURL,
+// which is served by the local FileServer during the install/first-boot
+// window — this lets us iterate on the seed contract without re-mastering
+// the ISO between records.
+func AnswerTOML(c *Config, firstBootURL string) string {
 	ip := c.NestedIP
 	netmask := strings.SplitN(ip, "/", 2)
 	cidr := "24"
@@ -47,9 +48,9 @@ disk_list = ["sda"]
 
 [first-boot]
 source = "from-url"
-url = "data:text/plain;base64,REPLACE_ME"
+url = %q
 ordering = "fully-up"
-`, c.NestedRootPassword, ip, cidr, c.NestedGateway)
+`, c.NestedRootPassword, ip, cidr, c.NestedGateway, firstBootURL)
 }
 
 // FirstBootScript returns the bash script that runs once on first boot of

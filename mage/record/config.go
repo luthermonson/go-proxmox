@@ -78,6 +78,14 @@ type Config struct {
 	// NestedDiskGB sizes the boot disk (PROXMOX_RECORDER_DISK_GB).
 	// Default 32.
 	NestedDiskGB int
+
+	// HTTPHost is the workstation IP the local HTTP server binds to
+	// (PROXMOX_RECORDER_HTTP_HOST). When empty (default), the recorder
+	// auto-detects a local interface IP in the gateway's subnet.
+	HTTPHost string
+	// HTTPPort is the workstation port the local HTTP server binds to
+	// (PROXMOX_RECORDER_HTTP_PORT). Default 8765.
+	HTTPPort int
 }
 
 // LoadConfig reads the env into a Config and applies defaults. Missing
@@ -104,6 +112,8 @@ func LoadConfig() (*Config, error) {
 	c.NestedCPU = envInt("PROXMOX_RECORDER_CPU", 4)
 	c.NestedRAM = envInt("PROXMOX_RECORDER_RAM_MB", 4096)
 	c.NestedDiskGB = envInt("PROXMOX_RECORDER_DISK_GB", 32)
+	c.HTTPHost = os.Getenv("PROXMOX_RECORDER_HTTP_HOST")
+	c.HTTPPort = envInt("PROXMOX_RECORDER_HTTP_PORT", 8765)
 
 	// Default SSH host to the outer URL's hostname (not host:port — SSH
 	// runs on :22, not the API's :8006). NewSSHClient will append :22.

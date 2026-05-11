@@ -2,7 +2,6 @@ package record
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -67,13 +66,16 @@ func (m *ISOManager) EnsureUpstream(ctx context.Context, r Release) (string, err
 	return volid, nil
 }
 
-// PrepareAutoInstall generates an answer.toml + first-boot script and runs
-// proxmox-auto-install-assistant on the outer host to bake them into a new
-// ISO. Returns the volume id of the prepared ISO.
+// PrepareAutoInstall runs proxmox-auto-install-assistant on the outer host
+// to bake an "auto-install skeleton" ISO. The prepared ISO knows to fetch
+// answer.toml from answerURL at install time — the file itself stays on
+// the workstation's FileServer, so iterating on the seed contract no
+// longer requires re-mastering the ISO between records.
 //
-// The prepared ISO has a deterministic filename (one per major) so re-runs
-// overwrite the previous artifact rather than accumulating.
-func (m *ISOManager) PrepareAutoInstall(ctx context.Context, r Release, upstreamVolid string) (string, error) {
+// Returns the volume id of the prepared ISO. The prepared filename is
+// deterministic per major, so re-runs overwrite the previous artifact
+// rather than accumulating.
+func (m *ISOManager) PrepareAutoInstall(ctx context.Context, r Release, upstreamVolid, answerURL string) (string, error) {
 	out, err := m.ssh.Run("which proxmox-auto-install-assistant")
 	if err != nil || strings.TrimSpace(out) == "" {
 		return "", fmt.Errorf("proxmox-auto-install-assistant not found on %s; "+
@@ -92,27 +94,13 @@ func (m *ISOManager) PrepareAutoInstall(ctx context.Context, r Release, upstream
 		return "", fmt.Errorf("pvesm path %q returned empty", upstreamVolid)
 	}
 
-	// Embed the first-boot script as a base64 data URL inside answer.toml so
-	// the autoinstall process pulls it on first boot without us needing an
-	// HTTP server reachable from the nested VM.
-	script := FirstBootScript(m.cfg)
-	scriptB64 := base64.StdEncoding.EncodeToString([]byte(script))
-	answer := strings.Replace(AnswerTOML(m.cfg), "REPLACE_ME", scriptB64, 1)
-
-	// Write answer.toml to a scratch path on the outer host.
-	answerPath := TempPath("answer") + ".toml"
-	if err := m.ssh.WriteFile(answerPath, []byte(answer)); err != nil {
-		return "", fmt.Errorf("write answer.toml: %w", err)
-	}
-	defer func() { _, _ = m.ssh.Run(fmt.Sprintf("rm -f %q", answerPath)) }()
-
 	preparedFilename := fmt.Sprintf("auto-%s.iso", r.Major)
 	preparedPath := strings.Replace(upstreamPath, r.ISOFilename, preparedFilename, 1)
 
 	cmd := fmt.Sprintf(
-		"proxmox-auto-install-assistant prepare-iso %q --fetch-from iso "+
-			"--answer-file %q --output %q",
-		upstreamPath, answerPath, preparedPath)
+		"proxmox-auto-install-assistant prepare-iso %q "+
+			"--fetch-from http --url %q --output %q",
+		upstreamPath, answerURL, preparedPath)
 	if _, err := m.ssh.Run(cmd); err != nil {
 		return "", fmt.Errorf("prepare-iso: %w", err)
 	}

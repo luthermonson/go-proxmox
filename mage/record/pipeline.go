@@ -66,7 +66,8 @@ func NewPipeline(ctx context.Context, cfg *Config, release Release) (*Pipeline, 
 }
 
 // Run executes the pipeline end-to-end. The nested VM is destroyed on
-// every exit path, including failure during provisioning or recording.
+// every exit path, including failure during provisioning or recording, and
+// the local HTTP server is shut down on the way out.
 func (p *Pipeline) Run(ctx context.Context) (err error) {
 	fmt.Printf("[record:%s] downloading upstream ISO if needed\n", p.release.Major)
 	upstream, err := p.iso.EnsureUpstream(ctx, p.release)
@@ -74,8 +75,25 @@ func (p *Pipeline) Run(ctx context.Context) (err error) {
 		return fmt.Errorf("ensure upstream ISO: %w", err)
 	}
 
-	fmt.Printf("[record:%s] preparing autoinstall ISO with embedded seed\n", p.release.Major)
-	prepared, err := p.iso.PrepareAutoInstall(ctx, p.release, upstream)
+	// Local HTTP server hosts answer.toml + first-boot.sh for the duration
+	// of the install. Compute the URLs from config first so the answer
+	// file can reference its own first-boot URL before we bind anything.
+	urls, err := PlanURLs(p.cfg)
+	if err != nil {
+		return fmt.Errorf("plan http server URLs: %w", err)
+	}
+	answer := []byte(AnswerTOML(p.cfg, urls.FirstBootURL))
+	firstBoot := []byte(FirstBootScript(p.cfg))
+
+	fmt.Printf("[record:%s] starting local HTTP server on %s\n", p.release.Major, urls.BaseURL)
+	httpServer, err := NewFileServer(p.cfg, answer, firstBoot)
+	if err != nil {
+		return fmt.Errorf("start http server: %w", err)
+	}
+	defer func() { _ = httpServer.Stop() }()
+
+	fmt.Printf("[record:%s] preparing autoinstall ISO with fetch-from-http URL\n", p.release.Major)
+	prepared, err := p.iso.PrepareAutoInstall(ctx, p.release, upstream, urls.AnswerURL)
 	if err != nil {
 		return fmt.Errorf("prepare auto-install ISO: %w", err)
 	}

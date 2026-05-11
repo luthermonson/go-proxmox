@@ -88,16 +88,20 @@ func Plan() error {
        Key:      %s
 
   3. For each release in (pve9, pve8):
-       a. Skip download if the upstream ISO is already in storage
-       b. Otherwise download from upstream
-       c. Re-master the ISO with answer.toml + first-boot seed
-       d. Create nested VM %d (%s)
+       a. Start local HTTP server (auto-detected on workstation LAN IP, port %d)
+          serving /answer.toml + /first-boot.sh
+       b. Skip ISO download if upstream is already in storage
+       c. Otherwise download from upstream
+       d. SSH to outer host, run proxmox-auto-install-assistant prepare-iso
+          --fetch-from http --url http://<workstation>:%d/answer.toml
+       e. Create nested VM %d (%s)
             CPU=host  cores=%d  ram=%dMB  disk=%dGB
             bridge=%s  ip=%s  gw=%s
-       e. Wait up to 25 minutes for install to complete
-       f. SSH-poll /var/lib/go-proxmox-seeded for seed completion
-       g. Run go test ./tests/recorder/... in record mode
-       h. Destroy the nested VM
+       f. Wait up to 25 minutes for install + first-boot seed
+          (nested VM fetches answer.toml + first-boot.sh from workstation)
+       g. SSH-poll /var/lib/go-proxmox-seeded for seed completion
+       h. Run go test ./tests/recorder/... in record mode
+       i. Destroy the nested VM and stop the HTTP server
 
   4. Cassettes land in:
        tests/recorder/testdata/pve9/
@@ -112,6 +116,8 @@ func Plan() error {
 		cfg.SSHHost,
 		cfg.SSHUser,
 		cfg.SSHKey,
+		cfg.HTTPPort,
+		cfg.HTTPPort,
 		cfg.NestedVMID,
 		cfg.NestedName,
 		cfg.NestedCPU,
