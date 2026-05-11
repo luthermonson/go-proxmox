@@ -17,6 +17,9 @@ require (
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	gopkg.in/dnaeon/go-vcr.v4 v4.0.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
