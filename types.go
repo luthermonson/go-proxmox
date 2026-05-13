@@ -1813,6 +1813,16 @@ type ImportMetadataWarning struct {
 	Value string `json:"value,omitempty"`
 }
 
+// NodeDNS represents the resolver configuration for a single node, as
+// returned by GET /nodes/{node}/dns and accepted by PUT /nodes/{node}/dns.
+// Search is required on update; the three DNS slots are individually optional.
+type NodeDNS struct {
+	Search string `json:"search,omitempty"`
+	DNS1   string `json:"dns1,omitempty"`
+	DNS2   string `json:"dns2,omitempty"`
+	DNS3   string `json:"dns3,omitempty"`
+}
+
 type NodeCertificates []*NodeCertificate
 
 type NodeCertificate struct {
