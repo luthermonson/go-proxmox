@@ -152,12 +152,32 @@ func pool() {
 		Reply(200).
 		JSON(`{"data": null}`)
 
+	// Modern PUT /pools (poolid in body). Persisted so Pool.Update tests can
+	// share with any future tests that hit the same route.
 	gock.New(config.C.URI).
+		Persist().
+		Put("^/pools$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Modern DELETE /pools?poolid=test-pool.
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/pools$").
+		MatchParam("poolid", "test-pool").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Deprecated PUT /pools/{poolid} (covered by Pool.UpdateDeprecated).
+	gock.New(config.C.URI).
+		Persist().
 		Put("^/pools/test-pool$").
 		Reply(200).
 		JSON(`{"data": null}`)
 
+	// Deprecated DELETE /pools/{poolid} (covered by Pool.DeleteDeprecated).
 	gock.New(config.C.URI).
+		Persist().
 		Delete("^/pools/test-pool$").
 		Reply(200).
 		JSON(`{"data": null}`)
