@@ -71,6 +71,25 @@ type NodeTime struct {
 	Timezone  string `json:"timezone"`
 }
 
+// Subscription mirrors GET /nodes/{node}/subscription. Fields are loosely
+// typed because PVE's response varies between license levels (community,
+// basic, standard, premium) and between current-vs-expired states.
+type Subscription struct {
+	Status         string `json:"status,omitempty"` // active / inactive / notfound / expired / suspended / new
+	Key            string `json:"key,omitempty"`
+	Level          string `json:"level,omitempty"` // c=community, b=basic, s=standard, p=premium
+	ProductName    string `json:"productname,omitempty"`
+	RegDate        string `json:"regdate,omitempty"`     // YYYY-MM-DD HH:MM:SS
+	NextDueDate    string `json:"nextduedate,omitempty"` // YYYY-MM-DD
+	Validdirectory string `json:"validdirectory,omitempty"`
+	Sockets        int    `json:"sockets,omitempty"`
+	Checktime      int64  `json:"checktime,omitempty"` // epoch
+	ServerID       string `json:"serverid,omitempty"`
+	URL            string `json:"url,omitempty"`
+	Message        string `json:"message,omitempty"`
+	Signature      string `json:"signature,omitempty"`
+}
+
 type Term struct {
 	Port   StringOrInt
 	Ticket string
