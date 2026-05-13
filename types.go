@@ -90,6 +90,35 @@ type Subscription struct {
 	Signature      string `json:"signature,omitempty"`
 }
 
+// LogEntry is a single line from PVE log endpoints (task log, replication
+// log, etc.) — N is the 1-based line number, T the line text.
+type LogEntry struct {
+	N int    `json:"n"`
+	T string `json:"t"`
+}
+
+// NodeReplicationStatus is runtime state for a replication job on a node:
+// what was last synced, fail count, next-sync time. The cluster-wide
+// configuration of the job lives at /cluster/replication; this is the
+// per-node view of how that job is *running*.
+type NodeReplicationStatus struct {
+	ID        string  `json:"id"`
+	Type      string  `json:"type,omitempty"`
+	Source    string  `json:"source,omitempty"`
+	Target    string  `json:"target,omitempty"`
+	Guest     int     `json:"guest,omitempty"`
+	JobNum    int     `json:"jobnum,omitempty"`
+	Schedule  string  `json:"schedule,omitempty"`
+	LastSync  int64   `json:"last_sync,omitempty"` // epoch
+	LastTry   int64   `json:"last_try,omitempty"`  // epoch
+	NextSync  int64   `json:"next_sync,omitempty"` // epoch
+	Duration  float64 `json:"duration,omitempty"`  // seconds
+	FailCount int     `json:"fail_count,omitempty"`
+	Error     string  `json:"error,omitempty"`
+	PID       int     `json:"pid,omitempty"`
+	State     string  `json:"state,omitempty"`
+}
+
 type Term struct {
 	Port   StringOrInt
 	Ticket string
