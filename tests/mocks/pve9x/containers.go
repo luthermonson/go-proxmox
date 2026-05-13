@@ -201,6 +201,26 @@ func containers() {
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:vzrollback:101:root@pam:"}`)
 
+	// GET /nodes/{node}/lxc/{vmid}/snapshot/{snapname}/config - Get snapshot config
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/snapshot/snapshot1/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "description": "First snapshot",
+        "memory": 1024,
+        "cores": 2,
+        "ostype": "ubuntu"
+    }
+}`)
+
+	// PUT /nodes/{node}/lxc/{vmid}/snapshot/{snapname}/config - Update snapshot config
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/lxc/101/snapshot/snapshot1/config$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
 	// GET /nodes/{node}/lxc/{vmid}/interfaces - Get network interfaces
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/lxc/101/interfaces$").
@@ -219,6 +239,85 @@ func containers() {
             "inet6": "fe80::be24:11ff:fe89:6707/64",
             "name": "eth0"
         }
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/rrddata
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/rrddata$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"time": 1715299200, "cpu": 0.05, "mem": 268435456, "maxmem": 1073741824, "disk": 0, "maxdisk": 8589934592, "netin": 1000, "netout": 500, "diskread": 0, "diskwrite": 0},
+        {"time": 1715299260, "cpu": 0.10, "mem": 270000000, "maxmem": 1073741824, "disk": 0, "maxdisk": 8589934592, "netin": 1500, "netout": 700, "diskread": 0, "diskwrite": 0}
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/pending
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/pending$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"key": "memory", "value": 1024, "pending": 2048},
+        {"key": "cores", "value": 2},
+        {"key": "swap", "value": 512, "delete": 1}
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/rrd
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/rrd$").
+		Reply(200).
+		JSON(`{"data": {"filename": "/var/lib/rrdcached/db/pve2-vm/101.png"}}`)
+
+	// POST /nodes/{node}/lxc/{vmid}/remote_migrate
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/remote_migrate$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00009ABC:0000DEAD:5A3B7C8D:vzremote-migrate:101:root@pam:"}`)
+
+	// POST /nodes/{node}/lxc/{vmid}/spiceproxy
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/lxc/101/spiceproxy$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "type": "spice",
+        "host": "node1.example.com",
+        "port": "61024",
+        "tls-port": "61025",
+        "password": "secret-ticket",
+        "proxy": "http://proxy.example.com",
+        "title": "CT 101",
+        "host-subject": "OU=PVE Cluster Node,O=Proxmox VE,CN=node1",
+        "ca": "-----BEGIN CERTIFICATE-----\nMIIB...==\n-----END CERTIFICATE-----",
+        "delete-this-file": "1",
+        "secure-attention": "Ctrl+Alt+Ins",
+        "release-cursor": "Ctrl+Alt+R",
+        "toggle-fullscreen": "Shift+F11"
+    }
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/firewall/log
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/firewall/log$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        [42, "1 2 policy DROP: IN=eth0 OUT= MAC=... SRC=10.0.0.1 DST=10.0.0.2"],
+        [43, "1 3 policy ACCEPT: IN=eth0 OUT= SRC=10.0.0.3"]
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/firewall/refs
+	gock.New(config.C.URI).
+		Get("^/nodes/node1/lxc/101/firewall/refs$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"type": "alias", "name": "lan", "comment": "Local LAN range"},
+        {"type": "ipset", "name": "blocked", "comment": "Blocked sources"}
     ]
 }`)
 }

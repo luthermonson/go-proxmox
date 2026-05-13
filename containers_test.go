@@ -7,6 +7,7 @@ import (
 	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestContainer(t *testing.T) {
@@ -414,4 +415,144 @@ func TestContainer_RemoveTag(t *testing.T) {
 	_, err = container.RemoveTag(ctx, "tag1")
 	assert.Nil(t, err)
 	assert.False(t, container.HasTag("tag1"))
+}
+
+func TestContainerRRDData(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	data, err := c.RRDData(ctx, TimeframeHour)
+	assert.Nil(t, err)
+	assert.Len(t, data, 2)
+	assert.Equal(t, uint64(1715299200), data[0].Time)
+}
+
+func TestContainerPending(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	pending, err := c.Pending(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, pending, 3)
+	assert.Equal(t, "memory", pending[0].Key)
+	assert.EqualValues(t, 2048, pending[0].Pending)
+	assert.Equal(t, "swap", pending[2].Key)
+	assert.Equal(t, 1, pending[2].Delete)
+}
+
+func TestContainerRRD(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	rrd, err := c.RRD(ctx, "cpu", TimeframeHour)
+	assert.Nil(t, err)
+	require.NotNil(t, rrd)
+	assert.Contains(t, rrd.Filename, "101.png")
+}
+
+func TestContainerRemoteMigrate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	task, err := c.RemoteMigrate(ctx, &ContainerRemoteMigrateOptions{
+		TargetEndpoint: "apitoken=PVEAPIToken=user@pam!tok=secret host=target.example.com fingerprint=AA:BB",
+		TargetBridge:   "vmbr0=vmbr0",
+		TargetStorage:  "local=local",
+		TargetVMID:     201,
+		Online:         IntOrBool(true),
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "vzremote-migrate")
+}
+
+func TestContainerSpiceProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	spice, err := c.SpiceProxy(ctx)
+	assert.Nil(t, err)
+	require.NotNil(t, spice)
+	assert.Equal(t, "spice", spice.Type)
+	assert.Equal(t, "node1.example.com", spice.Host)
+	assert.Equal(t, "61024", spice.Port)
+	assert.Equal(t, "secret-ticket", spice.Password)
+	assert.Equal(t, "61025", spice.TLSPort)
+}
+
+func TestContainerFirewallLog(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	entries, err := c.FirewallLog(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, entries, 2)
+	// PVE returns [n, "text"] tuples; verify the custom UnmarshalJSON flattens them
+	assert.Equal(t, 42, entries[0].LineNum)
+	assert.Contains(t, entries[0].Text, "policy DROP")
+	assert.Equal(t, 43, entries[1].LineNum)
+	assert.Contains(t, entries[1].Text, "policy ACCEPT")
+}
+
+func TestContainerFirewallRefs(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	refs, err := c.FirewallRefs(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, refs, 2)
+	assert.Equal(t, "alias", refs[0].Type)
+	assert.Equal(t, "lan", refs[0].Name)
+	assert.Equal(t, "ipset", refs[1].Type)
+	assert.Equal(t, "blocked", refs[1].Name)
+}
+
+func TestContainerGetSnapshotConfig(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	config, err := c.GetSnapshotConfig(ctx, "snapshot1")
+	assert.Nil(t, err)
+	assert.Equal(t, "First snapshot", config["description"])
+}
+
+func TestContainerUpdateSnapshot(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	c := &Container{client: client, Node: "node1", VMID: 101}
+
+	// nil options still posts a body successfully (was broken pre-fix)
+	assert.Nil(t, c.UpdateSnapshot(ctx, "snapshot1", nil))
+
+	// explicit description
+	assert.Nil(t, c.UpdateSnapshot(ctx, "snapshot1", &ContainerSnapshotUpdateOptions{
+		Description: "updated by tests",
+	}))
 }
