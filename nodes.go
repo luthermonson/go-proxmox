@@ -375,6 +375,56 @@ func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, e
 	return vzdumpCfg, nil
 }
 
+// ---- /nodes/{node}/services --------------------------------------------------
+
+// Services returns the list of services on the node (pveproxy, pvedaemon,
+// corosync, ssh, etc.). GET /nodes/{node}/services.
+func (n *Node) Services(ctx context.Context) (services []*NodeService, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/services", n.Name), &services)
+	return
+}
+
+// ServiceState returns the current state of a single service.
+// GET /nodes/{node}/services/{service}/state. The /services/{service} root is
+// just a directory index and is intentionally not wrapped — state is the only
+// useful read on a specific service.
+func (n *Node) ServiceState(ctx context.Context, service string) (state *NodeService, err error) {
+	state = &NodeService{}
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/services/%s/state", n.Name, service), state)
+	return
+}
+
+// ServiceStart issues POST /nodes/{node}/services/{service}/start. Returns a
+// Task because PVE does service control asynchronously.
+func (n *Node) ServiceStart(ctx context.Context, service string) (*Task, error) {
+	return n.serviceAction(ctx, service, "start")
+}
+
+// ServiceStop issues POST /nodes/{node}/services/{service}/stop.
+func (n *Node) ServiceStop(ctx context.Context, service string) (*Task, error) {
+	return n.serviceAction(ctx, service, "stop")
+}
+
+// ServiceRestart issues POST /nodes/{node}/services/{service}/restart — a
+// hard restart. Use Reload for graceful restart of services that support it.
+func (n *Node) ServiceRestart(ctx context.Context, service string) (*Task, error) {
+	return n.serviceAction(ctx, service, "restart")
+}
+
+// ServiceReload issues POST /nodes/{node}/services/{service}/reload, which
+// PVE documents as "falls back to restart if reload isn't supported".
+func (n *Node) ServiceReload(ctx context.Context, service string) (*Task, error) {
+	return n.serviceAction(ctx, service, "reload")
+}
+
+func (n *Node) serviceAction(ctx context.Context, service, action string) (*Task, error) {
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/%s", n.Name, service, action), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
 // Time returns the node's current time and timezone configuration.
 // GET /nodes/{node}/time. The "time" and "localtime" fields are unix epoch
 // seconds — see NodeTime.

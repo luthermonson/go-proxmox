@@ -50,6 +50,18 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+// NodeService is one row of the services list and the response shape of
+// /nodes/{node}/services/{service}/state. The same struct fits both because
+// the list returns the same per-service info, just batched.
+type NodeService struct {
+	Service     string `json:"service"`
+	Name        string `json:"name,omitempty"`
+	Desc        string `json:"desc,omitempty"`
+	State       string `json:"state,omitempty"`        // running / stopped / unknown
+	ActiveState string `json:"active-state,omitempty"` // active / inactive / failed
+	UnitState   string `json:"unit-state,omitempty"`   // enabled / disabled / masked
+}
+
 // NodeTime is the response from GET /nodes/{node}/time. Time and Localtime
 // are unix epoch seconds (UTC and local-tz-adjusted respectively); Timezone
 // is the IANA name.
