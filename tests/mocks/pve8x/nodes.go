@@ -642,4 +642,28 @@ func nodes() {
 		JSON(`{
     "data": "cores: 2\nmemory: 2048\nostype: debian\nrootfs: local-lvm:vm-100-disk-0,size=8G\nnet0: name=eth0,bridge=vmbr0,ip=dhcp"
 }`)
+
+	// GET /nodes/{node}/services
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/services$").
+		Reply(200).
+		JSON(`{"data": [
+			{"service": "pveproxy", "name": "pveproxy", "desc": "PVE API Proxy", "state": "running", "active-state": "active", "unit-state": "enabled"},
+			{"service": "sshd",     "name": "sshd",     "desc": "OpenSSH server",  "state": "running", "active-state": "active", "unit-state": "enabled"}
+		]}`)
+
+	// GET /nodes/{node}/services/{service}/state
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/services/pveproxy/state$").
+		Reply(200).
+		JSON(`{"data": {"service": "pveproxy", "name": "pveproxy", "desc": "PVE API Proxy", "state": "running", "active-state": "active", "unit-state": "enabled"}}`)
+
+	// POST /nodes/{node}/services/{service}/{action}
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/services/pveproxy/(start|stop|restart|reload)$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00012345:67890123:srvstart:pveproxy:root@pam:"}`)
 }

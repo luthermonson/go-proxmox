@@ -526,3 +526,54 @@ func TestNode_VirtualMachines_TemplateWithNullPID(t *testing.T) {
 	require.NotNil(t, running, "running VM should be present in the listing")
 	assert.Equal(t, StringOrUint64(14558), running.PID)
 }
+
+func TestNode_Services(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	services, err := node.Services(ctx)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, services)
+	assert.Equal(t, "pveproxy", services[0].Service)
+	assert.Equal(t, "running", services[0].State)
+}
+
+func TestNode_ServiceState(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	state, err := node.ServiceState(ctx, "pveproxy")
+	assert.Nil(t, err)
+	assert.Equal(t, "pveproxy", state.Service)
+	assert.Equal(t, "active", state.ActiveState)
+}
+
+func TestNode_ServiceActions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	// All four actions hit the same mock regex; just verify each method
+	// constructs the right URL by exercising it.
+	for _, fn := range []func(context.Context, string) (*Task, error){
+		node.ServiceStart, node.ServiceStop, node.ServiceRestart, node.ServiceReload,
+	} {
+		task, err := fn(ctx, "pveproxy")
+		assert.Nil(t, err)
+		assert.NotNil(t, task)
+	}
+}
