@@ -1523,6 +1523,9 @@ type PoolUpdateOption struct {
 	Comment string `json:"comment,omitempty"`
 	// Delete objects rather than adding them
 	Delete bool `json:"delete,omitempty"` // FIXME(issue-178): schema "boolean"; use IntOrBool (defaults match — no pointer needed).
+	// AllowMove permits adding a guest that already belongs to another pool;
+	// the guest is silently moved instead of the request being rejected.
+	AllowMove bool `json:"allow-move,omitempty"` // FIXME(issue-178): schema "boolean"; use IntOrBool (defaults match — no pointer needed).
 	// Comma separated lists of Storage names to add/delete to the pool
 	Storage string `json:"storage,omitempty"`
 	// Comma separated lists of Virtual Machine IDs to add/delete to the pool

@@ -56,10 +56,26 @@ func TestPoolUpdate(t *testing.T) {
 		err = pool.Update(ctx, &PoolUpdateOption{
 			Comment:         "Test pool updated",
 			Delete:          true,
+			AllowMove:       true,
 			Storage:         "local-zfs",
 			VirtualMachines: "100",
 		})
 		assert.Nil(t, err)
+	}
+}
+
+func TestPoolUpdateNilOption(t *testing.T) {
+	// poolUpdatePayload must tolerate a nil option and still send poolid.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	pool, err := client.Pool(ctx, "test-pool")
+	assert.Nil(t, err)
+	assert.NotNil(t, pool)
+	if pool != nil {
+		assert.Nil(t, pool.Update(ctx, nil))
 	}
 }
 
@@ -76,5 +92,54 @@ func TestPoolDelete(t *testing.T) {
 	if pool != nil {
 		err = pool.Delete(ctx)
 		assert.Nil(t, err)
+	}
+}
+
+func TestPoolGetDeprecated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	// Seed a Pool struct without going through Client.Pool so we exercise
+	// the deprecated GET /pools/{poolid} path directly.
+	stub := &Pool{client: client, PoolID: "test-pool"}
+	pool, err := stub.GetDeprecated(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, pool)
+	if pool != nil {
+		assert.Equal(t, "test-pool", pool.PoolID)
+		assert.Equal(t, "Test pool", pool.Comment)
+		assert.Len(t, pool.Members, 3)
+	}
+}
+
+func TestPoolUpdateDeprecated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	pool, err := client.Pool(ctx, "test-pool")
+	assert.Nil(t, err)
+	assert.NotNil(t, pool)
+	if pool != nil {
+		assert.Nil(t, pool.UpdateDeprecated(ctx, &PoolUpdateOption{
+			Comment: "via deprecated path",
+		}))
+	}
+}
+
+func TestPoolDeleteDeprecated(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	pool, err := client.Pool(ctx, "test-pool")
+	assert.Nil(t, err)
+	assert.NotNil(t, pool)
+	if pool != nil {
+		assert.Nil(t, pool.DeleteDeprecated(ctx))
 	}
 }
