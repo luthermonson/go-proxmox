@@ -439,3 +439,36 @@ func (n *Node) Time(ctx context.Context) (t *NodeTime, err error) {
 func (n *Node) SetTimezone(ctx context.Context, timezone string) error {
 	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/time", n.Name), map[string]string{"timezone": timezone}, nil)
 }
+
+// ---- /nodes/{node}/subscription ----------------------------------------------
+
+// Subscription reads the node's subscription state — license level, status,
+// next-due-date, etc. GET /nodes/{node}/subscription.
+func (n *Node) Subscription(ctx context.Context) (sub *Subscription, err error) {
+	sub = &Subscription{}
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/subscription", n.Name), sub)
+	return
+}
+
+// SetSubscription registers a Proxmox VE subscription key on the node.
+// PUT /nodes/{node}/subscription.
+func (n *Node) SetSubscription(ctx context.Context, key string) error {
+	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/subscription", n.Name), map[string]string{"key": key}, nil)
+}
+
+// RefreshSubscription asks the node to re-validate the cached subscription
+// status against Proxmox's servers. force=true bypasses the local cache and
+// always hits the upstream. POST /nodes/{node}/subscription.
+func (n *Node) RefreshSubscription(ctx context.Context, force bool) error {
+	body := map[string]any{}
+	if force {
+		body["force"] = 1
+	}
+	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/subscription", n.Name), body, nil)
+}
+
+// DeleteSubscription removes the subscription key from the node, returning it
+// to community-edition status. DELETE /nodes/{node}/subscription.
+func (n *Node) DeleteSubscription(ctx context.Context) error {
+	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/subscription", n.Name), nil)
+}

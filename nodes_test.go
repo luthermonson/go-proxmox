@@ -605,3 +605,33 @@ func TestNode_SetTimezone(t *testing.T) {
 
 	assert.Nil(t, node.SetTimezone(ctx, "America/Los_Angeles"))
 }
+
+func TestNode_Subscription(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	sub, err := node.Subscription(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "active", sub.Status)
+	assert.Equal(t, "c", sub.Level)
+	assert.Equal(t, 1, sub.Sockets)
+}
+
+func TestNode_SetRefreshDeleteSubscription(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	assert.Nil(t, node.SetSubscription(ctx, "pve8c-newkey"))
+	assert.Nil(t, node.RefreshSubscription(ctx, true))
+	assert.Nil(t, node.DeleteSubscription(ctx))
+}

@@ -722,4 +722,32 @@ func nodes() {
 		Put("^/nodes/node1/time$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/subscription
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/subscription$").
+		Reply(200).
+		JSON(`{"data": {"status": "active", "key": "pve8c-1234567890", "level": "c", "productname": "PVE Community 1 CPU/year", "sockets": 1, "nextduedate": "2026-12-31"}}`)
+
+	// PUT /nodes/{node}/subscription
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/subscription$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// POST /nodes/{node}/subscription
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/subscription$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /nodes/{node}/subscription
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/subscription$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
