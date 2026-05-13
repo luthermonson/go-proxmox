@@ -1692,6 +1692,50 @@ type StorageContent struct {
 	VMID         uint64         `json:"vmid,omitempty"`
 }
 
+// StoragePruneBackupsOptions filters which backups PreviewPruneBackups and
+// PruneBackups operate on. The zero value means "use the storage's configured
+// retention spec and apply to every backup".
+type StoragePruneBackupsOptions struct {
+	// PruneBackups overrides the storage's configured retention spec for this
+	// call only. Example: "keep-last=3,keep-monthly=4". Empty uses the storage default.
+	PruneBackups string
+	// Type filters by guest type: "qemu" or "lxc". Empty considers both.
+	Type string
+	// VMID filters to a single guest. Zero considers all guests.
+	VMID uint64
+}
+
+// PruneBackupItem is one row in the dryrun listing returned by
+// Storage.PreviewPruneBackups. Mark indicates what PruneBackups would do with
+// this volume: "keep", "remove", "protected" (retained by a protection flag),
+// or "renamed" (retained because its name doesn't match the standard scheme).
+type PruneBackupItem struct {
+	Volid string         `json:"volid"`
+	Ctime StringOrUint64 `json:"ctime"`
+	Mark  string         `json:"mark"`
+	Type  string         `json:"type"`
+	VMID  uint64         `json:"vmid,omitempty"`
+}
+
+// ImportMetadata is the result of Storage.ImportMetadata for an external disk
+// volume on an "import"-capable storage (e.g. an ESXi-imported guest). It
+// describes how Proxmox interprets the source and supplies ready-to-use
+// arguments for creating a guest from it.
+type ImportMetadata struct {
+	Type       string                  `json:"type"`
+	Source     string                  `json:"source"`
+	CreateArgs map[string]interface{}  `json:"create-args"`
+	Disks      map[string]string       `json:"disks,omitempty"`
+	Net        map[string]interface{}  `json:"net,omitempty"`
+	Warnings   []ImportMetadataWarning `json:"warnings,omitempty"`
+}
+
+type ImportMetadataWarning struct {
+	Type  string `json:"type"`
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
 type NodeCertificates []*NodeCertificate
 
 type NodeCertificate struct {
