@@ -424,3 +424,18 @@ func (n *Node) serviceAction(ctx context.Context, service, action string) (*Task
 	}
 	return NewTask(upid, n.client), nil
 }
+
+// Time returns the node's current time and timezone configuration.
+// GET /nodes/{node}/time. The "time" and "localtime" fields are unix epoch
+// seconds — see NodeTime.
+func (n *Node) Time(ctx context.Context) (t *NodeTime, err error) {
+	t = &NodeTime{}
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/time", n.Name), t)
+	return
+}
+
+// SetTimezone sets the node's timezone. Valid names come from
+// /usr/share/zoneinfo/zone.tab. PUT /nodes/{node}/time.
+func (n *Node) SetTimezone(ctx context.Context, timezone string) error {
+	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/time", n.Name), map[string]string{"timezone": timezone}, nil)
+}

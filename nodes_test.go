@@ -577,3 +577,31 @@ func TestNode_ServiceActions(t *testing.T) {
 		assert.NotNil(t, task)
 	}
 }
+
+func TestNode_Time(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	tm, err := node.Time(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, tm)
+	assert.Equal(t, "UTC", tm.Timezone)
+	assert.Equal(t, int64(1715500000), tm.Time)
+}
+
+func TestNode_SetTimezone(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	assert.Nil(t, node.SetTimezone(ctx, "America/Los_Angeles"))
+}

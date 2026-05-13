@@ -62,6 +62,15 @@ type NodeService struct {
 	UnitState   string `json:"unit-state,omitempty"`   // enabled / disabled / masked
 }
 
+// NodeTime is the response from GET /nodes/{node}/time. Time and Localtime
+// are unix epoch seconds (UTC and local-tz-adjusted respectively); Timezone
+// is the IANA name.
+type NodeTime struct {
+	Time      int64  `json:"time"`
+	Localtime int64  `json:"localtime"`
+	Timezone  string `json:"timezone"`
+}
+
 type Term struct {
 	Port   StringOrInt
 	Ticket string
