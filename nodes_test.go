@@ -728,3 +728,52 @@ func TestNode_WakeOnLAN(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", mac)
 }
+
+func TestNode_Replications(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	reps, err := node.Replications(ctx, 0)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, reps)
+	assert.Equal(t, "100-0", reps[0].ID)
+	assert.Equal(t, 100, reps[0].Guest)
+}
+
+func TestNode_ReplicationStatusAndLog(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	st, err := node.ReplicationStatus(ctx, "100-0")
+	assert.Nil(t, err)
+	assert.Equal(t, "100-0", st.ID)
+
+	log, err := node.ReplicationLog(ctx, "100-0", 0, 0)
+	assert.Nil(t, err)
+	assert.Len(t, log, 2)
+	assert.Equal(t, 1, log[0].N)
+}
+
+func TestNode_ReplicationScheduleNow(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	task, err := node.ReplicationScheduleNow(ctx, "100-0")
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}

@@ -708,4 +708,37 @@ func nodes() {
 		Delete("^/nodes/node1/subscription$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/replication
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/replication$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "100-0", "type": "local", "source": "node1", "target": "node2", "guest": 100, "jobnum": 0, "last_sync": 1715500000, "next_sync": 1715501000, "state": "idle"}
+		]}`)
+
+	// GET /nodes/{node}/replication/{id}/status
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/replication/100-0/status$").
+		Reply(200).
+		JSON(`{"data": {"id": "100-0", "type": "local", "target": "node2", "guest": 100, "jobnum": 0, "last_sync": 1715500000, "state": "idle", "fail_count": 0}}`)
+
+	// GET /nodes/{node}/replication/{id}/log
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/replication/100-0/log$").
+		Reply(200).
+		JSON(`{"data": [
+			{"n": 1, "t": "2025-05-12 10:00:00 100-0: start replication job"},
+			{"n": 2, "t": "2025-05-12 10:00:05 100-0: end replication job"}
+		]}`)
+
+	// POST /nodes/{node}/replication/{id}/schedule_now
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/replication/100-0/schedule_now$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00012345:67890124:replicate:100-0:root@pam:"}`)
 }
