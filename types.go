@@ -1863,6 +1863,147 @@ type FirewallRef struct {
 	Comment string `json:"comment,omitempty"`
 }
 
+// ---- /cluster/ha types -------------------------------------------------------
+
+// HAGroup is a node-affinity group resources can be bound to. Deprecated by
+// PVE in favor of HA rules but still functional; existing clusters use these
+// heavily, so the wrapper stays for compatibility.
+type HAGroup struct {
+	Group      string    `json:"group"`
+	Type       string    `json:"type,omitempty"`
+	Nodes      string    `json:"nodes,omitempty"`
+	Comment    string    `json:"comment,omitempty"`
+	Digest     string    `json:"digest,omitempty"`
+	NoFailback IntOrBool `json:"nofailback,omitempty"`
+	Restricted IntOrBool `json:"restricted,omitempty"`
+}
+
+type HAGroupCreateOption struct {
+	Group      string    `json:"group"`
+	Nodes      string    `json:"nodes"`
+	Type       string    `json:"type,omitempty"`
+	Comment    string    `json:"comment,omitempty"`
+	NoFailback IntOrBool `json:"nofailback,omitempty"`
+	Restricted IntOrBool `json:"restricted,omitempty"`
+}
+
+type HAGroupUpdateOption struct {
+	Delete     string    `json:"delete,omitempty"`
+	Digest     string    `json:"digest,omitempty"`
+	Comment    string    `json:"comment,omitempty"`
+	Nodes      string    `json:"nodes,omitempty"`
+	NoFailback IntOrBool `json:"nofailback,omitempty"`
+	Restricted IntOrBool `json:"restricted,omitempty"`
+}
+
+// HAResource is a managed HA-controlled guest (VM or container).
+// Failback / MaxRelocate / MaxRestart use pointer types: PVE defaults are 1
+// for all three, so unset → omitted → server applies its default; an
+// explicit Ptr(IntOrBool(false)) / Ptr(0) reaches the wire as 0 (the
+// "disable failback" / "no relocations" cases users actually want).
+// State defaults to "started" — pointer for the same reason.
+type HAResource struct {
+	SID         string     `json:"sid"`
+	Type        string     `json:"type,omitempty"`
+	Group       string     `json:"group,omitempty"`
+	Comment     string     `json:"comment,omitempty"`
+	Digest      string     `json:"digest,omitempty"`
+	State       *string    `json:"state,omitempty"`
+	Failback    *IntOrBool `json:"failback,omitempty"`
+	MaxRelocate *int       `json:"max_relocate,omitempty"`
+	MaxRestart  *int       `json:"max_restart,omitempty"`
+}
+
+type HAResourceCreateOption struct {
+	SID         string     `json:"sid"`
+	Type        string     `json:"type,omitempty"`
+	Group       string     `json:"group,omitempty"`
+	Comment     string     `json:"comment,omitempty"`
+	State       *string    `json:"state,omitempty"`
+	Failback    *IntOrBool `json:"failback,omitempty"`
+	MaxRelocate *int       `json:"max_relocate,omitempty"`
+	MaxRestart  *int       `json:"max_restart,omitempty"`
+}
+
+type HAResourceUpdateOption struct {
+	Delete      string     `json:"delete,omitempty"`
+	Digest      string     `json:"digest,omitempty"`
+	Group       string     `json:"group,omitempty"`
+	Comment     string     `json:"comment,omitempty"`
+	State       *string    `json:"state,omitempty"`
+	Failback    *IntOrBool `json:"failback,omitempty"`
+	MaxRelocate *int       `json:"max_relocate,omitempty"`
+	MaxRestart  *int       `json:"max_restart,omitempty"`
+}
+
+// HARule is the modern HA configuration unit (replaces groups). Type and
+// Affinity together describe whether resources should colocate, anti-colocate,
+// or pin to specific nodes. Strict (default 0) and Disable (no default in
+// schema) are both schema-boolean; plain IntOrBool is fine because the
+// "unset" semantic matches the Go zero for both.
+type HARule struct {
+	Rule      string    `json:"rule"`
+	Type      string    `json:"type,omitempty"`
+	Affinity  string    `json:"affinity,omitempty"`
+	Comment   string    `json:"comment,omitempty"`
+	Digest    string    `json:"digest,omitempty"`
+	Nodes     string    `json:"nodes,omitempty"`
+	Resources string    `json:"resources,omitempty"`
+	Disable   IntOrBool `json:"disable,omitempty"`
+	Strict    IntOrBool `json:"strict,omitempty"`
+}
+
+type HARuleCreateOption struct {
+	Rule      string    `json:"rule"`
+	Type      string    `json:"type"`
+	Resources string    `json:"resources"`
+	Affinity  string    `json:"affinity,omitempty"`
+	Comment   string    `json:"comment,omitempty"`
+	Nodes     string    `json:"nodes,omitempty"`
+	Disable   IntOrBool `json:"disable,omitempty"`
+	Strict    IntOrBool `json:"strict,omitempty"`
+}
+
+type HARuleUpdateOption struct {
+	Delete    string    `json:"delete,omitempty"`
+	Digest    string    `json:"digest,omitempty"`
+	Type      string    `json:"type,omitempty"`
+	Affinity  string    `json:"affinity,omitempty"`
+	Comment   string    `json:"comment,omitempty"`
+	Nodes     string    `json:"nodes,omitempty"`
+	Resources string    `json:"resources,omitempty"`
+	Disable   IntOrBool `json:"disable,omitempty"`
+	Strict    IntOrBool `json:"strict,omitempty"`
+}
+
+// HAStatusEntry is one row from GET /cluster/ha/status/current. The schema
+// is loose because PVE mixes per-resource, per-node, and overall-manager
+// rows in the same list — fields are populated based on the row's `type`.
+type HAStatusEntry struct {
+	ID           string `json:"id"`
+	Type         string `json:"type"`
+	Status       string `json:"status,omitempty"`
+	Node         string `json:"node,omitempty"`
+	Quorate      int    `json:"quorate,omitempty"`
+	CRMState     string `json:"crm_state,omitempty"`
+	LRMState     string `json:"lrm_state,omitempty"`
+	Service      string `json:"service,omitempty"`
+	ServiceState string `json:"state,omitempty"`
+	Request      string `json:"request_state,omitempty"`
+	Comment      string `json:"comment,omitempty"`
+	Timestamp    int64  `json:"timestamp,omitempty"`
+}
+
+// HAManagerStatus mirrors the JSON shape of GET /cluster/ha/status/manager_status —
+// the master process state plus LRM details. Fields are loosely typed because
+// PVE's manager_status is a JSON blob that evolves between releases.
+type HAManagerStatus struct {
+	ManagerStatus map[string]any           `json:"manager_status,omitempty"`
+	NodeStatus    map[string]string        `json:"node_status,omitempty"`
+	ServiceStatus map[string]map[string]any `json:"service_status,omitempty"`
+	Quorum        map[string]any           `json:"quorum,omitempty"`
+}
+
 type (
 	VirtualMachineBackupMode               = string
 	VirtualMachineBackupCompress           = string
