@@ -1994,6 +1994,159 @@ type HAStatusEntry struct {
 	Timestamp    int64  `json:"timestamp,omitempty"`
 }
 
+// ---- /cluster/backup types ---------------------------------------------------
+
+// BackupJob is one scheduled vzdump job (GET /cluster/backup, /cluster/backup/{id}).
+// Fields with non-zero PVE defaults are pointer-typed: an unset Schedule, Enabled,
+// Remove, StdExcludes etc. must omit from the wire so PVE keeps its defaults.
+// This is the same #199 discipline as VirtualMachineBackupOptions.
+type BackupJob struct {
+	ID                     string     `json:"id"`
+	Schedule               *string    `json:"schedule,omitempty"`
+	Storage                string     `json:"storage,omitempty"`
+	Comment                string     `json:"comment,omitempty"`
+	Enabled                *IntOrBool `json:"enabled,omitempty"`
+	All                    IntOrBool  `json:"all,omitempty"`
+	VMID                   string     `json:"vmid,omitempty"`
+	Pool                   string     `json:"pool,omitempty"`
+	Exclude                string     `json:"exclude,omitempty"`
+	ExcludePath            []string   `json:"exclude-path,omitempty"`
+	Node                   string     `json:"node,omitempty"`
+	DOW                    *string    `json:"dow,omitempty"`
+	StartTime              string     `json:"starttime,omitempty"`
+	Mode                   *string    `json:"mode,omitempty"`
+	Compress               string     `json:"compress,omitempty"`
+	Mailto                 string     `json:"mailto,omitempty"`
+	Mailnotification       *string    `json:"mailnotification,omitempty"`
+	NotificationMode       *string    `json:"notification-mode,omitempty"`
+	NotesTemplate          string     `json:"notes-template,omitempty"`
+	PBSChangeDetectionMode string     `json:"pbs-change-detection-mode,omitempty"`
+	Performance            string     `json:"performance,omitempty"`
+	Fleecing               string     `json:"fleecing,omitempty"`
+	BWLimit                int        `json:"bwlimit,omitempty"`
+	IONice                 *int       `json:"ionice,omitempty"`
+	LockWait               *int       `json:"lockwait,omitempty"`
+	MaxFiles               int        `json:"maxfiles,omitempty"`
+	Pigz                   int        `json:"pigz,omitempty"`
+	Zstd                   *int       `json:"zstd,omitempty"`
+	StopWait               *int       `json:"stopwait,omitempty"`
+	DumpDir                string     `json:"dumpdir,omitempty"`
+	TmpDir                 string     `json:"tmpdir,omitempty"`
+	Script                 string     `json:"script,omitempty"`
+	Protected              IntOrBool  `json:"protected,omitempty"`
+	Quiet                  IntOrBool  `json:"quiet,omitempty"`
+	Stop                   IntOrBool  `json:"stop,omitempty"`
+	RepeatMissed           IntOrBool  `json:"repeat-missed,omitempty"`
+	Remove                 *IntOrBool `json:"remove,omitempty"`
+	StdExcludes            *IntOrBool `json:"stdexcludes,omitempty"`
+	PruneBackups           *string    `json:"prune-backups,omitempty"`
+	Next                   int64      `json:"next,omitempty"` // PVE adds this on GET — next scheduled run epoch
+	Type                   string     `json:"type,omitempty"` // PVE adds this on GET — job type ("vzdump")
+}
+
+// BackupJobOptions is the POST body for /cluster/backup. PVE auto-generates
+// ID when omitted, so it's optional on create.
+type BackupJobOptions struct {
+	ID                     string     `json:"id,omitempty"`
+	Schedule               *string    `json:"schedule,omitempty"`
+	Storage                string     `json:"storage,omitempty"`
+	Comment                string     `json:"comment,omitempty"`
+	Enabled                *IntOrBool `json:"enabled,omitempty"`
+	All                    IntOrBool  `json:"all,omitempty"`
+	VMID                   string     `json:"vmid,omitempty"`
+	Pool                   string     `json:"pool,omitempty"`
+	Exclude                string     `json:"exclude,omitempty"`
+	ExcludePath            []string   `json:"exclude-path,omitempty"`
+	Node                   string     `json:"node,omitempty"`
+	DOW                    *string    `json:"dow,omitempty"`
+	StartTime              string     `json:"starttime,omitempty"`
+	Mode                   *string    `json:"mode,omitempty"`
+	Compress               string     `json:"compress,omitempty"`
+	Mailto                 string     `json:"mailto,omitempty"`
+	Mailnotification       *string    `json:"mailnotification,omitempty"`
+	NotificationMode       *string    `json:"notification-mode,omitempty"`
+	NotesTemplate          string     `json:"notes-template,omitempty"`
+	PBSChangeDetectionMode string     `json:"pbs-change-detection-mode,omitempty"`
+	Performance            string     `json:"performance,omitempty"`
+	Fleecing               string     `json:"fleecing,omitempty"`
+	BWLimit                int        `json:"bwlimit,omitempty"`
+	IONice                 *int       `json:"ionice,omitempty"`
+	LockWait               *int       `json:"lockwait,omitempty"`
+	MaxFiles               int        `json:"maxfiles,omitempty"`
+	Pigz                   int        `json:"pigz,omitempty"`
+	Zstd                   *int       `json:"zstd,omitempty"`
+	StopWait               *int       `json:"stopwait,omitempty"`
+	DumpDir                string     `json:"dumpdir,omitempty"`
+	TmpDir                 string     `json:"tmpdir,omitempty"`
+	Script                 string     `json:"script,omitempty"`
+	Protected              IntOrBool  `json:"protected,omitempty"`
+	Quiet                  IntOrBool  `json:"quiet,omitempty"`
+	Stop                   IntOrBool  `json:"stop,omitempty"`
+	RepeatMissed           IntOrBool  `json:"repeat-missed,omitempty"`
+	Remove                 *IntOrBool `json:"remove,omitempty"`
+	StdExcludes            *IntOrBool `json:"stdexcludes,omitempty"`
+	PruneBackups           *string    `json:"prune-backups,omitempty"`
+}
+
+// BackupJobUpdateOption is the PUT body — same fields plus `delete` for
+// unsetting individual options server-side.
+type BackupJobUpdateOption struct {
+	Delete                 string     `json:"delete,omitempty"`
+	Schedule               *string    `json:"schedule,omitempty"`
+	Storage                string     `json:"storage,omitempty"`
+	Comment                string     `json:"comment,omitempty"`
+	Enabled                *IntOrBool `json:"enabled,omitempty"`
+	All                    IntOrBool  `json:"all,omitempty"`
+	VMID                   string     `json:"vmid,omitempty"`
+	Pool                   string     `json:"pool,omitempty"`
+	Exclude                string     `json:"exclude,omitempty"`
+	ExcludePath            []string   `json:"exclude-path,omitempty"`
+	Node                   string     `json:"node,omitempty"`
+	DOW                    *string    `json:"dow,omitempty"`
+	StartTime              string     `json:"starttime,omitempty"`
+	Mode                   *string    `json:"mode,omitempty"`
+	Compress               string     `json:"compress,omitempty"`
+	Mailto                 string     `json:"mailto,omitempty"`
+	Mailnotification       *string    `json:"mailnotification,omitempty"`
+	NotificationMode       *string    `json:"notification-mode,omitempty"`
+	NotesTemplate          string     `json:"notes-template,omitempty"`
+	PBSChangeDetectionMode string     `json:"pbs-change-detection-mode,omitempty"`
+	Performance            string     `json:"performance,omitempty"`
+	Fleecing               string     `json:"fleecing,omitempty"`
+	BWLimit                int        `json:"bwlimit,omitempty"`
+	IONice                 *int       `json:"ionice,omitempty"`
+	LockWait               *int       `json:"lockwait,omitempty"`
+	MaxFiles               int        `json:"maxfiles,omitempty"`
+	Pigz                   int        `json:"pigz,omitempty"`
+	Zstd                   *int       `json:"zstd,omitempty"`
+	StopWait               *int       `json:"stopwait,omitempty"`
+	DumpDir                string     `json:"dumpdir,omitempty"`
+	TmpDir                 string     `json:"tmpdir,omitempty"`
+	Script                 string     `json:"script,omitempty"`
+	Protected              IntOrBool  `json:"protected,omitempty"`
+	Quiet                  IntOrBool  `json:"quiet,omitempty"`
+	Stop                   IntOrBool  `json:"stop,omitempty"`
+	RepeatMissed           IntOrBool  `json:"repeat-missed,omitempty"`
+	Remove                 *IntOrBool `json:"remove,omitempty"`
+	StdExcludes            *IntOrBool `json:"stdexcludes,omitempty"`
+	PruneBackups           *string    `json:"prune-backups,omitempty"`
+}
+
+// BackupIncludedVolumes is the response from /cluster/backup/{id}/included_volumes.
+// Children is a tree of guests with per-volume backup status, shaped for the
+// PVE UI's ExtJS tree view — fields are loosely typed because the shape
+// varies per node.
+type BackupIncludedVolumes struct {
+	Children []map[string]any `json:"children"`
+}
+
+// NotBackedUpGuest is one row from /cluster/backup-info/not-backed-up.
+type NotBackedUpGuest struct {
+	VMID int    `json:"vmid"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
+}
+
 // HAManagerStatus mirrors the JSON shape of GET /cluster/ha/status/manager_status —
 // the master process state plus LRM details. Fields are loosely typed because
 // PVE's manager_status is a JSON blob that evolves between releases.

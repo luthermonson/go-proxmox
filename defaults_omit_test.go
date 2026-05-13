@@ -157,6 +157,38 @@ func TestFirewallClusterOption_ExplicitEbtablesDisableSurvives(t *testing.T) {
 	assert.Equal(t, float64(0), m["ebtables"], "explicit ebtables=false must reach the server, not be swallowed by omitempty")
 }
 
+func TestBackupJobOptions_DefaultsOmittedWhenUnset(t *testing.T) {
+	// The big-deal fields are Remove (default 1) and StdExcludes (default 1):
+	// pre-#268 these were bare bools without omitempty on VirtualMachineBackupOptions
+	// and silently disabled pruning/exclusion. Backup jobs use the same fields
+	// with the same default — make sure the pointer + omitempty discipline holds.
+	m := marshalToMap(t, BackupJobOptions{Storage: "local"})
+	for _, k := range []string{
+		"schedule", "enabled", "dow", "ionice", "lockwait", "mailnotification",
+		"mode", "notification-mode", "prune-backups", "remove", "stdexcludes",
+		"stopwait", "zstd",
+	} {
+		_, present := m[k]
+		assert.Falsef(t, present, "%q should be omitted when unset so PVE applies its default", k)
+	}
+}
+
+func TestBackupJobOptions_ExplicitDisablesSurvive(t *testing.T) {
+	// Caller wants to disable pruning AND tmp/log exclusion on this job —
+	// must reach PVE as 0, not be swallowed by omitempty.
+	opts := BackupJobOptions{
+		Storage:     "local",
+		Schedule:    Ptr("sat 02:00"),
+		Remove:      Ptr(IntOrBool(false)),
+		StdExcludes: Ptr(IntOrBool(false)),
+		Enabled:     Ptr(IntOrBool(false)),
+	}
+	m := marshalToMap(t, opts)
+	assert.Equal(t, float64(0), m["remove"])
+	assert.Equal(t, float64(0), m["stdexcludes"])
+	assert.Equal(t, float64(0), m["enabled"])
+}
+
 func TestHAResource_DefaultsOmittedWhenUnset(t *testing.T) {
 	// PVE defaults are: state="started", failback=1, max_relocate=1,
 	// max_restart=1. All four are pointer-typed; bare struct must not ship

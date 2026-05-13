@@ -529,6 +529,7 @@ func cluster() {
 
 	clusterFirewallMain()
 	clusterHA()
+	clusterBackup()
 }
 
 // clusterFirewallMain registers mocks for /cluster/firewall/{rules,aliases,ipset,options,macros,refs}.
@@ -868,4 +869,57 @@ func clusterHA() {
 			"service_status": {"vm:100": {"state": "started", "node": "node1"}},
 			"quorum": {"quorate": 1}
 		}}`)
+}
+
+// clusterBackup registers mocks for /cluster/backup{,/{id},/{id}/included_volumes,-info/not-backed-up}.
+func clusterBackup() {
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "backup-job-1", "schedule": "sat 02:00", "storage": "local", "enabled": 1, "mode": "snapshot", "remove": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup/backup-job-1$").
+		Reply(200).
+		JSON(`{"data": {"id": "backup-job-1", "schedule": "sat 02:00", "storage": "local", "enabled": 1, "mode": "snapshot", "all": 1, "compress": "zstd"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/backup$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/backup/backup-job-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/backup/backup-job-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup/backup-job-1/included_volumes$").
+		Reply(200).
+		JSON(`{"data": {"children": [
+			{"id": "qemu/100", "name": "vm1", "type": "qemu", "children": [
+				{"id": "scsi0", "name": "scsi0", "backup": true}
+			]}
+		]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup-info/not-backed-up$").
+		Reply(200).
+		JSON(`{"data": [
+			{"vmid": 200, "name": "orphaned-vm", "type": "qemu"}
+		]}`)
 }
