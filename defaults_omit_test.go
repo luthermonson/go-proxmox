@@ -157,6 +157,15 @@ func TestFirewallClusterOption_ExplicitEbtablesDisableSurvives(t *testing.T) {
 	assert.Equal(t, float64(0), m["ebtables"], "explicit ebtables=false must reach the server, not be swallowed by omitempty")
 }
 
+func TestReplicationJobOptions_ScheduleOmittedWhenUnset(t *testing.T) {
+	// PVE default schedule is "*/15" (every 15 minutes). A nil Schedule
+	// pointer must omit, so the server keeps that default instead of being
+	// overridden by an empty string.
+	m := marshalToMap(t, ReplicationJobOptions{ID: "100-0", Target: "node2", Type: "local"})
+	_, present := m["schedule"]
+	assert.False(t, present, "schedule must be omitted when unset so PVE applies its */15 default")
+}
+
 func TestHAResource_DefaultsOmittedWhenUnset(t *testing.T) {
 	// PVE defaults are: state="started", failback=1, max_relocate=1,
 	// max_restart=1. All four are pointer-typed; bare struct must not ship

@@ -537,6 +537,7 @@ func cluster() {
 	clusterBackup()
 	clusterFirewallMain()
 	clusterHA()
+	clusterReplication()
 }
 
 func clusterBackup() {
@@ -1605,4 +1606,39 @@ func clusterHA() {
 			"service_status": {"vm:100": {"state": "started", "node": "node1"}},
 			"quorum": {"quorate": 1}
 		}}`)
+}
+
+// clusterReplication registers mocks for /cluster/replication/{,id}.
+func clusterReplication() {
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/replication$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "100-0", "type": "local", "target": "node2", "schedule": "*/15", "guest": 100, "jobnum": 0}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/replication/100-0$").
+		Reply(200).
+		JSON(`{"data": {"id": "100-0", "type": "local", "target": "node2", "schedule": "*/15", "guest": 100, "jobnum": 0}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/replication$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/replication/100-0$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/replication/100-0$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }

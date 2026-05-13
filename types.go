@@ -2947,6 +2947,49 @@ type HAStatusEntry struct {
 	Timestamp    int64  `json:"timestamp,omitempty"`
 }
 
+// ---- /cluster/replication types ----------------------------------------------
+
+// ReplicationJob is one storage replication job (GET /cluster/replication{,/id}).
+// Schedule defaults to "*/15" (every 15 min) — pointer-typed so an unset
+// Schedule omits and PVE keeps the default. Disable has no schema default;
+// IntOrBool with omitempty is sufficient.
+type ReplicationJob struct {
+	ID        string           `json:"id"`
+	Target    string           `json:"target,omitempty"`
+	Type      string           `json:"type,omitempty"`
+	Schedule  *string          `json:"schedule,omitempty"`
+	Comment   string           `json:"comment,omitempty"`
+	Disable   IntOrBool        `json:"disable,omitempty"`
+	Rate      *StringOrFloat64 `json:"rate,omitempty"`
+	RemoveJob string           `json:"remove_job,omitempty"`
+	Source    string           `json:"source,omitempty"`
+	Guest     int              `json:"guest,omitempty"`  // PVE adds on read — VMID
+	JobNum    int              `json:"jobnum,omitempty"` // PVE adds on read — job number within guest
+}
+
+type ReplicationJobOptions struct {
+	ID        string           `json:"id"`
+	Target    string           `json:"target"`
+	Type      string           `json:"type"`
+	Schedule  *string          `json:"schedule,omitempty"`
+	Comment   string           `json:"comment,omitempty"`
+	Disable   IntOrBool        `json:"disable,omitempty"`
+	Rate      *StringOrFloat64 `json:"rate,omitempty"`
+	RemoveJob string           `json:"remove_job,omitempty"`
+	Source    string           `json:"source,omitempty"`
+}
+
+type ReplicationJobUpdateOption struct {
+	Delete    string           `json:"delete,omitempty"`
+	Digest    string           `json:"digest,omitempty"`
+	Schedule  *string          `json:"schedule,omitempty"`
+	Comment   string           `json:"comment,omitempty"`
+	Disable   IntOrBool        `json:"disable,omitempty"`
+	Rate      *StringOrFloat64 `json:"rate,omitempty"`
+	RemoveJob string           `json:"remove_job,omitempty"`
+	Source    string           `json:"source,omitempty"`
+}
+
 // HAManagerStatus mirrors the JSON shape of GET /cluster/ha/status/manager_status —
 // the master process state plus LRM details. Fields are loosely typed because
 // PVE's manager_status is a JSON blob that evolves between releases.
