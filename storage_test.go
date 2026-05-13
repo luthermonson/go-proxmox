@@ -422,3 +422,107 @@ func TestClient_UploadReader(t *testing.T) {
 	assert.Equal(t, "hello.txt", capture.LastUpload.Filename)
 	assert.Equal(t, payload, capture.LastUpload.Body)
 }
+
+func TestStorage_PreviewPruneBackups(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+
+	items, err := storage.PreviewPruneBackups(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, items, 4)
+
+	marks := make(map[string]*PruneBackupItem, len(items))
+	for _, it := range items {
+		marks[it.Mark] = it
+	}
+	require.Contains(t, marks, "keep")
+	require.Contains(t, marks, "remove")
+	require.Contains(t, marks, "protected")
+	require.Contains(t, marks, "renamed")
+
+	assert.Equal(t, "local:backup/vzdump-qemu-100-2024_01_08-03_00_00.vma.zst", marks["remove"].Volid)
+	assert.Equal(t, "qemu", marks["remove"].Type)
+	assert.Equal(t, uint64(100), marks["remove"].VMID)
+	assert.Equal(t, StringOrUint64(1704682800), marks["remove"].Ctime)
+}
+
+func TestStorage_PreviewPruneBackups_WithFilters(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+
+	items, err := storage.PreviewPruneBackups(context.Background(), &StoragePruneBackupsOptions{
+		PruneBackups: "keep-last=3,keep-monthly=4",
+		Type:         "qemu",
+		VMID:         100,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, items)
+}
+
+func TestStorage_PruneBackups(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+
+	task, err := storage.PruneBackups(context.Background(), nil)
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "prunebackups", task.Type)
+}
+
+func TestStoragePruneBackupsOptions_QueryString(t *testing.T) {
+	cases := []struct {
+		name string
+		opts *StoragePruneBackupsOptions
+		want string
+	}{
+		{"nil", nil, ""},
+		{"empty", &StoragePruneBackupsOptions{}, ""},
+		{
+			"all fields",
+			&StoragePruneBackupsOptions{PruneBackups: "keep-last=3", Type: "qemu", VMID: 100},
+			"prune-backups=keep-last%3D3&type=qemu&vmid=100",
+		},
+		{"vmid only", &StoragePruneBackupsOptions{VMID: 100}, "vmid=100"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.opts.queryString())
+		})
+	}
+}
+
+func TestStorage_ImportMetadata(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "esxi"}
+
+	meta, err := storage.ImportMetadata(context.Background(), "esxi:ha-datacenter/MyVM/MyVM.vmx")
+	require.NoError(t, err)
+	require.NotNil(t, meta)
+
+	assert.Equal(t, "vm", meta.Type)
+	assert.Equal(t, "esxi", meta.Source)
+	assert.Equal(t, "imported-vm", meta.CreateArgs["name"])
+	assert.Equal(t, float64(4096), meta.CreateArgs["memory"])
+
+	require.Len(t, meta.Disks, 2)
+	assert.Equal(t, "esxi:ha-datacenter/MyVM/MyVM.vmdk", meta.Disks["scsi0"])
+
+	require.Len(t, meta.Net, 1)
+	net0, ok := meta.Net["net0"].(map[string]interface{})
+	require.True(t, ok, "net0 should unmarshal as a map")
+	assert.Equal(t, "vmxnet3", net0["model"])
+
+	require.Len(t, meta.Warnings, 1)
+	assert.Equal(t, "guest-is-running", meta.Warnings[0].Type)
+	assert.Equal(t, "power", meta.Warnings[0].Key)
+	assert.Equal(t, "poweredOn", meta.Warnings[0].Value)
+}

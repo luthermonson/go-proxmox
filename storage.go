@@ -3,8 +3,10 @@ package proxmox
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -292,6 +294,71 @@ func (b *Backup) Delete(ctx context.Context) (*Task, error) {
 
 func (i *ISO) Delete(ctx context.Context) (*Task, error) {
 	return deleteVolume(ctx, i.client, i.Node, i.Storage, i.VolID, i.Path, "iso")
+}
+
+// PreviewPruneBackups returns the list of backup volumes the prune call would
+// keep, remove, retain by protection flag, or skip due to non-standard
+// naming. Pass nil opts to use the storage's configured retention spec across
+// every guest. This is a dryrun — nothing on disk changes.
+func (s *Storage) PreviewPruneBackups(ctx context.Context, opts *StoragePruneBackupsOptions) ([]*PruneBackupItem, error) {
+	p := fmt.Sprintf("/nodes/%s/storage/%s/prunebackups", s.Node, s.Name)
+	if q := opts.queryString(); q != "" {
+		p = p + "?" + q
+	}
+	var items []*PruneBackupItem
+	err := s.client.Get(ctx, p, &items)
+	return items, err
+}
+
+// PruneBackups deletes the backup volumes a PreviewPruneBackups call with the
+// same opts would mark "remove". Returns the task so callers can Wait on it.
+// Note that backups added/removed between preview and prune may shift which
+// volumes get deleted; the preview is informational, not a transaction.
+func (s *Storage) PruneBackups(ctx context.Context, opts *StoragePruneBackupsOptions) (*Task, error) {
+	p := fmt.Sprintf("/nodes/%s/storage/%s/prunebackups", s.Node, s.Name)
+	if q := opts.queryString(); q != "" {
+		p = p + "?" + q
+	}
+	var upid UPID
+	if err := s.client.Delete(ctx, p, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
+func (o *StoragePruneBackupsOptions) queryString() string {
+	if o == nil {
+		return ""
+	}
+	v := url.Values{}
+	if o.PruneBackups != "" {
+		v.Set("prune-backups", o.PruneBackups)
+	}
+	if o.Type != "" {
+		v.Set("type", o.Type)
+	}
+	if o.VMID != 0 {
+		v.Set("vmid", strconv.FormatUint(o.VMID, 10))
+	}
+	return v.Encode()
+}
+
+// ImportMetadata fetches the metadata Proxmox extracts from an importable
+// guest volume — currently ESXi-sourced VM disks on an "import"-capable
+// storage. Use this as a pre-flight before constructing a VM with the
+// "import-from=" disk option to see the disks/network mapping PVE detected
+// and any warnings about unsupported fields.
+//
+// volume is the standard PVE volume identifier, e.g.
+// "esxi-store:ha-datacenter/MyVM/MyVM.vmx".
+func (s *Storage) ImportMetadata(ctx context.Context, volume string) (*ImportMetadata, error) {
+	p := fmt.Sprintf("/nodes/%s/storage/%s/import-metadata?%s",
+		s.Node, s.Name, url.Values{"volume": {volume}}.Encode())
+	var meta ImportMetadata
+	if err := s.client.Get(ctx, p, &meta); err != nil {
+		return nil, err
+	}
+	return &meta, nil
 }
 
 func deleteVolume(ctx context.Context, c *Client, n, s, v, p, t string) (*Task, error) {

@@ -155,4 +155,87 @@ func storage() {
 		JSON(`{
     "data": "UPID:node1:00000004:00000004:00000004:imgcopy:upload:root@pam:"
 }`)
+
+	// GET /nodes/{node}/storage/{storage}/prunebackups - Dryrun prune preview.
+	// Matches with or without filter query params.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/prunebackups").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "volid": "local:backup/vzdump-qemu-100-2024_01_15-03_00_00.vma.zst",
+            "ctime": 1705287600,
+            "mark": "keep",
+            "type": "qemu",
+            "vmid": 100
+        },
+        {
+            "volid": "local:backup/vzdump-qemu-100-2024_01_08-03_00_00.vma.zst",
+            "ctime": 1704682800,
+            "mark": "remove",
+            "type": "qemu",
+            "vmid": 100
+        },
+        {
+            "volid": "local:backup/vzdump-qemu-100-2023_12_25-03_00_00.vma.zst",
+            "ctime": 1703473200,
+            "mark": "protected",
+            "type": "qemu",
+            "vmid": 100
+        },
+        {
+            "volid": "local:backup/manual-snapshot-before-upgrade.vma.zst",
+            "ctime": 1703300000,
+            "mark": "renamed",
+            "type": "qemu",
+            "vmid": 100
+        }
+    ]
+}`)
+
+	// DELETE /nodes/{node}/storage/{storage}/prunebackups - Execute prune.
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/storage/local/prunebackups").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00000005:00000005:00000005:prunebackups:local:root@pam:"
+}`)
+
+	// GET /nodes/{node}/storage/{storage}/import-metadata - ESXi disk import metadata.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/esxi/import-metadata").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "type": "vm",
+        "source": "esxi",
+        "create-args": {
+            "name": "imported-vm",
+            "memory": 4096,
+            "cores": 2,
+            "ostype": "l26"
+        },
+        "disks": {
+            "scsi0": "esxi:ha-datacenter/MyVM/MyVM.vmdk",
+            "scsi1": "esxi:ha-datacenter/MyVM/MyVM_1.vmdk"
+        },
+        "net": {
+            "net0": {
+                "model": "vmxnet3",
+                "bridge": "vmbr0"
+            }
+        },
+        "warnings": [
+            {
+                "type": "guest-is-running",
+                "key": "power",
+                "value": "poweredOn"
+            }
+        ]
+    }
+}`)
 }
