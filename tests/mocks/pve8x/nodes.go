@@ -642,4 +642,18 @@ func nodes() {
 		JSON(`{
     "data": "cores: 2\nmemory: 2048\nostype: debian\nrootfs: local-lvm:vm-100-disk-0,size=8G\nnet0: name=eth0,bridge=vmbr0,ip=dhcp"
 }`)
+
+	// GET /nodes/{node}/time - Read time + timezone
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/time$").
+		Reply(200).
+		JSON(`{"data": {"time": 1715500000, "localtime": 1715500000, "timezone": "UTC"}}`)
+
+	// PUT /nodes/{node}/time - Set timezone
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/time$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }

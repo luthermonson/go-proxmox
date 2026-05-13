@@ -684,4 +684,18 @@ func nodes() {
 		Put("^/nodes/node1/dns$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/time - Read time + timezone
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/time$").
+		Reply(200).
+		JSON(`{"data": {"time": 1715500000, "localtime": 1715500000, "timezone": "UTC"}}`)
+
+	// PUT /nodes/{node}/time - Set timezone
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/time$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
