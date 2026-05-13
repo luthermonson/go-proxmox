@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -471,4 +472,68 @@ func (n *Node) RefreshSubscription(ctx context.Context, force bool) error {
 // to community-edition status. DELETE /nodes/{node}/subscription.
 func (n *Node) DeleteSubscription(ctx context.Context) error {
 	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/subscription", n.Name), nil)
+}
+
+// ---- node-wide mass operations -----------------------------------------------
+
+// StartAll starts every VM and container on the node honoring the configured
+// startup order. Pass NodeStartAllOptions{Force: IntOrBool(true)} to bypass
+// the order, or VMs to limit the set of guests started.
+func (n *Node) StartAll(ctx context.Context, opts *NodeStartAllOptions) (*Task, error) {
+	if opts == nil {
+		opts = &NodeStartAllOptions{}
+	}
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/startall", n.Name), opts, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// StopAll stops every VM and container on the node. ForceStop defaults to 1
+// (true) server-side; pass a populated NodeStopAllOptions to override timeout
+// or restrict which guests are stopped.
+func (n *Node) StopAll(ctx context.Context, opts *NodeStopAllOptions) (*Task, error) {
+	if opts == nil {
+		opts = &NodeStopAllOptions{}
+	}
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/stopall", n.Name), opts, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// SuspendAll suspends every VM on the node. (LXC containers are not suspended
+// by this endpoint — PVE only honors VMs here.)
+func (n *Node) SuspendAll(ctx context.Context, opts *NodeSuspendAllOptions) (*Task, error) {
+	if opts == nil {
+		opts = &NodeSuspendAllOptions{}
+	}
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/suspendall", n.Name), opts, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// MigrateAll migrates every VM and container on the node to opts.Target.
+// Target is required.
+func (n *Node) MigrateAll(ctx context.Context, opts *NodeMigrateAllOptions) (*Task, error) {
+	if opts == nil || opts.Target == "" {
+		return nil, errors.New("migrateall target can not be empty")
+	}
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/migrateall", n.Name), opts, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// WakeOnLAN sends a Wake-on-LAN magic packet to the node and returns the MAC
+// address that was woken. PVE looks up the WoL MAC from the cluster config —
+// the node's wakeonlan setting (see datacenter.cfg) must be configured.
+func (n *Node) WakeOnLAN(ctx context.Context) (mac string, err error) {
+	err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/wakeonlan", n.Name), nil, &mac)
+	return
 }

@@ -456,6 +456,33 @@ type NodeStatus struct {
 	Local  int    `json:",omitempty"`
 }
 
+// NodeStartAllOptions is the optional body for POST /nodes/{node}/startall.
+type NodeStartAllOptions struct {
+	Force IntOrBool `json:"force,omitempty"` // bypass configured startup order
+	VMs   string    `json:"vms,omitempty"`   // comma-separated VMID list to limit which guests are started
+}
+
+// NodeStopAllOptions is the optional body for POST /nodes/{node}/stopall.
+type NodeStopAllOptions struct {
+	ForceStop IntOrBool `json:"force-stop,omitempty"` // PVE default 1; pass IntOrBool(false) to allow graceful shutdown to time out
+	Timeout   uint64    `json:"timeout,omitempty"`    // per-guest shutdown timeout in seconds (PVE default 180)
+	VMs       string    `json:"vms,omitempty"`        // comma-separated VMID list to limit
+}
+
+// NodeSuspendAllOptions is the optional body for POST /nodes/{node}/suspendall.
+type NodeSuspendAllOptions struct {
+	VMs string `json:"vms,omitempty"` // comma-separated VMID list to limit
+}
+
+// NodeMigrateAllOptions is the body for POST /nodes/{node}/migrateall.
+// Target is required — the destination node name.
+type NodeMigrateAllOptions struct {
+	Target         string    `json:"target"`
+	MaxWorkers     uint64    `json:"maxworkers,omitempty"`       // parallel migration workers
+	VMs            string    `json:"vms,omitempty"`              // comma-separated VMID list to limit
+	WithLocalDisks IntOrBool `json:"with-local-disks,omitempty"` // include local disks via storage migration
+}
+
 type Node struct {
 	Name       string
 	client     *Client
