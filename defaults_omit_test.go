@@ -134,6 +134,39 @@ func TestFirewallNodeOption_ExplicitEnableMarshalsAsOne(t *testing.T) {
 	assert.Equal(t, float64(1), m["enable"], "schema is boolean — wire format must be 0/1, not true/false")
 }
 
+func TestFirewallClusterOption_DefaultsOmittedWhenUnset(t *testing.T) {
+	// Cluster-wide firewall is the TOP gate of PVE's three-gate model: this
+	// is the only place where Enable=0 disables everything regardless of
+	// node/VM settings. Ebtables defaults to 1 — silently shipping 0
+	// disables bridge-level filtering across the whole cluster, so the
+	// pointer + omitempty discipline matters here as much as anywhere.
+	m := marshalToMap(t, FirewallClusterOption{})
+	for _, k := range []string{"enable", "ebtables", "log_ratelimit", "policy_in", "policy_out", "policy_forward"} {
+		_, present := m[k]
+		assert.Falsef(t, present, "%q should be omitted when unset so PVE keeps its server-side default", k)
+	}
+}
+
+func TestFirewallClusterOption_ExplicitEbtablesDisableSurvives(t *testing.T) {
+	// The regression we're guarding: a caller wanting to disable ebtables
+	// cluster-wide. Pre-pointer, declaring Ebtables as IntOrBool with
+	// omitempty would drop an explicit false. With *IntOrBool, an explicit
+	// Ptr(false) marshals as 0 and reaches the server.
+	opts := FirewallClusterOption{Ebtables: Ptr(IntOrBool(false))}
+	m := marshalToMap(t, opts)
+	assert.Equal(t, float64(0), m["ebtables"], "explicit ebtables=false must reach the server, not be swallowed by omitempty")
+}
+
+func TestFirewallClusterOption_ExplicitValuesMarshal(t *testing.T) {
+	// Wire-format correctness: Enable is integer per schema, Ebtables is
+	// boolean. Both must land as 0/1 numerics — never `true`/`false`. The
+	// *IntOrBool method guarantees that for Ebtables.
+	opts := FirewallClusterOption{Enable: 1, Ebtables: Ptr(IntOrBool(true))}
+	m := marshalToMap(t, opts)
+	assert.Equal(t, float64(1), m["enable"])
+	assert.Equal(t, float64(1), m["ebtables"], "schema is boolean — wire format must be 0/1")
+}
+
 func TestStorageDownloadURLOptions_VerifyCertificatesDefaultsToServerDefault(t *testing.T) {
 	// Highest-stakes field in the audit: pre-fix, NOT setting
 	// VerifyCertificates silently sent 0 (because the field had no
