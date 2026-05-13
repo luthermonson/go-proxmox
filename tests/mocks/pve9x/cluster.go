@@ -536,6 +536,7 @@ func cluster() {
 
 	clusterBackup()
 	clusterFirewallMain()
+	clusterHA()
 }
 
 func clusterBackup() {
@@ -1478,4 +1479,130 @@ func clusterFirewallMain() {
 			{"name": "test-ipset", "ref": "+test-ipset","scope": "dc", "type": "ipset"}
 		]
 	}`)
+}
+
+// clusterHA registers mocks for /cluster/ha/{groups,resources,rules,status}.
+// Split from cluster() so the function stays under the linter complexity ceiling.
+func clusterHA() {
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/groups$").
+		Reply(200).
+		JSON(`{"data": [{"group": "test-group", "type": "group", "nodes": "node1,node2", "comment": "test"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/groups/test-group$").
+		Reply(200).
+		JSON(`{"data": {"group": "test-group", "type": "group", "nodes": "node1,node2", "comment": "test", "nofailback": 0, "restricted": 0}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/groups$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/ha/groups/test-group$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/ha/groups/test-group$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/resources$").
+		Reply(200).
+		JSON(`{"data": [{"sid": "vm:100", "type": "vm", "state": "started", "group": "test-group", "max_relocate": 1, "max_restart": 1}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/resources/vm:100$").
+		Reply(200).
+		JSON(`{"data": {"sid": "vm:100", "type": "vm", "state": "started", "group": "test-group", "max_relocate": 1, "max_restart": 1, "comment": "primary db"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/resources$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/ha/resources/vm:100$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/ha/resources/vm:100$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/resources/vm:100/migrate$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/resources/vm:100/relocate$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/rules$").
+		Reply(200).
+		JSON(`{"data": [{"rule": "rule-1", "type": "node-affinity", "resources": "vm:100", "nodes": "node1", "strict": 1}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/rules/rule-1$").
+		Reply(200).
+		JSON(`{"data": {"rule": "rule-1", "type": "node-affinity", "resources": "vm:100", "nodes": "node1", "strict": 1}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/rules$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/ha/rules/rule-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/ha/rules/rule-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/status/current$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "node1", "type": "node", "node": "node1", "status": "online", "quorate": 1},
+			{"id": "vm:100", "type": "service", "node": "node1", "state": "started", "request_state": "started"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/status/manager_status$").
+		Reply(200).
+		JSON(`{"data": {
+			"manager_status": {"node_status": {"node1": "online"}, "master_node": "node1"},
+			"node_status": {"node1": "online", "node2": "online"},
+			"service_status": {"vm:100": {"state": "started", "node": "node1"}},
+			"quorum": {"quorate": 1}
+		}}`)
 }

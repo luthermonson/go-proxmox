@@ -157,6 +157,31 @@ func TestFirewallClusterOption_ExplicitEbtablesDisableSurvives(t *testing.T) {
 	assert.Equal(t, float64(0), m["ebtables"], "explicit ebtables=false must reach the server, not be swallowed by omitempty")
 }
 
+func TestHAResource_DefaultsOmittedWhenUnset(t *testing.T) {
+	// PVE defaults are: state="started", failback=1, max_relocate=1,
+	// max_restart=1. All four are pointer-typed; bare struct must not ship
+	// them so the server keeps its documented defaults.
+	m := marshalToMap(t, HAResource{SID: "vm:100"})
+	for _, k := range []string{"state", "failback", "max_relocate", "max_restart"} {
+		_, present := m[k]
+		assert.Falsef(t, present, "%q should be omitted when unset so PVE applies its default", k)
+	}
+}
+
+func TestHAResource_ExplicitDisableFailbackSurvives(t *testing.T) {
+	// Regression we're guarding: caller wants to *disable* automatic failback
+	// (PVE default is 1=on). Plain IntOrBool with omitempty would drop the
+	// false. *IntOrBool keeps it.
+	r := HAResource{
+		SID:         "vm:100",
+		Failback:    Ptr(IntOrBool(false)),
+		MaxRelocate: Ptr(0),
+	}
+	m := marshalToMap(t, r)
+	assert.Equal(t, float64(0), m["failback"], "explicit failback=false must reach PVE, not be dropped")
+	assert.Equal(t, float64(0), m["max_relocate"], "explicit max_relocate=0 must reach PVE")
+}
+
 func TestFirewallClusterOption_ExplicitValuesMarshal(t *testing.T) {
 	// Wire-format correctness: Enable is integer per schema, Ebtables is
 	// boolean. Both must land as 0/1 numerics — never `true`/`false`. The
