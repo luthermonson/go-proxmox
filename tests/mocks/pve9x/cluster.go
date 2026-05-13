@@ -535,6 +535,7 @@ func cluster() {
 	}`)
 
 	clusterBackup()
+	clusterFirewallMain()
 }
 
 func clusterBackup() {
@@ -1283,4 +1284,198 @@ func clusterBackup() {
 		Delete("^/cluster/jobs/realm-sync/ldap-sync$").
 		Reply(200).
 		JSON(`{"data": null}`)
+}
+
+// clusterFirewallMain registers mocks for /cluster/firewall/{rules,aliases,ipset,options,macros,refs}.
+// Split from cluster() so the function stays under the linter complexity ceiling.
+func clusterFirewallMain() {
+	// GET /cluster/firewall/rules
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/rules$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"pos": 0, "type": "in", "action": "ACCEPT", "enable": 1, "proto": "tcp", "dport": "22", "comment": "ssh"},
+			{"pos": 1, "type": "in", "action": "DROP",   "enable": 1, "proto": "tcp", "dport": "23", "comment": "telnet"}
+		]
+	}`)
+
+	// POST /cluster/firewall/rules
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/rules$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/rules/{pos}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/rules/[0-9]+$").
+		Reply(200).
+		JSON(`{
+		"data": {"pos": 0, "type": "in", "action": "ACCEPT", "enable": 1, "proto": "tcp", "dport": "22"}
+	}`)
+
+	// PUT /cluster/firewall/rules/{pos}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/firewall/rules/[0-9]+$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/firewall/rules/{pos}
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/firewall/rules/[0-9]+$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/aliases
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/aliases$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"name": "test-alias", "cidr": "10.0.0.0/24", "comment": "primary", "digest": "abc"}
+		]
+	}`)
+
+	// POST /cluster/firewall/aliases
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/aliases$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/aliases/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/aliases/test-alias$").
+		Reply(200).
+		JSON(`{
+		"data": {"name": "test-alias", "cidr": "10.0.0.0/24", "comment": "primary", "digest": "abc"}
+	}`)
+
+	// PUT /cluster/firewall/aliases/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/firewall/aliases/test-alias$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/firewall/aliases/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/firewall/aliases/test-alias$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/ipset
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/ipset$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"name": "test-ipset", "comment": "test", "digest": "abc"}
+		]
+	}`)
+
+	// POST /cluster/firewall/ipset
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/ipset$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/ipset/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/ipset/test-ipset$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"cidr": "10.0.0.1", "comment": "host-a", "nomatch": false, "digest": "abc"},
+			{"cidr": "10.0.0.2", "comment": "host-b", "nomatch": true,  "digest": "abc"}
+		]
+	}`)
+
+	// POST /cluster/firewall/ipset/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/firewall/ipset/test-ipset$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/firewall/ipset/{name}  (with or without ?force=1)
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/firewall/ipset/test-ipset$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/ipset/{name}/{cidr}
+	gock.New(config.C.URI).
+		Persist().
+		Get(`^/cluster/firewall/ipset/test-ipset/10\.0\.0\.1$`).
+		Reply(200).
+		JSON(`{
+		"data": {"cidr": "10.0.0.1", "comment": "host-a", "nomatch": false, "digest": "abc"}
+	}`)
+
+	// PUT /cluster/firewall/ipset/{name}/{cidr}
+	gock.New(config.C.URI).
+		Persist().
+		Put(`^/cluster/firewall/ipset/test-ipset/10\.0\.0\.1$`).
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/firewall/ipset/{name}/{cidr}
+	gock.New(config.C.URI).
+		Persist().
+		Delete(`^/cluster/firewall/ipset/test-ipset/10\.0\.0\.1$`).
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/options
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/options$").
+		Reply(200).
+		JSON(`{
+		"data": {"enable": 0, "ebtables": 1, "policy_in": "DROP", "policy_out": "ACCEPT", "policy_forward": "ACCEPT"}
+	}`)
+
+	// PUT /cluster/firewall/options
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/firewall/options$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/firewall/macros
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/macros$").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"macro": "HTTP",  "descr": "HTTP traffic"},
+			{"macro": "HTTPS", "descr": "HTTPS traffic"}
+		]
+	}`)
+
+	// GET /cluster/firewall/refs
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/refs").
+		Reply(200).
+		JSON(`{
+		"data": [
+			{"name": "test-alias", "ref": "test-alias", "scope": "dc", "type": "alias", "comment": "primary"},
+			{"name": "test-ipset", "ref": "+test-ipset","scope": "dc", "type": "ipset"}
+		]
+	}`)
 }

@@ -1406,11 +1406,15 @@ func (f *FirewallLogEntry) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// FirewallRef is one entry from GET /firewall/refs — a referencable IPSet or
-// alias visible at this container/VM's scope.
+// FirewallRef is one entry from GET /firewall/refs — a referencable IPSet
+// or alias visible at this scope. Returned by both the cluster-level
+// (/cluster/firewall/refs) and per-guest (/nodes/.../firewall/refs)
+// endpoints; cluster responses also populate Ref and Scope.
 type FirewallRef struct {
-	Type    string `json:"type"` // "alias" or "ipset"
 	Name    string `json:"name"`
+	Ref     string `json:"ref,omitempty"`
+	Scope   string `json:"scope,omitempty"`
+	Type    string `json:"type"` // "alias" or "ipset"
 	Comment string `json:"comment,omitempty"`
 }
 
@@ -2756,6 +2760,61 @@ type FirewallIPSetEntryUpdateOption struct {
 	Digest  string `json:"digest,omitempty"`
 	NoMatch bool   `json:"nomatch,omitempty"`
 }
+
+// Cluster-wide firewall option set. Distinct from FirewallNodeOption /
+// FirewallVirtualMachineOption: this is the top of the three-gate model — if
+// Enable is 0 here, neither node nor VM firewalls do anything regardless of
+// their own settings. Note the schema asymmetry: `enable` is declared
+// `type: integer` (default 0), while `ebtables` is `type: boolean` (default 1).
+// Ebtables therefore needs *IntOrBool so an unset value stays off the wire and
+// PVE keeps its default; silently shipping 0 would disable bridge-level
+// filtering cluster-wide.
+type FirewallClusterOption struct {
+	Enable        int        `json:"enable,omitempty"`
+	Ebtables      *IntOrBool `json:"ebtables,omitempty"`
+	LogRatelimit  string     `json:"log_ratelimit,omitempty"`
+	PolicyForward string     `json:"policy_forward,omitempty"`
+	PolicyIn      string     `json:"policy_in,omitempty"`
+	PolicyOut     string     `json:"policy_out,omitempty"`
+}
+
+// FirewallClusterOptionUpdateOption mirrors FirewallClusterOption but adds
+// the PUT-only `delete` selector for unsetting individual fields server-side.
+type FirewallClusterOptionUpdateOption struct {
+	Delete        string     `json:"delete,omitempty"`
+	Digest        string     `json:"digest,omitempty"`
+	Enable        int        `json:"enable,omitempty"`
+	Ebtables      *IntOrBool `json:"ebtables,omitempty"`
+	LogRatelimit  string     `json:"log_ratelimit,omitempty"`
+	PolicyForward string     `json:"policy_forward,omitempty"`
+	PolicyIn      string     `json:"policy_in,omitempty"`
+	PolicyOut     string     `json:"policy_out,omitempty"`
+}
+
+// FirewallAliasCreateOption is the POST body for /cluster/firewall/aliases.
+// CIDR and Name are both required by PVE.
+type FirewallAliasCreateOption struct {
+	CIDR    string `json:"cidr"`
+	Name    string `json:"name"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// FirewallAliasUpdateOption is the PUT body for /cluster/firewall/aliases/{name}.
+// Rename lets a caller change the alias name in place; same value as Name
+// updates only the comment.
+type FirewallAliasUpdateOption struct {
+	CIDR    string `json:"cidr,omitempty"`
+	Comment string `json:"comment,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Rename  string `json:"rename,omitempty"`
+}
+
+// FirewallMacro is one entry from GET /cluster/firewall/macros — read-only.
+type FirewallMacro struct {
+	Macro string `json:"macro"`
+	Descr string `json:"descr,omitempty"`
+}
+
 
 type (
 	VirtualMachineBackupMode               = string
