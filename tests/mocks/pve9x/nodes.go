@@ -750,4 +750,38 @@ func nodes() {
 		Delete("^/nodes/node1/subscription$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// POST /nodes/{node}/startall — mass start
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/startall$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:startall::root@pam:"}`)
+
+	// POST /nodes/{node}/stopall — mass stop
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/stopall$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:stopall::root@pam:"}`)
+
+	// POST /nodes/{node}/suspendall — mass suspend
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/suspendall$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:suspendall::root@pam:"}`)
+
+	// POST /nodes/{node}/migrateall — mass migrate
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/migrateall$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:migrateall::root@pam:"}`)
+
+	// POST /nodes/{node}/wakeonlan — returns the MAC string
+	gock.New(config.C.URI).
+		Post("^/nodes/node1/wakeonlan$").
+		Reply(200).
+		JSON(`{"data": "AA:BB:CC:DD:EE:FF"}`)
 }

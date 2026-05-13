@@ -635,3 +635,96 @@ func TestNode_SetRefreshDeleteSubscription(t *testing.T) {
 	assert.Nil(t, node.RefreshSubscription(ctx, true))
 	assert.Nil(t, node.DeleteSubscription(ctx))
 }
+
+func TestNode_StartAll(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	// nil opts is allowed
+	task, err := node.StartAll(ctx, nil)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), ":startall:")
+
+	// with opts
+	task, err = node.StartAll(ctx, &NodeStartAllOptions{
+		Force: IntOrBool(true),
+		VMs:   "101,102",
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+}
+
+func TestNode_StopAll(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	task, err := node.StopAll(ctx, &NodeStopAllOptions{Timeout: 60})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), ":stopall:")
+}
+
+func TestNode_SuspendAll(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	task, err := node.SuspendAll(ctx, nil)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), ":suspendall:")
+}
+
+func TestNode_MigrateAll(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	// empty target guard — no HTTP request issued
+	_, err = node.MigrateAll(ctx, &NodeMigrateAllOptions{})
+	assert.Error(t, err)
+	_, err = node.MigrateAll(ctx, nil)
+	assert.Error(t, err)
+
+	task, err := node.MigrateAll(ctx, &NodeMigrateAllOptions{
+		Target:         "node2",
+		MaxWorkers:     4,
+		WithLocalDisks: IntOrBool(true),
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), ":migrateall:")
+}
+
+func TestNode_WakeOnLAN(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	mac, err := node.WakeOnLAN(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "AA:BB:CC:DD:EE:FF", mac)
+}
