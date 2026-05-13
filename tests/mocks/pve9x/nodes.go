@@ -663,4 +663,25 @@ func nodes() {
 		JSON(`{
     "data": "cores: 2\nmemory: 2048\nostype: debian\nrootfs: local-lvm:vm-100-disk-0,size=8G\nnet0: name=eth0,bridge=vmbr0,ip=dhcp"
 }`)
+
+	// GET /nodes/{node}/dns - Read resolver config.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/dns$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "search": "example.com",
+        "dns1": "1.1.1.1",
+        "dns2": "8.8.8.8",
+        "dns3": "9.9.9.9"
+    }
+}`)
+
+	// PUT /nodes/{node}/dns - Replace resolver config. Returns null on success.
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/dns$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
