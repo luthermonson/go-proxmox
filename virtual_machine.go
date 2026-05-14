@@ -569,35 +569,33 @@ func (v *VirtualMachine) AgentGetHostName(ctx context.Context) (hostname string,
 		return
 	}
 
-	results := map[string]*AgentHostName{}
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-host-name", node.Name, v.VMID), &results)
-	if err != nil {
+	var resp struct {
+		Result *AgentHostName `json:"result"`
+	}
+	if err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-host-name", node.Name, v.VMID), &resp); err != nil {
 		return
 	}
-	result, ok := results["result"]
-	if !ok {
+	if resp.Result == nil {
 		err = fmt.Errorf("result is empty")
 		return
 	}
-	hostname = result.HostName
+	hostname = resp.Result.HostName
 	return
 }
 
 func (v *VirtualMachine) AgentGetNetworkIFaces(ctx context.Context) (iFaces []*AgentNetworkIface, err error) {
-	networks := map[string][]*AgentNetworkIface{}
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", v.Node, v.VMID), &networks)
-	if err != nil {
+	var resp struct {
+		Result []*AgentNetworkIface `json:"result"`
+	}
+	if err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/network-get-interfaces", v.Node, v.VMID), &resp); err != nil {
 		return
 	}
-	if result, ok := networks["result"]; ok {
-		for _, iface := range result {
-			if iface.Name == "lo" {
-				continue
-			}
-			iFaces = append(iFaces, iface)
+	for _, iface := range resp.Result {
+		if iface.Name == "lo" {
+			continue
 		}
+		iFaces = append(iFaces, iface)
 	}
-
 	return
 }
 
@@ -672,18 +670,17 @@ func (v *VirtualMachine) WaitForAgentExecExit(ctx context.Context, pid, seconds 
 }
 
 func (v *VirtualMachine) AgentOsInfo(ctx context.Context) (info *AgentOsInfo, err error) {
-	results := map[string]*AgentOsInfo{}
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", v.Node, v.VMID), &results)
-	if err != nil {
+	var resp struct {
+		Result *AgentOsInfo `json:"result"`
+	}
+	if err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", v.Node, v.VMID), &resp); err != nil {
 		return
 	}
-
-	var ok bool
-	info, ok = results["result"]
-	if !ok {
+	if resp.Result == nil {
 		err = fmt.Errorf("result is empty")
+		return
 	}
-
+	info = resp.Result
 	return
 }
 
