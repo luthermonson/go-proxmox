@@ -119,6 +119,114 @@ type NodeReplicationStatus struct {
 	State     string  `json:"state,omitempty"`
 }
 
+// APTIndexEntry is one row of the /nodes/{node}/apt directory index. PVE
+// returns objects with a single "id" field naming each child resource
+// (changelog, repositories, update, versions).
+type APTIndexEntry struct {
+	ID string `json:"id"`
+}
+
+// APTUpdate is one pending package upgrade as reported by /apt/update. Fields
+// use PVE's upper-case names verbatim — these come straight from the apt
+// metadata.
+type APTUpdate struct {
+	Package      string `json:"Package"`
+	Title        string `json:"Title"`
+	Description  string `json:"Description"`
+	Version      string `json:"Version"`                // new version
+	OldVersion   string `json:"OldVersion,omitempty"`   // installed version
+	Origin       string `json:"Origin"`                 // "Proxmox", "Debian", ...
+	Arch         string `json:"Arch"`
+	Section      string `json:"Section"`
+	Priority     string `json:"Priority"`
+	NotifyStatus string `json:"NotifyStatus,omitempty"` // version PVE has already notified about
+}
+
+// APTPackageVersion is one row of /apt/versions — package info for the
+// Proxmox-relevant subset of installed packages, including current install
+// state. Used by the GUI's "Updates → Package Versions" panel.
+type APTPackageVersion struct {
+	Package        string `json:"Package"`
+	Title          string `json:"Title"`
+	Description    string `json:"Description"`
+	Version        string `json:"Version"`
+	OldVersion     string `json:"OldVersion,omitempty"`
+	Origin         string `json:"Origin"`
+	Arch           string `json:"Arch"`
+	Section        string `json:"Section"`
+	Priority       string `json:"Priority"`
+	CurrentState   string `json:"CurrentState"`             // Installed / NotInstalled / ...
+	ManagerVersion string `json:"ManagerVersion,omitempty"` // only on pve-manager
+	RunningKernel  string `json:"RunningKernel,omitempty"`  // only on proxmox-ve
+	NotifyStatus   string `json:"NotifyStatus,omitempty"`
+}
+
+// APTRepositories is the parsed view of /etc/apt/sources.list(.d) plus a
+// global Digest used as an etag for concurrent edits. StandardRepos is PVE's
+// catalog of repositories the GUI knows how to add; the per-handle Status is
+// nil when the repo isn't configured on the node.
+type APTRepositories struct {
+	Digest        string                  `json:"digest"`
+	Files         []*APTRepositoryFile    `json:"files,omitempty"`
+	Errors        []*APTRepositoryError   `json:"errors,omitempty"`
+	Infos         []*APTRepositoryInfo    `json:"infos,omitempty"`
+	StandardRepos []*APTStandardRepo      `json:"standard-repos,omitempty"`
+}
+
+// APTRepositoryFile is one apt sources file on disk. FileType is "list"
+// (one-line) or "sources" (deb822). Digest is the per-file digest as a byte
+// array (PVE returns it as a JSON array of integers).
+type APTRepositoryFile struct {
+	Path         string            `json:"path"`
+	FileType     string            `json:"file-type"`
+	Digest       []int             `json:"digest,omitempty"`
+	Repositories []*APTRepository  `json:"repositories,omitempty"`
+}
+
+// APTRepository is a single repository entry within a file. Components,
+// Options and Comment are only populated where the underlying file format
+// supports them.
+type APTRepository struct {
+	Enabled    bool                   `json:"Enabled"`
+	FileType   string                 `json:"FileType"`
+	Types      []string               `json:"Types"`
+	URIs       []string               `json:"URIs"`
+	Suites     []string               `json:"Suites"`
+	Components []string               `json:"Components,omitempty"`
+	Options    []*APTRepositoryOption `json:"Options,omitempty"`
+	Comment    string                 `json:"Comment,omitempty"`
+}
+
+type APTRepositoryOption struct {
+	Key    string   `json:"Key"`
+	Values []string `json:"Values"`
+}
+
+type APTRepositoryError struct {
+	Path  string `json:"path"`
+	Error string `json:"error"`
+}
+
+// APTRepositoryInfo is a warning/info note PVE attaches to a specific entry
+// within a specific file (e.g. "use of subscription repo on free system").
+// Index is a string in the schema even though it names a numeric position.
+type APTRepositoryInfo struct {
+	Path     string `json:"path"`
+	Index    string `json:"index"`
+	Kind     string `json:"kind"`
+	Message  string `json:"message"`
+	Property string `json:"property,omitempty"`
+}
+
+// APTStandardRepo is one entry from PVE's catalog of well-known repos.
+// Status is *bool because tri-state: true = configured+enabled,
+// false = configured+disabled, nil = not present on the node.
+type APTStandardRepo struct {
+	Handle string `json:"handle"`
+	Name   string `json:"name"`
+	Status *bool  `json:"status,omitempty"`
+}
+
 type Term struct {
 	Port   StringOrInt
 	Ticket string

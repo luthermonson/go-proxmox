@@ -741,4 +741,81 @@ func nodes() {
 		Post("^/nodes/node1/replication/100-0/schedule_now$").
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001234:00012345:67890124:replicate:100-0:root@pam:"}`)
+
+	// GET /nodes/{node}/apt
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/apt$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "changelog"},
+			{"id": "repositories"},
+			{"id": "update"},
+			{"id": "versions"}
+		]}`)
+
+	// GET /nodes/{node}/apt/update
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/apt/update$").
+		Reply(200).
+		JSON(`{"data": [
+			{"Package": "pve-manager", "Title": "Proxmox VE Management", "Description": "PVE manager", "Version": "8.4-1", "OldVersion": "8.3-1", "Origin": "Proxmox", "Arch": "amd64", "Section": "admin", "Priority": "optional"}
+		]}`)
+
+	// POST /nodes/{node}/apt/update
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/apt/update$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000ABCD:0001ABCD:67890125:aptupdate::root@pam:"}`)
+
+	// GET /nodes/{node}/apt/changelog
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/apt/changelog").
+		Reply(200).
+		JSON(`{"data": "pve-manager (8.4-1) bookworm; urgency=medium\n"}`)
+
+	// GET /nodes/{node}/apt/repositories
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/apt/repositories$").
+		Reply(200).
+		JSON(`{"data": {
+			"digest": "abcdef0123456789",
+			"files": [
+				{"path": "/etc/apt/sources.list", "file-type": "list", "digest": [1,2,3,4], "repositories": [
+					{"Enabled": true, "FileType": "list", "Types": ["deb"], "URIs": ["http://deb.debian.org/debian"], "Suites": ["bookworm"], "Components": ["main"]}
+				]}
+			],
+			"errors": [],
+			"infos": [],
+			"standard-repos": [
+				{"handle": "enterprise", "name": "Proxmox VE Enterprise"}
+			]
+		}}`)
+
+	// POST /nodes/{node}/apt/repositories
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/apt/repositories$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /nodes/{node}/apt/repositories
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/apt/repositories$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/apt/versions
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/apt/versions$").
+		Reply(200).
+		JSON(`{"data": [
+			{"Package": "pve-manager", "Title": "Proxmox VE Management", "Description": "PVE manager", "Version": "8.4-1", "Origin": "Proxmox", "Arch": "amd64", "Section": "admin", "Priority": "optional", "CurrentState": "Installed", "ManagerVersion": "8.4-1"}
+		]}`)
 }
