@@ -70,9 +70,12 @@ func (n *Node) APTRepositories(ctx context.Context) (repos *APTRepositories, err
 // edits.
 func (n *Node) APTChangeRepository(ctx context.Context, path string, index int, enabled bool, digest string) error {
 	body := map[string]interface{}{
-		"path":  path,
-		"index": index,
-		"enabled": map[bool]int{true: 1, false: 0}[enabled],
+		"path":    path,
+		"index":   index,
+		"enabled": 0,
+	}
+	if enabled {
+		body["enabled"] = 1
 	}
 	if digest != "" {
 		body["digest"] = digest
