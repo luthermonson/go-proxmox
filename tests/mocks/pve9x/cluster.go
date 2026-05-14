@@ -598,4 +598,502 @@ func clusterBackup() {
 		Delete("^/cluster/backup/backup-1$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// --- /cluster/metrics/server ---------------------------------------------
+
+	// GET /cluster/metrics/server — list configured metric servers
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/metrics/server$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"id": "influx1", "type": "influxdb", "server": "metrics.example.com", "port": 8086, "disable": 0},
+        {"id": "graphite1", "type": "graphite", "server": "graphite.example.com", "port": 2003, "disable": 0}
+    ]
+}`)
+
+	// GET /cluster/metrics/server/{id} — single metric server config
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/metrics/server/influx1$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "id": "influx1",
+        "type": "influxdb",
+        "server": "metrics.example.com",
+        "port": 8086,
+        "influxdbproto": "http",
+        "bucket": "proxmox",
+        "organization": "ops",
+        "token": "secret",
+        "disable": 0,
+        "verify-certificate": 1,
+        "digest": "abc123"
+    }
+}`)
+
+	// POST /cluster/metrics/server/{id} — create
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/metrics/server/influx1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /cluster/metrics/server/{id} — update
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/metrics/server/influx1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/metrics/server/{id} — delete
+	gock.New(config.C.URI).
+		Delete("^/cluster/metrics/server/influx1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// --- /cluster/mapping ----------------------------------------------------
+
+	// GET /cluster/mapping — directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "dir"},
+        {"name": "pci"},
+        {"name": "usb"}
+    ]
+}`)
+
+	// GET /cluster/mapping/dir — list directory mappings
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/dir$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "id": "shared-iso",
+            "description": "Shared ISO directory",
+            "map": ["node=node1,path=/srv/iso", "node=node2,path=/srv/iso"]
+        }
+    ]
+}`)
+
+	// GET /cluster/mapping/dir/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/dir/shared-iso$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "id": "shared-iso",
+        "description": "Shared ISO directory",
+        "map": ["node=node1,path=/srv/iso", "node=node2,path=/srv/iso"],
+        "digest": "d1"
+    }
+}`)
+
+	// POST /cluster/mapping/dir
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/mapping/dir$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /cluster/mapping/dir/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/mapping/dir/shared-iso$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/mapping/dir/{id}
+	gock.New(config.C.URI).
+		Delete("^/cluster/mapping/dir/shared-iso$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/mapping/pci — list PCI mappings
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/pci$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "id": "gpu0",
+            "description": "Tesla T4",
+            "map": ["node=node1,path=0000:01:00.0,id=10de:1eb8,iommugroup=12"],
+            "mdev": 0
+        }
+    ]
+}`)
+
+	// GET /cluster/mapping/pci/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/pci/gpu0$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "id": "gpu0",
+        "description": "Tesla T4",
+        "map": ["node=node1,path=0000:01:00.0,id=10de:1eb8,iommugroup=12"],
+        "mdev": 0,
+        "live-migration-capable": 0,
+        "digest": "p1"
+    }
+}`)
+
+	// POST /cluster/mapping/pci
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/mapping/pci$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /cluster/mapping/pci/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/mapping/pci/gpu0$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/mapping/pci/{id}
+	gock.New(config.C.URI).
+		Delete("^/cluster/mapping/pci/gpu0$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /cluster/mapping/usb — list USB mappings
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/usb$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "id": "yubikey",
+            "description": "YubiKey 5",
+            "map": ["node=node1,id=1050:0407,path=1-1"]
+        }
+    ]
+}`)
+
+	// GET /cluster/mapping/usb/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/mapping/usb/yubikey$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "id": "yubikey",
+        "description": "YubiKey 5",
+        "map": ["node=node1,id=1050:0407,path=1-1"],
+        "digest": "u1"
+    }
+}`)
+
+	// POST /cluster/mapping/usb
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/mapping/usb$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT /cluster/mapping/usb/{id}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/mapping/usb/yubikey$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /cluster/mapping/usb/{id}
+	gock.New(config.C.URI).
+		Delete("^/cluster/mapping/usb/yubikey$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// --- /cluster/notifications ---------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "endpoints"},
+        {"name": "matchers"},
+        {"name": "targets"},
+        {"name": "matcher-fields"},
+        {"name": "matcher-field-values"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/matcher-fields$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "type"},
+        {"name": "hostname"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/matcher-field-values$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"field": "type", "value": "vzdump", "comment": "Backup notifications"},
+        {"field": "type", "value": "system"}
+    ]
+}`)
+
+	// Targets
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/targets$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "mail-to-root", "type": "sendmail", "origin": "builtin", "disable": 0},
+        {"name": "gotify1", "type": "gotify", "origin": "user-created", "disable": 0}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/targets/mail-to-root/test$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Matchers
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/matchers$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "name": "default-matcher",
+            "mode": "all",
+            "target": ["mail-to-root"],
+            "origin": "builtin"
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/matchers/default-matcher$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "default-matcher",
+        "mode": "all",
+        "match-severity": ["warning", "error"],
+        "target": ["mail-to-root"],
+        "digest": "m1"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/matchers$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/notifications/matchers/default-matcher$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/notifications/matchers/default-matcher$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Gotify endpoints
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/gotify$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "gotify1", "server": "https://gotify.example.com", "disable": 0}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/gotify/gotify1$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "gotify1",
+        "server": "https://gotify.example.com",
+        "disable": 0,
+        "digest": "g1"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/endpoints/gotify$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/notifications/endpoints/gotify/gotify1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/notifications/endpoints/gotify/gotify1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Sendmail endpoints
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/sendmail$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "mail-to-root", "mailto-user": ["root@pam"], "origin": "builtin"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/sendmail/mail-to-root$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "mail-to-root",
+        "mailto-user": ["root@pam"],
+        "from-address": "root@pve",
+        "digest": "s1"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/endpoints/sendmail$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/notifications/endpoints/sendmail/mail-to-root$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/notifications/endpoints/sendmail/mail-to-root$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// SMTP endpoints
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/smtp$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {
+            "name": "smtp1",
+            "server": "smtp.example.com",
+            "port": 587,
+            "mode": "starttls",
+            "from-address": "alerts@example.com",
+            "username": "alerts"
+        }
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/smtp/smtp1$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "smtp1",
+        "server": "smtp.example.com",
+        "port": 587,
+        "mode": "starttls",
+        "from-address": "alerts@example.com",
+        "mailto": ["ops@example.com"],
+        "digest": "st1"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/endpoints/smtp$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/notifications/endpoints/smtp/smtp1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/notifications/endpoints/smtp/smtp1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// Webhook endpoints
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/webhook$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "wh1", "url": "https://hook.example.com/alert", "method": "post"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints/webhook/wh1$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "wh1",
+        "url": "https://hook.example.com/alert",
+        "method": "post",
+        "body": "eyJoZWxsbyI6IndvcmxkIn0=",
+        "digest": "w1"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/notifications/endpoints/webhook$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/notifications/endpoints/webhook/wh1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/notifications/endpoints/webhook/wh1$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
