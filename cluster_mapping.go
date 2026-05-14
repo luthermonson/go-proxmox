@@ -9,45 +9,40 @@ import (
 
 // Mappings lists the resource-type directory under /cluster/mapping (e.g. dir,
 // pci, usb). See https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/mapping
-func (cl *Cluster) Mappings(ctx context.Context) (ClusterMappings, error) {
-	var entries ClusterMappings
-	if err := cl.client.Get(ctx, "/cluster/mapping", &entries); err != nil {
-		return nil, err
-	}
-	return entries, nil
+func (cl *Cluster) Mappings(ctx context.Context) (entries ClusterMappings, err error) {
+	err = cl.client.Get(ctx, "/cluster/mapping", &entries)
+	return
 }
 
 // --- directory mappings -----------------------------------------------------
 
 // DirMappings lists directory mappings. Pass a non-empty checkNode to ask PVE
 // to validate each entry against that node (populates each entry's Checks).
-func (cl *Cluster) DirMappings(ctx context.Context, checkNode string) (ClusterDirMappings, error) {
+func (cl *Cluster) DirMappings(ctx context.Context, checkNode string) (mappings ClusterDirMappings, err error) {
 	path := "/cluster/mapping/dir"
 	if checkNode != "" {
 		q := url.Values{}
 		q.Set("check-node", checkNode)
 		path = path + "?" + q.Encode()
 	}
-	var mappings ClusterDirMappings
-	if err := cl.client.Get(ctx, path, &mappings); err != nil {
-		return nil, err
-	}
-	return mappings, nil
+	err = cl.client.Get(ctx, path, &mappings)
+	return
 }
 
 // DirMapping reads a single directory mapping by id.
-func (cl *Cluster) DirMapping(ctx context.Context, id string) (*ClusterDirMapping, error) {
+func (cl *Cluster) DirMapping(ctx context.Context, id string) (m *ClusterDirMapping, err error) {
 	if id == "" {
-		return nil, errors.New("dir mapping id can not be empty")
+		err = errors.New("dir mapping id can not be empty")
+		return
 	}
-	m := &ClusterDirMapping{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/dir/%s", id), m); err != nil {
-		return nil, err
+	m = &ClusterDirMapping{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/dir/%s", id), m); err != nil {
+		return
 	}
 	if m.ID == "" {
 		m.ID = id
 	}
-	return m, nil
+	return
 }
 
 // NewDirMapping creates a directory mapping. opts.ID and opts.Map are required.
@@ -80,33 +75,31 @@ func (cl *Cluster) DeleteDirMapping(ctx context.Context, id string) error {
 // --- PCI mappings -----------------------------------------------------------
 
 // PCIMappings lists PCI hardware mappings. See DirMappings for checkNode.
-func (cl *Cluster) PCIMappings(ctx context.Context, checkNode string) (ClusterPCIMappings, error) {
+func (cl *Cluster) PCIMappings(ctx context.Context, checkNode string) (mappings ClusterPCIMappings, err error) {
 	path := "/cluster/mapping/pci"
 	if checkNode != "" {
 		q := url.Values{}
 		q.Set("check-node", checkNode)
 		path = path + "?" + q.Encode()
 	}
-	var mappings ClusterPCIMappings
-	if err := cl.client.Get(ctx, path, &mappings); err != nil {
-		return nil, err
-	}
-	return mappings, nil
+	err = cl.client.Get(ctx, path, &mappings)
+	return
 }
 
 // PCIMapping reads a single PCI mapping by id.
-func (cl *Cluster) PCIMapping(ctx context.Context, id string) (*ClusterPCIMapping, error) {
+func (cl *Cluster) PCIMapping(ctx context.Context, id string) (m *ClusterPCIMapping, err error) {
 	if id == "" {
-		return nil, errors.New("pci mapping id can not be empty")
+		err = errors.New("pci mapping id can not be empty")
+		return
 	}
-	m := &ClusterPCIMapping{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/pci/%s", id), m); err != nil {
-		return nil, err
+	m = &ClusterPCIMapping{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/pci/%s", id), m); err != nil {
+		return
 	}
 	if m.ID == "" {
 		m.ID = id
 	}
-	return m, nil
+	return
 }
 
 // NewPCIMapping creates a PCI hardware mapping.
@@ -139,33 +132,31 @@ func (cl *Cluster) DeletePCIMapping(ctx context.Context, id string) error {
 // --- USB mappings -----------------------------------------------------------
 
 // USBMappings lists USB hardware mappings. See DirMappings for checkNode.
-func (cl *Cluster) USBMappings(ctx context.Context, checkNode string) (ClusterUSBMappings, error) {
+func (cl *Cluster) USBMappings(ctx context.Context, checkNode string) (mappings ClusterUSBMappings, err error) {
 	path := "/cluster/mapping/usb"
 	if checkNode != "" {
 		q := url.Values{}
 		q.Set("check-node", checkNode)
 		path = path + "?" + q.Encode()
 	}
-	var mappings ClusterUSBMappings
-	if err := cl.client.Get(ctx, path, &mappings); err != nil {
-		return nil, err
-	}
-	return mappings, nil
+	err = cl.client.Get(ctx, path, &mappings)
+	return
 }
 
 // USBMapping reads a single USB mapping by id.
-func (cl *Cluster) USBMapping(ctx context.Context, id string) (*ClusterUSBMapping, error) {
+func (cl *Cluster) USBMapping(ctx context.Context, id string) (m *ClusterUSBMapping, err error) {
 	if id == "" {
-		return nil, errors.New("usb mapping id can not be empty")
+		err = errors.New("usb mapping id can not be empty")
+		return
 	}
-	m := &ClusterUSBMapping{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/usb/%s", id), m); err != nil {
-		return nil, err
+	m = &ClusterUSBMapping{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/mapping/usb/%s", id), m); err != nil {
+		return
 	}
 	if m.ID == "" {
 		m.ID = id
 	}
-	return m, nil
+	return
 }
 
 // NewUSBMapping creates a USB hardware mapping.

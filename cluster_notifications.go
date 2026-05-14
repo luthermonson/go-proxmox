@@ -7,44 +7,32 @@ import (
 )
 
 // Notifications lists the resource-type directory under /cluster/notifications.
-func (cl *Cluster) Notifications(ctx context.Context) (ClusterNotificationIndex, error) {
-	var entries ClusterNotificationIndex
-	if err := cl.client.Get(ctx, "/cluster/notifications", &entries); err != nil {
-		return nil, err
-	}
-	return entries, nil
+func (cl *Cluster) Notifications(ctx context.Context) (entries ClusterNotificationIndex, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications", &entries)
+	return
 }
 
 // NotificationMatcherFields returns the known metadata field names usable in
 // matcher "match-field" rules.
-func (cl *Cluster) NotificationMatcherFields(ctx context.Context) ([]*ClusterNotificationMatcherField, error) {
-	var fields []*ClusterNotificationMatcherField
-	if err := cl.client.Get(ctx, "/cluster/notifications/matcher-fields", &fields); err != nil {
-		return nil, err
-	}
-	return fields, nil
+func (cl *Cluster) NotificationMatcherFields(ctx context.Context) (fields []*ClusterNotificationMatcherField, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/matcher-fields", &fields)
+	return
 }
 
 // NotificationMatcherFieldValues returns the known (field, value) pairs for
 // matcher exact-match rules.
-func (cl *Cluster) NotificationMatcherFieldValues(ctx context.Context) ([]*ClusterNotificationMatcherFieldValue, error) {
-	var values []*ClusterNotificationMatcherFieldValue
-	if err := cl.client.Get(ctx, "/cluster/notifications/matcher-field-values", &values); err != nil {
-		return nil, err
-	}
-	return values, nil
+func (cl *Cluster) NotificationMatcherFieldValues(ctx context.Context) (values []*ClusterNotificationMatcherFieldValue, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/matcher-field-values", &values)
+	return
 }
 
 // --- targets ----------------------------------------------------------------
 
 // NotificationTargets lists all notification targets (flattened view across
 // every endpoint plugin type).
-func (cl *Cluster) NotificationTargets(ctx context.Context) ([]*ClusterNotificationTarget, error) {
-	var targets []*ClusterNotificationTarget
-	if err := cl.client.Get(ctx, "/cluster/notifications/targets", &targets); err != nil {
-		return nil, err
-	}
-	return targets, nil
+func (cl *Cluster) NotificationTargets(ctx context.Context) (targets []*ClusterNotificationTarget, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/targets", &targets)
+	return
 }
 
 // TestNotificationTarget triggers PVE to send a test notification through the
@@ -59,27 +47,25 @@ func (cl *Cluster) TestNotificationTarget(ctx context.Context, name string) erro
 // --- matchers ---------------------------------------------------------------
 
 // NotificationMatchers lists configured matchers.
-func (cl *Cluster) NotificationMatchers(ctx context.Context) ([]*ClusterNotificationMatcher, error) {
-	var matchers []*ClusterNotificationMatcher
-	if err := cl.client.Get(ctx, "/cluster/notifications/matchers", &matchers); err != nil {
-		return nil, err
-	}
-	return matchers, nil
+func (cl *Cluster) NotificationMatchers(ctx context.Context) (matchers []*ClusterNotificationMatcher, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/matchers", &matchers)
+	return
 }
 
 // NotificationMatcher reads a single matcher by name.
-func (cl *Cluster) NotificationMatcher(ctx context.Context, name string) (*ClusterNotificationMatcher, error) {
+func (cl *Cluster) NotificationMatcher(ctx context.Context, name string) (m *ClusterNotificationMatcher, err error) {
 	if name == "" {
-		return nil, errors.New("notification matcher name can not be empty")
+		err = errors.New("notification matcher name can not be empty")
+		return
 	}
-	m := &ClusterNotificationMatcher{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/matchers/%s", name), m); err != nil {
-		return nil, err
+	m = &ClusterNotificationMatcher{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/matchers/%s", name), m); err != nil {
+		return
 	}
 	if m.Name == "" {
 		m.Name = name
 	}
-	return m, nil
+	return
 }
 
 // NewNotificationMatcher creates a matcher. opts.Name is required.
@@ -112,27 +98,25 @@ func (cl *Cluster) DeleteNotificationMatcher(ctx context.Context, name string) e
 // --- gotify endpoints -------------------------------------------------------
 
 // NotificationGotifyEndpoints lists configured Gotify endpoints.
-func (cl *Cluster) NotificationGotifyEndpoints(ctx context.Context) ([]*ClusterNotificationGotifyEndpoint, error) {
-	var endpoints []*ClusterNotificationGotifyEndpoint
-	if err := cl.client.Get(ctx, "/cluster/notifications/endpoints/gotify", &endpoints); err != nil {
-		return nil, err
-	}
-	return endpoints, nil
+func (cl *Cluster) NotificationGotifyEndpoints(ctx context.Context) (endpoints []*ClusterNotificationGotifyEndpoint, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/endpoints/gotify", &endpoints)
+	return
 }
 
 // NotificationGotifyEndpoint reads a single Gotify endpoint.
-func (cl *Cluster) NotificationGotifyEndpoint(ctx context.Context, name string) (*ClusterNotificationGotifyEndpoint, error) {
+func (cl *Cluster) NotificationGotifyEndpoint(ctx context.Context, name string) (e *ClusterNotificationGotifyEndpoint, err error) {
 	if name == "" {
-		return nil, errors.New("gotify endpoint name can not be empty")
+		err = errors.New("gotify endpoint name can not be empty")
+		return
 	}
-	e := &ClusterNotificationGotifyEndpoint{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/gotify/%s", name), e); err != nil {
-		return nil, err
+	e = &ClusterNotificationGotifyEndpoint{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/gotify/%s", name), e); err != nil {
+		return
 	}
 	if e.Name == "" {
 		e.Name = name
 	}
-	return e, nil
+	return
 }
 
 // NewNotificationGotifyEndpoint creates a Gotify endpoint. opts.Name, .Server,
@@ -166,27 +150,25 @@ func (cl *Cluster) DeleteNotificationGotifyEndpoint(ctx context.Context, name st
 // --- sendmail endpoints -----------------------------------------------------
 
 // NotificationSendmailEndpoints lists configured sendmail endpoints.
-func (cl *Cluster) NotificationSendmailEndpoints(ctx context.Context) ([]*ClusterNotificationSendmailEndpoint, error) {
-	var endpoints []*ClusterNotificationSendmailEndpoint
-	if err := cl.client.Get(ctx, "/cluster/notifications/endpoints/sendmail", &endpoints); err != nil {
-		return nil, err
-	}
-	return endpoints, nil
+func (cl *Cluster) NotificationSendmailEndpoints(ctx context.Context) (endpoints []*ClusterNotificationSendmailEndpoint, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/endpoints/sendmail", &endpoints)
+	return
 }
 
 // NotificationSendmailEndpoint reads a single sendmail endpoint.
-func (cl *Cluster) NotificationSendmailEndpoint(ctx context.Context, name string) (*ClusterNotificationSendmailEndpoint, error) {
+func (cl *Cluster) NotificationSendmailEndpoint(ctx context.Context, name string) (e *ClusterNotificationSendmailEndpoint, err error) {
 	if name == "" {
-		return nil, errors.New("sendmail endpoint name can not be empty")
+		err = errors.New("sendmail endpoint name can not be empty")
+		return
 	}
-	e := &ClusterNotificationSendmailEndpoint{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/sendmail/%s", name), e); err != nil {
-		return nil, err
+	e = &ClusterNotificationSendmailEndpoint{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/sendmail/%s", name), e); err != nil {
+		return
 	}
 	if e.Name == "" {
 		e.Name = name
 	}
-	return e, nil
+	return
 }
 
 // NewNotificationSendmailEndpoint creates a sendmail endpoint.
@@ -219,27 +201,25 @@ func (cl *Cluster) DeleteNotificationSendmailEndpoint(ctx context.Context, name 
 // --- smtp endpoints ---------------------------------------------------------
 
 // NotificationSMTPEndpoints lists configured SMTP endpoints.
-func (cl *Cluster) NotificationSMTPEndpoints(ctx context.Context) ([]*ClusterNotificationSMTPEndpoint, error) {
-	var endpoints []*ClusterNotificationSMTPEndpoint
-	if err := cl.client.Get(ctx, "/cluster/notifications/endpoints/smtp", &endpoints); err != nil {
-		return nil, err
-	}
-	return endpoints, nil
+func (cl *Cluster) NotificationSMTPEndpoints(ctx context.Context) (endpoints []*ClusterNotificationSMTPEndpoint, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/endpoints/smtp", &endpoints)
+	return
 }
 
 // NotificationSMTPEndpoint reads a single SMTP endpoint.
-func (cl *Cluster) NotificationSMTPEndpoint(ctx context.Context, name string) (*ClusterNotificationSMTPEndpoint, error) {
+func (cl *Cluster) NotificationSMTPEndpoint(ctx context.Context, name string) (e *ClusterNotificationSMTPEndpoint, err error) {
 	if name == "" {
-		return nil, errors.New("smtp endpoint name can not be empty")
+		err = errors.New("smtp endpoint name can not be empty")
+		return
 	}
-	e := &ClusterNotificationSMTPEndpoint{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/smtp/%s", name), e); err != nil {
-		return nil, err
+	e = &ClusterNotificationSMTPEndpoint{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/smtp/%s", name), e); err != nil {
+		return
 	}
 	if e.Name == "" {
 		e.Name = name
 	}
-	return e, nil
+	return
 }
 
 // NewNotificationSMTPEndpoint creates an SMTP endpoint.
@@ -272,27 +252,25 @@ func (cl *Cluster) DeleteNotificationSMTPEndpoint(ctx context.Context, name stri
 // --- webhook endpoints ------------------------------------------------------
 
 // NotificationWebhookEndpoints lists configured webhook endpoints.
-func (cl *Cluster) NotificationWebhookEndpoints(ctx context.Context) ([]*ClusterNotificationWebhookEndpoint, error) {
-	var endpoints []*ClusterNotificationWebhookEndpoint
-	if err := cl.client.Get(ctx, "/cluster/notifications/endpoints/webhook", &endpoints); err != nil {
-		return nil, err
-	}
-	return endpoints, nil
+func (cl *Cluster) NotificationWebhookEndpoints(ctx context.Context) (endpoints []*ClusterNotificationWebhookEndpoint, err error) {
+	err = cl.client.Get(ctx, "/cluster/notifications/endpoints/webhook", &endpoints)
+	return
 }
 
 // NotificationWebhookEndpoint reads a single webhook endpoint.
-func (cl *Cluster) NotificationWebhookEndpoint(ctx context.Context, name string) (*ClusterNotificationWebhookEndpoint, error) {
+func (cl *Cluster) NotificationWebhookEndpoint(ctx context.Context, name string) (e *ClusterNotificationWebhookEndpoint, err error) {
 	if name == "" {
-		return nil, errors.New("webhook endpoint name can not be empty")
+		err = errors.New("webhook endpoint name can not be empty")
+		return
 	}
-	e := &ClusterNotificationWebhookEndpoint{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/webhook/%s", name), e); err != nil {
-		return nil, err
+	e = &ClusterNotificationWebhookEndpoint{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/notifications/endpoints/webhook/%s", name), e); err != nil {
+		return
 	}
 	if e.Name == "" {
 		e.Name = name
 	}
-	return e, nil
+	return
 }
 
 // NewNotificationWebhookEndpoint creates a webhook endpoint.

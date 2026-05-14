@@ -8,27 +8,25 @@ import (
 
 // MetricServers lists configured external metric servers (graphite / influxdb /
 // opentelemetry). See https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/metrics/server
-func (cl *Cluster) MetricServers(ctx context.Context) (ClusterMetricServers, error) {
-	var servers ClusterMetricServers
-	if err := cl.client.Get(ctx, "/cluster/metrics/server", &servers); err != nil {
-		return nil, err
-	}
-	return servers, nil
+func (cl *Cluster) MetricServers(ctx context.Context) (servers ClusterMetricServers, err error) {
+	err = cl.client.Get(ctx, "/cluster/metrics/server", &servers)
+	return
 }
 
 // MetricServer reads the full configuration of a single metric server.
-func (cl *Cluster) MetricServer(ctx context.Context, id string) (*ClusterMetricServer, error) {
+func (cl *Cluster) MetricServer(ctx context.Context, id string) (server *ClusterMetricServer, err error) {
 	if id == "" {
-		return nil, errors.New("metric server id can not be empty")
+		err = errors.New("metric server id can not be empty")
+		return
 	}
-	server := &ClusterMetricServer{}
-	if err := cl.client.Get(ctx, fmt.Sprintf("/cluster/metrics/server/%s", id), server); err != nil {
-		return nil, err
+	server = &ClusterMetricServer{}
+	if err = cl.client.Get(ctx, fmt.Sprintf("/cluster/metrics/server/%s", id), server); err != nil {
+		return
 	}
 	if server.ID == "" {
 		server.ID = id
 	}
-	return server, nil
+	return
 }
 
 // NewMetricServer creates a new external metric server entry. Requires opts.ID
