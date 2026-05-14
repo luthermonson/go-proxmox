@@ -32,9 +32,13 @@ func (c *Container) Clone(ctx context.Context, params *ContainerCloneOptions) (n
 	return newid, NewTask(upid, c.client), nil
 }
 
-func (c *Container) Delete(ctx context.Context) (task *Task, err error) {
+// Delete removes the container. Pass a non-nil *ContainerDeleteOptions to
+// force-delete a running container (Force), purge it from related
+// configurations (Purge), or destroy unreferenced disks
+// (DestroyUnreferencedDisks). nil applies the API defaults.
+func (c *Container) Delete(ctx context.Context, params *ContainerDeleteOptions) (task *Task, err error) {
 	var upid UPID
-	if err := c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d", c.Node, c.VMID), &upid); err != nil {
+	if err := c.client.DeleteWithParams(ctx, fmt.Sprintf("/nodes/%s/lxc/%d", c.Node, c.VMID), params, &upid); err != nil {
 		return nil, err
 	}
 
