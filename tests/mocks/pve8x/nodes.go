@@ -625,6 +625,57 @@ func nodes() {
     "data": null
 }`)
 
+	// GET /nodes/{node}/certificates - Directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/certificates$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "info"},
+        {"name": "custom"},
+        {"name": "acme"}
+    ]
+}`)
+
+	// GET /nodes/{node}/certificates/acme - ACME directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/certificates/acme$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "certificate"}
+    ]
+}`)
+
+	// POST /nodes/{node}/certificates/acme/certificate - Order ACME cert
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/certificates/acme/certificate$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:acme-new-cert:pveproxy:root@pam:"
+}`)
+
+	// PUT /nodes/{node}/certificates/acme/certificate - Renew ACME cert
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/certificates/acme/certificate$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:acme-renew-cert:pveproxy:root@pam:"
+}`)
+
+	// DELETE /nodes/{node}/certificates/acme/certificate - Revoke ACME cert
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/certificates/acme/certificate$").
+		Reply(200).
+		JSON(`{
+    "data": "UPID:node1:00001234:00005678:12345678:acme-revoke-cert:pveproxy:root@pam:"
+}`)
+
 	// POST /nodes/{node}/vzdump - Backup VMs
 	gock.New(config.C.URI).
 		Persist().

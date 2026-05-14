@@ -411,6 +411,81 @@ func TestNode_DeleteCustomCertificate(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestNode_ListCertificateSubresources(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	names, err := node.ListCertificateSubresources(ctx)
+	assert.Nil(t, err)
+	assert.Contains(t, names, "info")
+	assert.Contains(t, names, "custom")
+	assert.Contains(t, names, "acme")
+}
+
+func TestNode_ListACMECertificateSubresources(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	names, err := node.ListACMECertificateSubresources(ctx)
+	assert.Nil(t, err)
+	assert.Contains(t, names, "certificate")
+}
+
+func TestNode_OrderACMECertificate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	task, err := node.OrderACMECertificate(ctx, false)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "acme-new-cert", task.Type)
+}
+
+func TestNode_RenewACMECertificate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	task, err := node.RenewACMECertificate(ctx, true)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "acme-renew-cert", task.Type)
+}
+
+func TestNode_RevokeACMECertificate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	assert.Nil(t, err)
+
+	task, err := node.RevokeACMECertificate(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "acme-revoke-cert", task.Type)
+}
+
 func TestNode_Vzdump(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

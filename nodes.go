@@ -326,6 +326,80 @@ func (n *Node) GetCustomCertificates(ctx context.Context) (certs *NodeCertificat
 	return
 }
 
+// ListCertificateSubresources enumerates the children of
+// /nodes/{node}/certificates (typically "info", "custom", "acme"). The PVE
+// schema only documents this as a directory index, so we collapse the
+// {"name": ...} link objects into a flat []string.
+func (n *Node) ListCertificateSubresources(ctx context.Context) ([]string, error) {
+	var items []struct {
+		Name string `json:"name"`
+	}
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/certificates", n.Name), &items); err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.Name)
+	}
+	return out, nil
+}
+
+// ListACMECertificateSubresources enumerates the children of
+// /nodes/{node}/certificates/acme (typically just "certificate").
+func (n *Node) ListACMECertificateSubresources(ctx context.Context) ([]string, error) {
+	var items []struct {
+		Name string `json:"name"`
+	}
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/certificates/acme", n.Name), &items); err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.Name)
+	}
+	return out, nil
+}
+
+// OrderACMECertificate orders a new ACME certificate using the node's
+// configured ACME account/plugin. force=true overwrites an existing custom
+// or ACME certificate. POST /nodes/{node}/certificates/acme/certificate.
+func (n *Node) OrderACMECertificate(ctx context.Context, force bool) (*Task, error) {
+	body := map[string]any{}
+	if force {
+		body["force"] = 1
+	}
+	var upid UPID
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/certificates/acme/certificate", n.Name), body, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// RenewACMECertificate renews the node's ACME certificate. PVE skips renewal
+// when the cert is more than 30 days from expiry — force=true overrides that
+// check. PUT /nodes/{node}/certificates/acme/certificate.
+func (n *Node) RenewACMECertificate(ctx context.Context, force bool) (*Task, error) {
+	body := map[string]any{}
+	if force {
+		body["force"] = 1
+	}
+	var upid UPID
+	if err := n.client.Put(ctx, fmt.Sprintf("/nodes/%s/certificates/acme/certificate", n.Name), body, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+// RevokeACMECertificate revokes the node's ACME certificate with the issuing
+// CA. DELETE /nodes/{node}/certificates/acme/certificate.
+func (n *Node) RevokeACMECertificate(ctx context.Context) (*Task, error) {
+	var upid UPID
+	if err := n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/certificates/acme/certificate", n.Name), &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
 func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) (task *Task, err error) {
 	var upid UPID
 
