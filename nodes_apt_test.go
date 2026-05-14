@@ -109,8 +109,7 @@ func TestNode_APTChangeRepository(t *testing.T) {
 	defer mocks.Off()
 
 	node := &Node{client: mockClient(), Name: "node1"}
-	enabled := false
-	err := node.APTChangeRepository(context.Background(), "/etc/apt/sources.list.d/pve-enterprise.list", 0, &enabled, "abcdef0123456789")
+	err := node.APTChangeRepository(context.Background(), "/etc/apt/sources.list.d/pve-enterprise.list", 0, false, "abcdef0123456789")
 	assert.NoError(t, err)
 }
 

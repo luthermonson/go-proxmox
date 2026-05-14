@@ -67,19 +67,12 @@ func (n *Node) APTRepositories(ctx context.Context) (repos *APTRepositories, err
 // APTChangeRepository enables or disables an existing repository entry,
 // identified by the containing file path and its index within that file.
 // digest is optional; pass the value from APTRepositories to detect concurrent
-// edits. enabled is *bool because both true and false are meaningful — leave
-// it nil to skip toggling.
-func (n *Node) APTChangeRepository(ctx context.Context, path string, index int, enabled *bool, digest string) error {
+// edits.
+func (n *Node) APTChangeRepository(ctx context.Context, path string, index int, enabled bool, digest string) error {
 	body := map[string]interface{}{
 		"path":  path,
 		"index": index,
-	}
-	if enabled != nil {
-		if *enabled {
-			body["enabled"] = 1
-		} else {
-			body["enabled"] = 0
-		}
+		"enabled": map[bool]int{true: 1, false: 0}[enabled],
 	}
 	if digest != "" {
 		body["digest"] = digest
