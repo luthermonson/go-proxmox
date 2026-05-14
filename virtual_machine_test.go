@@ -338,6 +338,150 @@ func TestVirtualMachine_Delete(t *testing.T) {
 	assert.Equal(t, "999", task.ID)
 }
 
+func TestVirtualMachine_AgentPing(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	assert.Nil(t, vm.AgentPing(context.Background()))
+}
+
+func TestVirtualMachine_AgentGetTime(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	ts, err := vm.AgentGetTime(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, AgentTime(1715600000000000000), ts)
+}
+
+func TestVirtualMachine_AgentGetTimezone(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	tz, err := vm.AgentGetTimezone(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, "UTC", tz)
+}
+
+func TestVirtualMachine_AgentGetUsers(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	users, err := vm.AgentGetUsers(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, users, 2)
+	assert.Equal(t, "root", users[0].User)
+	assert.Equal(t, "WORKGROUP", users[1].Domain)
+}
+
+func TestVirtualMachine_AgentGetVCPUs(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	cpus, err := vm.AgentGetVCPUs(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, cpus, 2)
+	assert.Equal(t, 1, cpus[1].LogicalID)
+	assert.True(t, cpus[1].CanOffline)
+}
+
+func TestVirtualMachine_AgentGetFsInfo(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	fs, err := vm.AgentGetFsInfo(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, fs, 1)
+	assert.Equal(t, "/", fs[0].Mountpoint)
+	assert.Equal(t, "ext4", fs[0].Type)
+	assert.Len(t, fs[0].Disk, 1)
+	assert.Equal(t, "/dev/sda1", fs[0].Disk[0].Dev)
+}
+
+func TestVirtualMachine_AgentGetMemoryBlocks(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	blocks, err := vm.AgentGetMemoryBlocks(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, blocks, 2)
+	assert.True(t, blocks[1].CanOffline)
+}
+
+func TestVirtualMachine_AgentGetInfo(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	info, err := vm.AgentGetInfo(context.Background())
+	assert.Nil(t, err)
+	assert.NotNil(t, info)
+	assert.Equal(t, "7.2.0", info.Version)
+	assert.Len(t, info.SupportedCommands, 2)
+}
+
+func TestVirtualMachine_AgentFsfreezeFreezeThawStatus(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	ctx := context.Background()
+
+	n, err := vm.AgentFsfreezeFreeze(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, n)
+
+	status, err := vm.AgentFsfreezeStatus(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, AgentFsfreezeStatus("thawed"), status)
+
+	n, err = vm.AgentFsfreezeThaw(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, n)
+}
+
+func TestVirtualMachine_AgentFstrim(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	out, err := vm.AgentFstrim(context.Background())
+	assert.Nil(t, err)
+	assert.Contains(t, out, "/")
+}
+
+func TestVirtualMachine_AgentShutdown(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	assert.Nil(t, vm.AgentShutdown(context.Background()))
+}
+
+func TestVirtualMachine_AgentSuspend(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	ctx := context.Background()
+	assert.Nil(t, vm.AgentSuspendDisk(ctx))
+	assert.Nil(t, vm.AgentSuspendHybrid(ctx))
+	assert.Nil(t, vm.AgentSuspendRAM(ctx))
+}
+
+func TestVirtualMachine_AgentFileRead(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	out, err := vm.AgentFileRead(context.Background(), "/etc/hostname")
+	assert.Nil(t, err)
+	assert.NotNil(t, out)
+	assert.Equal(t, "hello world\n", out.Content)
+	assert.Equal(t, IntOrBool(false), out.Truncated)
+}
+
+func TestVirtualMachine_AgentFileWrite(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	assert.Nil(t, vm.AgentFileWrite(context.Background(), "/tmp/foo", []byte("hello")))
+}
+
 func TestVirtualMachine_Snapshots(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

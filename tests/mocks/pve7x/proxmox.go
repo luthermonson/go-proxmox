@@ -8,4 +8,5 @@ func Load() {
 	pool()
 	storage()
 	tasks()
+	virtualMachines()
 }

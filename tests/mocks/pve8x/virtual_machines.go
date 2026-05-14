@@ -793,4 +793,121 @@ func virtualMachines() {
 		JSON(`{
     "data": "UPID:node1:0000000F:0000000F:0000000F:qmdelsnapshot:100:root@pam:"
 }`)
+
+	// ----- QEMU guest-agent endpoints (vmid 101) -----
+	// Mirrors the pve9x fixtures; behaviour is unchanged across PVE 8.x.
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/ping$").
+		Reply(200).
+		JSON(`{"data": {"result": {}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-time$").
+		Reply(200).
+		JSON(`{"data": {"result": 1715600000000000000}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-timezone$").
+		Reply(200).
+		JSON(`{"data": {"result": {"zone": "UTC", "offset": 0}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-users$").
+		Reply(200).
+		JSON(`{"data": {"result": [
+			{"user": "root", "login-time": 1715500000.123}
+		]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-vcpus$").
+		Reply(200).
+		JSON(`{"data": {"result": [
+			{"logical-id": 0, "online": true}
+		]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-fsinfo$").
+		Reply(200).
+		JSON(`{"data": {"result": [
+			{"name": "sda1", "mountpoint": "/", "type": "ext4", "used-bytes": 1234567890, "total-bytes": 53687091200}
+		]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-memory-blocks$").
+		Reply(200).
+		JSON(`{"data": {"result": []}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/info$").
+		Reply(200).
+		JSON(`{"data": {"result": {"version": "6.2.0", "supported_commands": []}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/fsfreeze-freeze$").
+		Reply(200).
+		JSON(`{"data": {"result": 3}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/fsfreeze-thaw$").
+		Reply(200).
+		JSON(`{"data": {"result": 3}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/fsfreeze-status$").
+		Reply(200).
+		JSON(`{"data": {"result": "thawed"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/fstrim$").
+		Reply(200).
+		JSON(`{"data": {"result": {"/": {"trimmed": 1048576, "minimum": 0}}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/shutdown$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/suspend-disk$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/suspend-hybrid$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/suspend-ram$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/file-read$").
+		Reply(200).
+		JSON(`{"data": {"content": "hello world\n", "truncated": 0}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/file-write$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }

@@ -1714,6 +1714,87 @@ type AgentExecStatus struct {
 	Signal       bool      `json:"signal"`
 }
 
+// AgentFileRead is the response from /agent/file-read. PVE returns the file
+// body inline alongside a truncation flag — no `result` envelope here, unlike
+// most other agent endpoints.
+type AgentFileRead struct {
+	Content   string    `json:"content"`
+	Truncated IntOrBool `json:"truncated,omitempty"`
+}
+
+// AgentFsInfo mirrors qga's "guest-get-fsinfo" filesystem entry. Each
+// element of AgentGetFsInfo.Result describes one mounted filesystem inside
+// the guest.
+type AgentFsInfo struct {
+	Name           string                  `json:"name"`
+	Mountpoint     string                  `json:"mountpoint"`
+	Type           string                  `json:"type"`
+	UsedBytes      uint64                  `json:"used-bytes,omitempty"`
+	TotalBytes     uint64                  `json:"total-bytes,omitempty"`
+	Disk           []*AgentFsInfoDisk      `json:"disk,omitempty"`
+}
+
+type AgentFsInfoDisk struct {
+	Serial  string             `json:"serial,omitempty"`
+	BusType string             `json:"bus-type,omitempty"`
+	Bus     int                `json:"bus,omitempty"`
+	Unit    int                `json:"unit,omitempty"`
+	Target  int                `json:"target,omitempty"`
+	PciController *AgentPciCtrl `json:"pci-controller,omitempty"`
+	Dev     string             `json:"dev,omitempty"`
+}
+
+type AgentPciCtrl struct {
+	Domain   int `json:"domain"`
+	Bus      int `json:"bus"`
+	Slot     int `json:"slot"`
+	Function int `json:"function"`
+}
+
+// AgentTime represents the guest's wall-clock time in nanoseconds since
+// epoch, as returned by qga's guest-get-time.
+type AgentTime int64
+
+// AgentUser describes one logged-in user from qga's guest-get-users. The
+// LoginTime field is unix-epoch seconds with sub-second precision.
+type AgentUser struct {
+	User      string  `json:"user"`
+	Domain    string  `json:"domain,omitempty"`
+	LoginTime float64 `json:"login-time"`
+}
+
+// AgentVCPU represents one logical CPU from qga's guest-get-vcpus. PVE
+// passes the QGA payload through verbatim.
+type AgentVCPU struct {
+	LogicalID int  `json:"logical-id"`
+	Online    bool `json:"online"`
+	CanOffline bool `json:"can-offline,omitempty"`
+}
+
+// AgentInfo describes the guest-agent itself: version + supported commands.
+type AgentInfo struct {
+	Version           string              `json:"version"`
+	SupportedCommands []*AgentCommandInfo `json:"supported_commands,omitempty"`
+}
+
+type AgentCommandInfo struct {
+	Name            string `json:"name"`
+	Enabled         bool   `json:"enabled"`
+	SuccessResponse bool   `json:"success-response"`
+}
+
+// AgentMemoryBlock describes one hot-pluggable memory block as reported by
+// qga's guest-get-memory-blocks.
+type AgentMemoryBlock struct {
+	PhysIndex   int  `json:"phys-index"`
+	Online      bool `json:"online"`
+	CanOffline  bool `json:"can-offline,omitempty"`
+}
+
+// AgentFsfreezeStatus is the freeze state string ("thawed" or "frozen")
+// returned by qga's guest-fsfreeze-status.
+type AgentFsfreezeStatus string
+
 type FirewallSecurityGroup struct {
 	client  *Client
 	Group   string          `json:"group,omitempty"`
