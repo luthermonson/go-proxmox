@@ -2351,3 +2351,345 @@ type SDNZoneOptions struct {
 	VRFVXLAN                 int    `json:"vrf-vxlan,omitempty"`
 	VXLANPort                uint16 `json:"vxlan-port,omitempty"` // FIXME(issue-199): PVE default 4789; use *uint16 so unset doesn't send 0.
 }
+
+// ClusterMetricServers is the list payload returned by GET /cluster/metrics/server.
+type ClusterMetricServers []*ClusterMetricServerSummary
+
+// ClusterMetricServerSummary is the trimmed shape returned by the list endpoint.
+// The detailed GET /cluster/metrics/server/{id} returns the full plugin config in
+// ClusterMetricServer.
+type ClusterMetricServerSummary struct {
+	ID      string    `json:"id,omitempty"`
+	Type    string    `json:"type,omitempty"`
+	Server  string    `json:"server,omitempty"`
+	Port    int       `json:"port,omitempty"`
+	Disable IntOrBool `json:"disable,omitempty"`
+}
+
+// ClusterMetricServer is the union of fields PVE returns for a single configured
+// metric server. PVE multiplexes graphite / influxdb / opentelemetry plugins
+// behind one config-id; per-plugin fields are populated only when relevant.
+type ClusterMetricServer struct {
+	ID            string    `json:"id,omitempty"`
+	Type          string    `json:"type,omitempty"`
+	Server        string    `json:"server,omitempty"`
+	Port          int       `json:"port,omitempty"`
+	Disable       IntOrBool `json:"disable,omitempty"`
+	APIPathPrefix string    `json:"api-path-prefix,omitempty"`
+	Bucket        string    `json:"bucket,omitempty"`
+	InfluxDBProto string    `json:"influxdbproto,omitempty"`
+	MaxBodySize   uint64    `json:"max-body-size,omitempty"`
+	MTU           uint      `json:"mtu,omitempty"`
+	Organization  string    `json:"organization,omitempty"`
+	Path          string    `json:"path,omitempty"`
+	Proto         string    `json:"proto,omitempty"`
+	Timeout       uint      `json:"timeout,omitempty"`
+	Token         string    `json:"token,omitempty"`
+	// OpenTelemetry-specific knobs.
+	OtelCompression        string    `json:"otel-compression,omitempty"`
+	OtelHeaders            string    `json:"otel-headers,omitempty"`
+	OtelMaxBodySize        uint64    `json:"otel-max-body-size,omitempty"`
+	OtelPath               string    `json:"otel-path,omitempty"`
+	OtelProtocol           string    `json:"otel-protocol,omitempty"`
+	OtelResourceAttributes string    `json:"otel-resource-attributes,omitempty"`
+	OtelTimeout            uint      `json:"otel-timeout,omitempty"`
+	OtelVerifySSL          IntOrBool `json:"otel-verify-ssl,omitempty"`
+	VerifyCertificate      IntOrBool `json:"verify-certificate,omitempty"`
+	Digest                 string    `json:"digest,omitempty"`
+}
+
+// ClusterMetricServerOptions is the create/update payload. POST requires id+type;
+// PUT uses id from the URL and accepts a "delete" comma list to unset keys.
+type ClusterMetricServerOptions struct {
+	ID            string `json:"id,omitempty"`
+	Type          string `json:"type,omitempty"` // graphite | influxdb | opentelemetry — POST only
+	Server        string `json:"server,omitempty"`
+	Port          int    `json:"port,omitempty"`
+	Disable       *bool  `json:"disable,omitempty"`
+	APIPathPrefix string `json:"api-path-prefix,omitempty"`
+	Bucket        string `json:"bucket,omitempty"`
+	InfluxDBProto string `json:"influxdbproto,omitempty"`
+	MaxBodySize   uint64 `json:"max-body-size,omitempty"`
+	MTU           uint   `json:"mtu,omitempty"`
+	Organization  string `json:"organization,omitempty"`
+	Path          string `json:"path,omitempty"`
+	Proto         string `json:"proto,omitempty"`
+	Timeout       uint   `json:"timeout,omitempty"`
+	Token         string `json:"token,omitempty"`
+	// OpenTelemetry-specific knobs.
+	OtelCompression        string `json:"otel-compression,omitempty"`
+	OtelHeaders            string `json:"otel-headers,omitempty"`
+	OtelMaxBodySize        uint64 `json:"otel-max-body-size,omitempty"`
+	OtelPath               string `json:"otel-path,omitempty"`
+	OtelProtocol           string `json:"otel-protocol,omitempty"`
+	OtelResourceAttributes string `json:"otel-resource-attributes,omitempty"`
+	OtelTimeout            uint   `json:"otel-timeout,omitempty"`
+	OtelVerifySSL          *bool  `json:"otel-verify-ssl,omitempty"`     // PVE default true; pointer so unset doesn't flip server-side
+	VerifyCertificate      *bool  `json:"verify-certificate,omitempty"`  // PVE default true; pointer to avoid silently disabling TLS verification
+	Digest                 string `json:"digest,omitempty"`              // PUT only — optimistic concurrency
+	Delete                 string `json:"delete,omitempty"`              // PUT only — comma-separated keys to clear
+}
+
+// ClusterMappings is the directory index returned by GET /cluster/mapping.
+type ClusterMappings []*ClusterMappingIndexEntry
+
+// ClusterMappingIndexEntry is one row in the top-level mapping index.
+type ClusterMappingIndexEntry struct {
+	Name string `json:"name,omitempty"`
+}
+
+// ClusterMappingCheck captures the optional per-node diagnostic returned when
+// the list endpoints are called with check-node set.
+type ClusterMappingCheck struct {
+	Message  string `json:"message,omitempty"`
+	Severity string `json:"severity,omitempty"`
+}
+
+// ClusterDirMappings is the list payload returned by GET /cluster/mapping/dir.
+type ClusterDirMappings []*ClusterDirMapping
+
+// ClusterDirMapping describes a single directory mapping. The "map" field is
+// a list of PVE property-strings ("node=...,path=...") rather than structured
+// objects — that's what the API returns.
+type ClusterDirMapping struct {
+	ID          string                 `json:"id,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Map         []string               `json:"map,omitempty"`
+	Checks      []*ClusterMappingCheck `json:"checks,omitempty"`
+	Digest      string                 `json:"digest,omitempty"`
+}
+
+// ClusterDirMappingOptions is the create/update payload for dir mappings.
+type ClusterDirMappingOptions struct {
+	ID          string   `json:"id,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Map         []string `json:"map,omitempty"`
+	Digest      string   `json:"digest,omitempty"`
+	Delete      string   `json:"delete,omitempty"`
+}
+
+// ClusterPCIMappings is the list payload returned by GET /cluster/mapping/pci.
+type ClusterPCIMappings []*ClusterPCIMapping
+
+// ClusterPCIMapping describes a logical PCI device mapping.
+type ClusterPCIMapping struct {
+	ID                   string                 `json:"id,omitempty"`
+	Description          string                 `json:"description,omitempty"`
+	Map                  []string               `json:"map,omitempty"`
+	Checks               []*ClusterMappingCheck `json:"checks,omitempty"`
+	MDev                 IntOrBool              `json:"mdev,omitempty"`
+	LiveMigrationCapable IntOrBool              `json:"live-migration-capable,omitempty"`
+	Digest               string                 `json:"digest,omitempty"`
+}
+
+// ClusterPCIMappingOptions is the create/update payload for PCI mappings.
+// mdev / live-migration-capable both default to false on PVE, so plain bool
+// with omitempty is safe.
+type ClusterPCIMappingOptions struct {
+	ID                   string   `json:"id,omitempty"`
+	Description          string   `json:"description,omitempty"`
+	Map                  []string `json:"map,omitempty"`
+	MDev                 bool     `json:"mdev,omitempty"`
+	LiveMigrationCapable bool     `json:"live-migration-capable,omitempty"`
+	Digest               string   `json:"digest,omitempty"`
+	Delete               string   `json:"delete,omitempty"`
+}
+
+// ClusterUSBMappings is the list payload returned by GET /cluster/mapping/usb.
+type ClusterUSBMappings []*ClusterUSBMapping
+
+// ClusterUSBMapping describes a logical USB device mapping. USB uses "error"
+// instead of "checks" in the list response (PVE quirk — not normalised).
+type ClusterUSBMapping struct {
+	ID          string                 `json:"id,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Map         []string               `json:"map,omitempty"`
+	Error       []*ClusterMappingCheck `json:"error,omitempty"`
+	Digest      string                 `json:"digest,omitempty"`
+}
+
+// ClusterUSBMappingOptions is the create/update payload for USB mappings.
+type ClusterUSBMappingOptions struct {
+	ID          string   `json:"id,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Map         []string `json:"map,omitempty"`
+	Digest      string   `json:"digest,omitempty"`
+	Delete      string   `json:"delete,omitempty"`
+}
+
+// --- notifications ----------------------------------------------------------
+
+// ClusterNotificationIndex is the top-level directory under /cluster/notifications.
+type ClusterNotificationIndex []*ClusterNotificationIndexEntry
+
+// ClusterNotificationIndexEntry is one row in the notifications index.
+type ClusterNotificationIndexEntry struct {
+	Name string `json:"name,omitempty"`
+}
+
+// ClusterNotificationMatcherField is a row from /cluster/notifications/matcher-fields.
+type ClusterNotificationMatcherField struct {
+	Name string `json:"name,omitempty"`
+}
+
+// ClusterNotificationMatcherFieldValue is a row from
+// /cluster/notifications/matcher-field-values.
+type ClusterNotificationMatcherFieldValue struct {
+	Field   string `json:"field,omitempty"`
+	Value   string `json:"value,omitempty"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// ClusterNotificationTarget is a row from /cluster/notifications/targets — a
+// flattened view across all endpoint plugin types (sendmail/gotify/smtp/webhook).
+type ClusterNotificationTarget struct {
+	Name    string    `json:"name,omitempty"`
+	Type    string    `json:"type,omitempty"`
+	Comment string    `json:"comment,omitempty"`
+	Origin  string    `json:"origin,omitempty"`
+	Disable IntOrBool `json:"disable,omitempty"`
+}
+
+// ClusterNotificationMatcher is a single matcher.
+type ClusterNotificationMatcher struct {
+	Name          string    `json:"name,omitempty"`
+	Comment       string    `json:"comment,omitempty"`
+	Mode          string    `json:"mode,omitempty"` // all | any
+	Disable       IntOrBool `json:"disable,omitempty"`
+	InvertMatch   IntOrBool `json:"invert-match,omitempty"`
+	MatchCalendar []string  `json:"match-calendar,omitempty"`
+	MatchField    []string  `json:"match-field,omitempty"`
+	MatchSeverity []string  `json:"match-severity,omitempty"`
+	Target        []string  `json:"target,omitempty"`
+	Origin        string    `json:"origin,omitempty"`
+	Digest        string    `json:"digest,omitempty"`
+}
+
+// ClusterNotificationMatcherOptions is the create/update payload for matchers.
+// Delete is an array of keys (not a comma-string) per PVE schema.
+type ClusterNotificationMatcherOptions struct {
+	Name          string   `json:"name,omitempty"`
+	Comment       string   `json:"comment,omitempty"`
+	Mode          string   `json:"mode,omitempty"`
+	Disable       *bool    `json:"disable,omitempty"`
+	InvertMatch   *bool    `json:"invert-match,omitempty"`
+	MatchCalendar []string `json:"match-calendar,omitempty"`
+	MatchField    []string `json:"match-field,omitempty"`
+	MatchSeverity []string `json:"match-severity,omitempty"`
+	Target        []string `json:"target,omitempty"`
+	Digest        string   `json:"digest,omitempty"`
+	Delete        []string `json:"delete,omitempty"`
+}
+
+// ClusterNotificationGotifyEndpoint is a Gotify endpoint configuration. The
+// `token` field is write-only on PVE — GET never returns it.
+type ClusterNotificationGotifyEndpoint struct {
+	Name    string    `json:"name,omitempty"`
+	Server  string    `json:"server,omitempty"`
+	Comment string    `json:"comment,omitempty"`
+	Disable IntOrBool `json:"disable,omitempty"`
+	Origin  string    `json:"origin,omitempty"`
+	Digest  string    `json:"digest,omitempty"`
+}
+
+// ClusterNotificationGotifyOptions is the create/update payload for gotify.
+type ClusterNotificationGotifyOptions struct {
+	Name    string   `json:"name,omitempty"`
+	Server  string   `json:"server,omitempty"`
+	Token   string   `json:"token,omitempty"`
+	Comment string   `json:"comment,omitempty"`
+	Disable *bool    `json:"disable,omitempty"`
+	Digest  string   `json:"digest,omitempty"`
+	Delete  []string `json:"delete,omitempty"`
+}
+
+// ClusterNotificationSendmailEndpoint is a sendmail endpoint.
+type ClusterNotificationSendmailEndpoint struct {
+	Name        string    `json:"name,omitempty"`
+	Author      string    `json:"author,omitempty"`
+	FromAddress string    `json:"from-address,omitempty"`
+	MailTo      []string  `json:"mailto,omitempty"`
+	MailToUser  []string  `json:"mailto-user,omitempty"`
+	Comment     string    `json:"comment,omitempty"`
+	Disable     IntOrBool `json:"disable,omitempty"`
+	Origin      string    `json:"origin,omitempty"`
+	Digest      string    `json:"digest,omitempty"`
+}
+
+// ClusterNotificationSendmailOptions is the create/update payload for sendmail.
+type ClusterNotificationSendmailOptions struct {
+	Name        string   `json:"name,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	FromAddress string   `json:"from-address,omitempty"`
+	MailTo      []string `json:"mailto,omitempty"`
+	MailToUser  []string `json:"mailto-user,omitempty"`
+	Comment     string   `json:"comment,omitempty"`
+	Disable     *bool    `json:"disable,omitempty"`
+	Digest      string   `json:"digest,omitempty"`
+	Delete      []string `json:"delete,omitempty"`
+}
+
+// ClusterNotificationSMTPEndpoint is an SMTP endpoint. Password is write-only.
+type ClusterNotificationSMTPEndpoint struct {
+	Name        string    `json:"name,omitempty"`
+	Server      string    `json:"server,omitempty"`
+	Port        int       `json:"port,omitempty"`
+	Mode        string    `json:"mode,omitempty"` // insecure | starttls | tls
+	Username    string    `json:"username,omitempty"`
+	FromAddress string    `json:"from-address,omitempty"`
+	Author      string    `json:"author,omitempty"`
+	MailTo      []string  `json:"mailto,omitempty"`
+	MailToUser  []string  `json:"mailto-user,omitempty"`
+	Comment     string    `json:"comment,omitempty"`
+	Disable     IntOrBool `json:"disable,omitempty"`
+	Origin      string    `json:"origin,omitempty"`
+	Digest      string    `json:"digest,omitempty"`
+}
+
+// ClusterNotificationSMTPOptions is the create/update payload for smtp.
+type ClusterNotificationSMTPOptions struct {
+	Name        string   `json:"name,omitempty"`
+	Server      string   `json:"server,omitempty"`
+	Port        int      `json:"port,omitempty"`
+	Mode        string   `json:"mode,omitempty"`
+	Username    string   `json:"username,omitempty"`
+	Password    string   `json:"password,omitempty"`
+	FromAddress string   `json:"from-address,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	MailTo      []string `json:"mailto,omitempty"`
+	MailToUser  []string `json:"mailto-user,omitempty"`
+	Comment     string   `json:"comment,omitempty"`
+	Disable     *bool    `json:"disable,omitempty"`
+	Digest      string   `json:"digest,omitempty"`
+	Delete      []string `json:"delete,omitempty"`
+}
+
+// ClusterNotificationWebhookEndpoint is a webhook endpoint. The header / secret
+// arrays use PVE property-string format ("name=...,value=<base64>"); body is
+// already base64-encoded on the wire.
+type ClusterNotificationWebhookEndpoint struct {
+	Name    string    `json:"name,omitempty"`
+	URL     string    `json:"url,omitempty"`
+	Method  string    `json:"method,omitempty"` // post | put | get
+	Header  []string  `json:"header,omitempty"`
+	Body    string    `json:"body,omitempty"`
+	Secret  []string  `json:"secret,omitempty"`
+	Comment string    `json:"comment,omitempty"`
+	Disable IntOrBool `json:"disable,omitempty"`
+	Origin  string    `json:"origin,omitempty"`
+	Digest  string    `json:"digest,omitempty"`
+}
+
+// ClusterNotificationWebhookOptions is the create/update payload for webhook.
+type ClusterNotificationWebhookOptions struct {
+	Name    string   `json:"name,omitempty"`
+	URL     string   `json:"url,omitempty"`
+	Method  string   `json:"method,omitempty"`
+	Header  []string `json:"header,omitempty"`
+	Body    string   `json:"body,omitempty"`
+	Secret  []string `json:"secret,omitempty"`
+	Comment string   `json:"comment,omitempty"`
+	Disable *bool    `json:"disable,omitempty"`
+	Digest  string   `json:"digest,omitempty"`
+	Delete  []string `json:"delete,omitempty"`
+}
