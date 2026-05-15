@@ -2825,6 +2825,48 @@ type ClusterMetricServerOptions struct {
 	Delete                 string `json:"delete,omitempty"`              // PUT only — comma-separated keys to clear
 }
 
+// --- /cluster/jobs ---------------------------------------------------------
+
+// ClusterJobIndexEntry is one row in the /cluster/jobs directory index.
+type ClusterJobIndexEntry struct {
+	SubDir string `json:"subdir,omitempty"`
+}
+
+// ClusterScheduleEvent is one firing in the schedule-analyze preview — a
+// human-readable UTC timestamp + UNIX epoch.
+type ClusterScheduleEvent struct {
+	Timestamp int64  `json:"timestamp,omitempty"`
+	UTC       string `json:"utc,omitempty"`
+}
+
+// ClusterRealmSyncJob is the GET shape for a realm-sync job. PVE returns
+// Enabled / EnableNew as integers; using IntOrBool to stay safe.
+type ClusterRealmSyncJob struct {
+	ID             string    `json:"id,omitempty"`
+	Comment        string    `json:"comment,omitempty"`
+	EnableNew      IntOrBool `json:"enable-new,omitempty"`
+	Enabled        IntOrBool `json:"enabled,omitempty"`
+	LastRun        int64     `json:"last-run,omitempty"`
+	NextRun        int64     `json:"next-run,omitempty"`
+	Realm          string    `json:"realm,omitempty"`
+	RemoveVanished string    `json:"remove-vanished,omitempty"`
+	Schedule       string    `json:"schedule,omitempty"`
+	Scope          string    `json:"scope,omitempty"`
+}
+
+// ClusterRealmSyncJobOptions is the body for both POST (create) and PUT
+// (update). Pointer fields preserve PVE's defaults when unset.
+type ClusterRealmSyncJobOptions struct {
+	Comment        string `json:"comment,omitempty"`
+	EnableNew      *bool  `json:"enable-new,omitempty"` // PVE default true; pointer so unset doesn't flip
+	Enabled        *bool  `json:"enabled,omitempty"`    // PVE default true; pointer so unset doesn't flip
+	Realm          string `json:"realm,omitempty"`      // POST only — identifies the auth realm
+	RemoveVanished string `json:"remove-vanished,omitempty"`
+	Schedule       string `json:"schedule,omitempty"` // required on create
+	Scope          string `json:"scope,omitempty"`
+	Delete         string `json:"delete,omitempty"` // PUT only — comma-separated keys to clear
+}
+
 // ClusterMappings is the directory index returned by GET /cluster/mapping.
 type ClusterMappings []*ClusterMappingIndexEntry
 
