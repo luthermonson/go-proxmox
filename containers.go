@@ -165,7 +165,7 @@ func (c *Container) MoveVolume(ctx context.Context, params *VirtualMachineMoveDi
 }
 
 func (c *Container) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
-	u := url.URL{Path: fmt.Sprintf("/lxc/%s/qemu/%d/rrddata", c.Node, c.VMID)}
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/lxc/%d/rrddata", c.Node, c.VMID)}
 
 	// consolidation functions are variadic because they're optional, but Proxmox only allows one cf parameter
 	params := url.Values{}
@@ -229,8 +229,13 @@ func (c *Container) GetSnapshotConfig(ctx context.Context, snapshot string) (con
 	return config, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", c.Node, c.VMID, snapshot), &config)
 }
 
-func (c *Container) UpdateSnapshot(ctx context.Context, snapshot string) error {
-	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", c.Node, c.VMID, snapshot), nil, nil)
+// UpdateSnapshot updates a container snapshot's metadata. PVE only allows
+// changing the description on this endpoint; pass nil options to clear it.
+func (c *Container) UpdateSnapshot(ctx context.Context, snapshot string, options *ContainerSnapshotUpdateOptions) error {
+	if options == nil {
+		options = &ContainerSnapshotUpdateOptions{}
+	}
+	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", c.Node, c.VMID, snapshot), options, nil)
 }
 
 func (c *Container) Firewall(ctx context.Context) (firewall *Firewall, err error) {
@@ -400,3 +405,58 @@ func (c *Container) RemoveTag(ctx context.Context, value string) (*Task, error) 
 func (c *Container) SplitTags() {
 	c.ContainerConfig.TagsSlice = strings.Split(c.ContainerConfig.Tags, TagSeperator)
 }
+
+// Pending returns the container's staged config changes — keys whose desired
+// value differs from the running value. Empty list when the container's live
+// config matches its on-disk config.
+func (c *Container) Pending(ctx context.Context) (pending []*ContainerPending, err error) {
+	return pending, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/pending", c.Node, c.VMID), &pending)
+}
+
+// RRD asks PVE to render a single timeframe PNG on the server and returns its
+// on-disk filename (the file lives in PVE's rrdcached dir). Most callers want
+// RRDData instead for numeric series; this exists for API parity.
+func (c *Container) RRD(ctx context.Context, ds string, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrd *ContainerRRD, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/lxc/%d/rrd", c.Node, c.VMID)}
+	params := url.Values{}
+	if len(consolidationFunction) > 0 {
+		if len(consolidationFunction) != 1 {
+			return nil, fmt.Errorf("only one consolidation function allowed")
+		}
+		params.Add("cf", string(consolidationFunction[0]))
+	}
+	params.Add("ds", ds)
+	params.Add("timeframe", string(timeframe))
+	u.RawQuery = params.Encode()
+	err = c.client.Get(ctx, u.String(), &rrd)
+	return
+}
+
+// RemoteMigrate triggers a cross-cluster migration of this container. The
+// target endpoint is an API-token bundle string per PVE's pvesh docs.
+func (c *Container) RemoteMigrate(ctx context.Context, params *ContainerRemoteMigrateOptions) (task *Task, err error) {
+	var upid UPID
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/remote_migrate", c.Node, c.VMID), params, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, c.client), nil
+}
+
+// SpiceProxy returns SPICE proxy connection info for the container. PVE
+// supports SPICE primarily for QEMU VMs; LXC support depends on the
+// container's console configuration and may error on most setups.
+func (c *Container) SpiceProxy(ctx context.Context) (spice *SpiceProxy, err error) {
+	return spice, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/spiceproxy", c.Node, c.VMID), nil, &spice)
+}
+
+// FirewallLog returns the per-container firewall log entries.
+func (c *Container) FirewallLog(ctx context.Context) (entries []*FirewallLogEntry, err error) {
+	return entries, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/log", c.Node, c.VMID), &entries)
+}
+
+// FirewallRefs returns the IPSets and aliases referenceable from this
+// container's firewall rules (cluster-level + node-level + container-level).
+func (c *Container) FirewallRefs(ctx context.Context) (refs []*FirewallRef, err error) {
+	return refs, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/refs", c.Node, c.VMID), &refs)
+}
+

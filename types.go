@@ -1046,6 +1046,105 @@ type ContainerDeleteOptions struct {
 	DestroyUnreferencedDisks IntOrBool `json:"destroy-unreferenced-disks,omitempty"`
 }
 
+// ContainerRemoteMigrateOptions configures POST /nodes/{node}/lxc/{vmid}/remote_migrate
+// (cross-cluster migration). TargetEndpoint is the API-token bundle string PVE
+// accepts ("apitoken=PVEAPIToken=... host=... fingerprint=..."); see the
+// pvesh docs for the exact shape.
+type ContainerRemoteMigrateOptions struct {
+	TargetEndpoint string    `json:"target-endpoint"`
+	TargetBridge   string    `json:"target-bridge"`            // "src=tgt,src2=tgt2" map
+	TargetStorage  string    `json:"target-storage"`           // "src=tgt,src2=tgt2" map
+	TargetVMID     int       `json:"target-vmid,omitempty"`
+	BWLimit        uint64    `json:"bwlimit,omitempty"`
+	Delete         IntOrBool `json:"delete,omitempty"`
+	Online         IntOrBool `json:"online,omitempty"`
+	Restart        IntOrBool `json:"restart,omitempty"`
+	Timeout        uint64    `json:"timeout,omitempty"`
+}
+
+// ContainerPending describes a single staged config change returned by
+// GET /nodes/{node}/lxc/{vmid}/pending. Value is the currently active value;
+// Pending is the value queued for the next start. Delete is set when the key
+// is queued for removal.
+type ContainerPending struct {
+	Key     string      `json:"key"`
+	Value   interface{} `json:"value,omitempty"`
+	Pending interface{} `json:"pending,omitempty"`
+	Delete  int         `json:"delete,omitempty"`
+}
+
+// ContainerRRD is the response from GET /nodes/{node}/lxc/{vmid}/rrd. PVE
+// renders a single PNG on the server and returns its on-disk filename;
+// callers typically want RRDData instead for usable numeric series.
+type ContainerRRD struct {
+	Filename string `json:"filename"`
+}
+
+// SpiceProxy carries the SPICE connection info returned by /spiceproxy.
+// The field names match the keys remote-viewer expects in its .vv config.
+type SpiceProxy struct {
+	Type             string `json:"type"`
+	Host             string `json:"host"`
+	Port             string `json:"port,omitempty"`
+	Password         string `json:"password,omitempty"`
+	Proxy            string `json:"proxy,omitempty"`
+	Title            string `json:"title,omitempty"`
+	TLSPort          string `json:"tls-port,omitempty"`
+	CA               string `json:"ca,omitempty"`
+	HostSubject      string `json:"host-subject,omitempty"`
+	DeleteThisFile   string `json:"delete-this-file,omitempty"`
+	SecureAttention  string `json:"secure-attention,omitempty"`
+	ReleaseCursor    string `json:"release-cursor,omitempty"`
+	ToggleFullscreen string `json:"toggle-fullscreen,omitempty"`
+}
+
+// FirewallLogEntry is one line from GET /firewall/log. PVE returns each entry
+// as a [line-number, text] JSON tuple — the custom UnmarshalJSON below
+// flattens that into named fields.
+type FirewallLogEntry struct {
+	LineNum int    `json:"n"`
+	Text    string `json:"t"`
+}
+
+func (f *FirewallLogEntry) UnmarshalJSON(b []byte) error {
+	// Tuple form (current PVE): [n, "text"]
+	var tuple []interface{}
+	if err := json.Unmarshal(b, &tuple); err == nil && len(tuple) == 2 {
+		if n, ok := tuple[0].(float64); ok {
+			f.LineNum = int(n)
+		}
+		if t, ok := tuple[1].(string); ok {
+			f.Text = t
+		}
+		return nil
+	}
+	// Object fallback in case PVE ever switches shape.
+	aux := struct {
+		N int    `json:"n"`
+		T string `json:"t"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	f.LineNum = aux.N
+	f.Text = aux.T
+	return nil
+}
+
+// FirewallRef is one entry from GET /firewall/refs — a referencable IPSet or
+// alias visible at this container/VM's scope.
+type FirewallRef struct {
+	Type    string `json:"type"` // "alias" or "ipset"
+	Name    string `json:"name"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// ContainerSnapshotUpdateOptions is the body for PUT /snapshot/{name}/config.
+// PVE accepts only the description field on this endpoint.
+type ContainerSnapshotUpdateOptions struct {
+	Description string `json:"description,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"` // FIXME(issue-199): PVE default = datacenter/storage clone limit; use *uint64 so unset doesn't impose 0.
