@@ -1096,4 +1096,61 @@ func clusterBackup() {
 		Delete("^/cluster/notifications/endpoints/webhook/wh1$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// --- /cluster/jobs -------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/jobs$").
+		Reply(200).
+		JSON(`{"data": [{"subdir": "realm-sync"}, {"subdir": "schedule-analyze"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/jobs/schedule-analyze").
+		Reply(200).
+		JSON(`{"data": [
+			{"timestamp": 1715731200, "utc": "2026-05-15 00:00:00"},
+			{"timestamp": 1715817600, "utc": "2026-05-16 00:00:00"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/jobs/realm-sync$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "ldap-sync", "realm": "ldap1", "schedule": "daily", "enabled": 1, "enable-new": 1, "scope": "both"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/jobs/realm-sync/ldap-sync$").
+		Reply(200).
+		JSON(`{"data": {
+			"id": "ldap-sync",
+			"realm": "ldap1",
+			"schedule": "daily",
+			"enabled": 1,
+			"enable-new": 1,
+			"scope": "both",
+			"remove-vanished": "none",
+			"comment": "daily LDAP sync"
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/jobs/realm-sync/ldap-sync$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/jobs/realm-sync/ldap-sync$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/jobs/realm-sync/ldap-sync$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }
