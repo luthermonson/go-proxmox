@@ -979,6 +979,33 @@ type VirtualMachineConfig struct {
 	IPConfig9 string            `json:"ipconfig9,omitempty"`
 }
 
+// indexedDeviceMaps lists the JSON-key prefixes that get routed into a
+// per-prefix helper map on VirtualMachineConfig. Proxmox accepts more indices
+// for each device type than the explicit IDE0..VirtIO15 fields cover (e.g.
+// net0..net31, scsi0..scsi30, unused0..unused255), so the maps are the
+// authoritative source of truth and the explicit fields stay as a
+// compatibility mirror for indices 0..9. Plan: mark the explicit fields
+// // Deprecated in v0.7.x and drop them in a later release.
+//
+// Order does not matter; lookups are by exact prefix followed by a pure-digit
+// suffix, which means "scsihw" and the bare "numa" scalar do not collide.
+func (vmc *VirtualMachineConfig) indexedDeviceMaps() map[string]*map[string]string {
+	return map[string]*map[string]string{
+		"ide":      &vmc.IDEs,
+		"scsi":     &vmc.SCSIs,
+		"sata":     &vmc.SATAs,
+		"virtio":   &vmc.VirtIOs,
+		"unused":   &vmc.Unuseds,
+		"net":      &vmc.Nets,
+		"numa":     &vmc.Numas,
+		"hostpci":  &vmc.HostPCIs,
+		"serial":   &vmc.Serials,
+		"usb":      &vmc.USBs,
+		"parallel": &vmc.Parallels,
+		"ipconfig": &vmc.IPConfigs,
+	}
+}
+
 func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
 	type tmpVirtualMachineConfig VirtualMachineConfig
 
@@ -997,21 +1024,56 @@ func (vmc *VirtualMachineConfig) UnmarshalJSON(data []byte) error {
 	// Split the tags on TagSeparator and populate TagsSlice
 	vmc.TagsSlice = strings.Split(vmc.Tags, TagSeperator)
 
-	// Populate the indexed fields into helper maps
-	vmc.MergeIDEs()
-	vmc.MergeSCSIs()
-	vmc.MergeSATAs()
-	vmc.MergeVirtIOs()
-	vmc.MergeUnuseds()
-	vmc.MergeNets()
-	vmc.MergeNumas()
-	vmc.MergeHostPCIs()
-	vmc.MergeSerials()
-	vmc.MergeUSBs()
-	vmc.MergeParallels()
-	vmc.MergeIPConfigs()
+	// Walk the raw JSON object once and route every "<prefix><digits>" key
+	// into its target map. This captures indices Proxmox returns beyond the
+	// explicit struct fields (e.g. net10..net31, scsi10..scsi30).
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	routes := vmc.indexedDeviceMaps()
+	for k, v := range raw {
+		prefix, ok := indexedDeviceKey(k)
+		if !ok {
+			continue
+		}
+		target, ok := routes[prefix]
+		if !ok {
+			continue
+		}
+		var s string
+		if err := json.Unmarshal(v, &s); err != nil {
+			// non-string indexed value — skip rather than fail the whole config
+			continue
+		}
+		if *target == nil {
+			*target = make(map[string]string)
+		}
+		(*target)[k] = s
+	}
 
 	return nil
+}
+
+// indexedDeviceKey returns ("net", true) for "net10" and ("", false) for keys
+// like "scsihw" or "numa" that share a prefix but lack a pure-digit suffix.
+func indexedDeviceKey(k string) (prefix string, ok bool) {
+	for i := 0; i < len(k); i++ {
+		c := k[i]
+		if c >= '0' && c <= '9' {
+			if i == 0 {
+				return "", false
+			}
+			// rest of the string must be all digits
+			for j := i + 1; j < len(k); j++ {
+				if k[j] < '0' || k[j] > '9' {
+					return "", false
+				}
+			}
+			return k[:i], true
+		}
+	}
+	return "", false
 }
 
 type VirtualMachineMigrateOptions struct {
@@ -1357,6 +1419,17 @@ type ContainerConfig struct {
 	Unused9      string            `json:"unused9,omitempty"`
 }
 
+// indexedDeviceMaps mirrors VirtualMachineConfig.indexedDeviceMaps for the
+// container side: dev0..dev255, mp0..mp255, net0..net31, unused0..unused255.
+func (cc *ContainerConfig) indexedDeviceMaps() map[string]*map[string]string {
+	return map[string]*map[string]string{
+		"dev":    &cc.Devs,
+		"mp":     &cc.Mps,
+		"net":    &cc.Nets,
+		"unused": &cc.Unuseds,
+	}
+}
+
 func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
 	type tmpContainerConfig ContainerConfig
 
@@ -1374,11 +1447,31 @@ func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
 	// Split the tags on TagSeparator and populate TagsSlice
 	cc.TagsSlice = strings.Split(cc.Tags, TagSeperator)
 
-	// Populate the indexed fields into helper maps
-	cc.MergeDevs()
-	cc.MergeMps()
-	cc.MergeNets()
-	cc.MergeUnuseds()
+	// Walk the raw JSON object once and route every "<prefix><digits>" key
+	// into its target map; covers indices beyond the explicit Net0..Net9 etc.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	routes := cc.indexedDeviceMaps()
+	for k, v := range raw {
+		prefix, ok := indexedDeviceKey(k)
+		if !ok {
+			continue
+		}
+		target, ok := routes[prefix]
+		if !ok {
+			continue
+		}
+		var s string
+		if err := json.Unmarshal(v, &s); err != nil {
+			continue
+		}
+		if *target == nil {
+			*target = make(map[string]string)
+		}
+		(*target)[k] = s
+	}
 
 	return nil
 }

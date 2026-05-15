@@ -39,6 +39,57 @@ func virtualMachines() {
     }
 }`)
 
+	// GET /nodes/{node}/qemu/102/config — high-index device entries plus
+	// prefix-collision fields (scsihw, bare numa). Issue #211 regression coverage:
+	// proves the UnmarshalJSON router routes net15..net31, scsi30, unused255,
+	// hostpci15, ipconfig20 into the maps and does NOT route scsihw or numa.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/102/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "digest": "abc123def456beyondten",
+        "name": "wide",
+        "vmid": 102,
+        "cores": 4,
+        "memory": 4096,
+        "ostype": "l26",
+        "scsihw": "virtio-scsi-pci",
+        "numa": 1,
+        "scsi0": "local-lvm:vm-102-disk-0,size=32G",
+        "scsi30": "local-lvm:vm-102-disk-30,size=32G",
+        "net0": "virtio=00:00:00:00:00:00,bridge=vmbr0",
+        "net15": "virtio=00:00:00:00:00:15,bridge=vmbr15",
+        "net31": "virtio=00:00:00:00:00:31,bridge=vmbr31",
+        "unused15": "local-lvm:vm-102-unused-15",
+        "unused255": "local-lvm:vm-102-unused-255",
+        "hostpci15": "0000:0f:00.0",
+        "numa0": "cpus=0-1,memory=2048",
+        "ipconfig20": "ip=10.0.0.20/24,gw=10.0.0.1"
+    }
+}`)
+
+	// GET /nodes/node1/qemu/102/status/current — minimal status payload so
+	// node.VirtualMachine(ctx, 102) succeeds before fetching /config.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/102/status/current$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "vmid": 102,
+        "name": "wide",
+        "status": "running",
+        "uptime": 1234,
+        "cpus": 4,
+        "maxmem": 4294967296,
+        "mem": 0,
+        "maxdisk": 34359738368,
+        "disk": 0
+    }
+}`)
+
 	// GET /nodes/{node}/qemu/{vmid}/status/current - VM status
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/qemu/101/status/current$").
