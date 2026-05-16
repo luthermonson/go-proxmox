@@ -878,6 +878,132 @@ func virtualMachines() {
     "data": "UPID:node1:0000000F:0000000F:0000000F:qmdelsnapshot:100:root@pam:"
 }`)
 
+	// GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}/config
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/snapshot/snap1/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "description": "Before upgrade",
+        "parent": "snap0",
+        "cores": 4,
+        "memory": 8192,
+        "name": "snap1"
+    }
+}`)
+
+	// PUT /nodes/{node}/qemu/{vmid}/snapshot/{snapname}/config
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/100/snapshot/snap1/config$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// ----- Per-VM firewall (vmid 100) -----
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "rules": [{"pos": 0, "action": "ACCEPT", "type": "in"}],
+        "aliases": [{"name": "internal", "cidr": "10.0.0.0/8"}],
+        "ipset": [{"name": "blocked", "comment": "blocked clients"}]
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall/rules/0$").
+		Reply(200).
+		JSON(`{
+    "data": {"pos": 0, "action": "ACCEPT", "type": "in", "enable": 1, "comment": "allow http"}
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall/log").
+		Reply(200).
+		JSON(`{
+    "data": [
+        [0, "block: IN=eth0 SRC=1.2.3.4"],
+        [1, "block: IN=eth0 SRC=5.6.7.8"]
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall/refs").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"type": "alias", "name": "internal", "comment": "vm-local"},
+        {"type": "ipset", "name": "blocked"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall/aliases$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "internal", "cidr": "10.0.0.0/8", "comment": "RFC1918"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/100/firewall/aliases$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/firewall/aliases/internal$").
+		Reply(200).
+		JSON(`{
+    "data": {"name": "internal", "cidr": "10.0.0.0/8", "comment": "RFC1918"}
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/100/firewall/aliases/internal$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/nodes/node1/qemu/100/firewall/aliases/internal$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// ----- Cloud-init (vmid 100) -----
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/cloudinit$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"key": "ipconfig0", "value": "ip=10.0.0.10/24,gw=10.0.0.1", "pending": "ip=10.0.0.11/24,gw=10.0.0.1"},
+        {"key": "sshkeys", "value": "ssh-rsa AAAA...old", "pending": "ssh-rsa AAAA...new"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/100/cloudinit$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/cloudinit/dump").
+		Reply(200).
+		JSON(`{"data": "#cloud-config\nhostname: node1\n"}`)
+
 	// ----- QEMU guest-agent endpoints (vmid 101) -----
 	// All synchronous QGA wrappers return {"data": {"result": ...}} except
 	// file-read (top-level data) and file-write (null).
