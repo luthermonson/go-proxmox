@@ -238,4 +238,54 @@ func storage() {
         ]
     }
 }`)
+
+	// --- /nodes/{node}/storage/{storage}/content extras ---------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local-lvm/content$").
+		Reply(200).
+		JSON(`{"data": "local-lvm:vm-100-disk-1"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/storage/local/content/local:backup/").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local-lvm/content/local-lvm:vm-100-disk-0$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000006:00000006:00000006:imgcopy:vm-100-disk-0:root@pam:"}`)
+
+	// --- OCI registry pull --------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/storage/local/oci-registry-pull$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000007:00000007:00000007:ocipull:alpine:root@pam:"}`)
+
+	// --- file-restore -------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/pbs/file-restore/list").
+		Reply(200).
+		JSON(`{"data": [
+			{"filepath": "/etc/hostname", "type": "f", "size": 12, "mtime": 1715000000},
+			{"filepath": "/etc/network", "type": "d", "leaf": 0}
+		]}`)
+
+	// --- rrddata ------------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/rrddata").
+		Reply(200).
+		JSON(`{"data": [
+			{"time": 1715000000, "used": 1000000, "total": 2000000},
+			{"time": 1715000060, "used": 1100000, "total": 2000000}
+		]}`)
 }
