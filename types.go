@@ -2713,7 +2713,7 @@ type SDNZone struct {
 	IPAM       string   `json:"ipam,omitempty"`
 	MTU        int      `json:"mtu,omitempty"`
 	Nodes      []string `json:"nodes,omitempty"`
-	Peers      string   `json:"peers,omitempty"`
+	Peers      []string `json:"peers,omitempty"`
 	Pending    bool     `json:"pending,omitempty"`
 	ReverseDNS string   `json:"reversedns,omitempty"`
 	State      string   `json:"state,omitempty"`
@@ -2724,6 +2724,7 @@ func (z *SDNZone) UnmarshalJSON(b []byte) error {
 	var raw struct {
 		sdnZone
 		Nodes json.RawMessage `json:"nodes,omitempty"`
+		Peers json.RawMessage `json:"peers,omitempty"`
 	}
 
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -2731,23 +2732,38 @@ func (z *SDNZone) UnmarshalJSON(b []byte) error {
 	}
 
 	*z = SDNZone(raw.sdnZone)
-	if len(raw.Nodes) == 0 || bytes.Equal(raw.Nodes, []byte("null")) {
-		return nil
-	}
 
-	var nodes []string
-	if err := json.Unmarshal(raw.Nodes, &nodes); err == nil {
-		z.Nodes = nodes
-		return nil
-	}
-
-	var nodeList string
-	if err := json.Unmarshal(raw.Nodes, &nodeList); err != nil {
+	nodes, err := unmarshalCommaSeparatedOrSlice(raw.Nodes)
+	if err != nil {
 		return err
 	}
+	z.Nodes = nodes
 
-	z.Nodes = splitCommaSeparatedList(nodeList)
+	peers, err := unmarshalCommaSeparatedOrSlice(raw.Peers)
+	if err != nil {
+		return err
+	}
+	z.Peers = peers
+
 	return nil
+}
+
+func unmarshalCommaSeparatedOrSlice(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return nil, nil
+	}
+
+	var list []string
+	if err := json.Unmarshal(raw, &list); err == nil {
+		return list, nil
+	}
+
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+
+	return splitCommaSeparatedList(s), nil
 }
 
 func splitCommaSeparatedList(s string) []string {
