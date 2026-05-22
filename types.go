@@ -2713,9 +2713,57 @@ type SDNZone struct {
 	IPAM       string   `json:"ipam,omitempty"`
 	MTU        int      `json:"mtu,omitempty"`
 	Nodes      []string `json:"nodes,omitempty"`
+	Peers      string   `json:"peers,omitempty"`
 	Pending    bool     `json:"pending,omitempty"`
 	ReverseDNS string   `json:"reversedns,omitempty"`
 	State      string   `json:"state,omitempty"`
+}
+
+func (z *SDNZone) UnmarshalJSON(b []byte) error {
+	type sdnZone SDNZone
+	var raw struct {
+		sdnZone
+		Nodes json.RawMessage `json:"nodes,omitempty"`
+	}
+
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	*z = SDNZone(raw.sdnZone)
+	if len(raw.Nodes) == 0 || bytes.Equal(raw.Nodes, []byte("null")) {
+		return nil
+	}
+
+	var nodes []string
+	if err := json.Unmarshal(raw.Nodes, &nodes); err == nil {
+		z.Nodes = nodes
+		return nil
+	}
+
+	var nodeList string
+	if err := json.Unmarshal(raw.Nodes, &nodeList); err != nil {
+		return err
+	}
+
+	z.Nodes = splitCommaSeparatedList(nodeList)
+	return nil
+}
+
+func splitCommaSeparatedList(s string) []string {
+	if s == "" {
+		return nil
+	}
+
+	parts := strings.Split(s, ",")
+	list := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if v := strings.TrimSpace(part); v != "" {
+			list = append(list, v)
+		}
+	}
+
+	return list
 }
 
 type SDNZoneOptions struct {
