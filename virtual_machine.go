@@ -470,6 +470,23 @@ func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err e
 	return true, nil
 }
 
+// MigratePreconditions is the pre-flight sibling of Migrate: it returns
+// whether the VM is movable, which target nodes accept it, and what local
+// state (disks, PCI/USB resources, HA dependencies) would have to be moved
+// along with it. target is optional — pass "" to query against every node
+// in the cluster; pass a node name to scope the answer to just that target.
+// No task is created.
+func (v *VirtualMachine) MigratePreconditions(ctx context.Context, target string) (preconditions *VirtualMachineMigratePreconditions, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/migrate", v.Node, v.VMID)}
+	if target != "" {
+		params := url.Values{}
+		params.Add("target", target)
+		u.RawQuery = params.Encode()
+	}
+	err = v.client.Get(ctx, u.String(), &preconditions)
+	return
+}
+
 func (v *VirtualMachine) Migrate(
 	ctx context.Context,
 	params *VirtualMachineMigrateOptions,
@@ -484,6 +501,22 @@ func (v *VirtualMachine) Migrate(
 		return nil, err
 	}
 
+	return NewTask(upid, v.client), nil
+}
+
+// RemoteMigrate triggers a cross-cluster migration of this VM. The target
+// endpoint is an API-token bundle string per PVE's pvesh docs (e.g.
+// "apitoken=PVEAPIToken=user@pam!tok=secret host=target.example.com
+// fingerprint=AA:BB:..."). EXPERIMENTAL upstream — the schema and behavior
+// may change between PVE versions.
+func (v *VirtualMachine) RemoteMigrate(ctx context.Context, params *VirtualMachineRemoteMigrateOptions) (task *Task, err error) {
+	var upid UPID
+	if params == nil {
+		params = &VirtualMachineRemoteMigrateOptions{}
+	}
+	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/remote_migrate", v.Node, v.VMID), params, &upid); err != nil {
+		return nil, err
+	}
 	return NewTask(upid, v.client), nil
 }
 
@@ -806,6 +839,26 @@ func (v *VirtualMachine) UpdateSnapshot(ctx context.Context, snapshot string, op
 		options = &VirtualMachineSnapshotUpdateOptions{}
 	}
 	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), options, nil)
+}
+
+// RRD asks PVE to render a single-datasource PNG on the server and returns
+// its on-disk filename (the file lives in PVE's rrdcached directory). Most
+// callers want RRDData instead for numeric series; this exists for API
+// parity with the web UI's graph rendering.
+func (v *VirtualMachine) RRD(ctx context.Context, ds string, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrd *VirtualMachineRRD, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrd", v.Node, v.VMID)}
+	params := url.Values{}
+	if len(consolidationFunction) > 0 {
+		if len(consolidationFunction) != 1 {
+			return nil, fmt.Errorf("only one consolidation function allowed")
+		}
+		params.Add("cf", string(consolidationFunction[0]))
+	}
+	params.Add("ds", ds)
+	params.Add("timeframe", string(timeframe))
+	u.RawQuery = params.Encode()
+	err = v.client.Get(ctx, u.String(), &rrd)
+	return
 }
 
 // RRDData takes a timeframe enum and an optional consolidation function
