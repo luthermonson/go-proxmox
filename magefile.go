@@ -11,6 +11,9 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 
+	//mage:import endpoints
+	"github.com/luthermonson/go-proxmox/mage/endpoints"
+
 	//mage:import install
 	"github.com/luthermonson/go-proxmox/mage/install"
 
@@ -34,8 +37,9 @@ var (
 )
 
 var Aliases = map[string]interface{}{
-	"test":    test.Unit,
-	"install": install.Dependencies,
+	"test":      test.Unit,
+	"install":   install.Dependencies,
+	"endpoints": endpoints.Sync,
 }
 
 // run everything for ci process (install deps, lint, coverage, build)
