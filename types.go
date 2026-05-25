@@ -3486,3 +3486,69 @@ type VirtualMachineMigrationTunnelOptions struct {
 	// and availability for. Optional.
 	Storages string `json:"storages,omitempty"`
 }
+
+// --- /nodes/{node}/ceph/{mon,mgr,mds} daemon registries -------------------
+//
+// These types are the per-node daemon-registry entries returned by the
+// "list" GETs under /nodes/{node}/ceph/{mon,mgr,mds}. They are distinct
+// from the cluster-wide CephMon (used inside ClusterCephStatus.Monmap.Mons)
+// and CephMgrMap (the active manager map in cluster status) — those describe
+// what the Ceph cluster sees, while these describe what PVE has configured
+// on this node (including stopped/unknown daemons).
+
+// CephMonDaemon is one row from GET /nodes/{node}/ceph/mon — the per-node
+// monitor registry entry. "name" is the monid; "state" mixes cluster
+// reality (running) with PVE config state (stopped/unknown).
+type CephMonDaemon struct {
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Quorum           IntOrBool `json:"quorum,omitempty"`
+	Rank             int       `json:"rank,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMonOptions is the POST body for /nodes/{node}/ceph/mon/{monid}. monid
+// is set via the URL path; MonAddress overrides the autodetected monitor IP
+// address(es), must be on Ceph's public network.
+type CephMonOptions struct {
+	MonAddress string `json:"mon-address,omitempty"`
+}
+
+// CephMgrDaemon is one row from GET /nodes/{node}/ceph/mgr.
+type CephMgrDaemon struct {
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMDSDaemon is one row from GET /nodes/{node}/ceph/mds.
+type CephMDSDaemon struct {
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	FSName           string    `json:"fs_name,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Rank             int       `json:"rank,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	StandbyReplay    IntOrBool `json:"standby_replay,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMDSOptions is the POST body for /nodes/{node}/ceph/mds/{name}. Hot
+// standby has the daemon poll and replay an active MDS' log for faster
+// failover at the cost of always-on idle resources.
+type CephMDSOptions struct {
+	HotStandby IntOrBool `json:"hotstandby,omitempty"`
+}
