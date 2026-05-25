@@ -937,7 +937,7 @@ func access() {
 }`)
 
 	gock.New(config.C.URI).
-		Delete("^/access/users/userid/tfa").
+		Put("^/access/users/userid/unlock-tfa").
 		Reply(200).
 		JSON(``)
 

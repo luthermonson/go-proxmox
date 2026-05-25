@@ -268,7 +268,7 @@ func (u *User) GetTFA(ctx context.Context) (tfa TFA, err error) {
 }
 
 func (u *User) UnlockTFA(ctx context.Context) error {
-	return u.client.Delete(ctx, fmt.Sprintf("/access/users/%s/tfa", u.UserID), nil)
+	return u.client.Put(ctx, fmt.Sprintf("/access/users/%s/unlock-tfa", u.UserID), nil, nil)
 }
 
 func (c *Client) Role(ctx context.Context, roleid string) (role Permission, err error) {
