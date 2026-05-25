@@ -619,29 +619,44 @@ func (n *Node) WakeOnLAN(ctx context.Context) (mac string, err error) {
 // reports per-node runtime state (last sync, last duration, fail count, etc.)
 // for each job that targets or originates on this node. guest filters to a
 // specific VMID; pass 0 for all.
-func (n *Node) Replications(ctx context.Context, guest int) (status []*NodeReplicationStatus, err error) {
+func (n *Node) Replications(ctx context.Context, guest int) (jobs []*NodeReplicationJob, err error) {
 	path := fmt.Sprintf("/nodes/%s/replication", n.Name)
 	if guest != 0 {
 		path += fmt.Sprintf("?guest=%d", guest)
 	}
-	err = n.client.Get(ctx, path, &status)
-	return
+	if err = n.client.Get(ctx, path, &jobs); err != nil {
+		return nil, err
+	}
+	for _, j := range jobs {
+		j.client = n.client
+		j.Node = n.Name
+	}
+	return jobs, nil
 }
 
-// ReplicationStatus returns runtime status for a single replication job.
+// Replication returns a handle to a single replication job on this node. It
+// does not perform an API call; use the returned job's methods to query or
+// act on the underlying /nodes/{node}/replication/{id}/* endpoints.
+func (n *Node) Replication(id string) *NodeReplicationJob {
+	return &NodeReplicationJob{
+		client: n.client,
+		Node:   n.Name,
+		ID:     id,
+	}
+}
+
+// Status refreshes runtime state for this replication job in-place.
 // GET /nodes/{node}/replication/{id}/status. The /replication/{id} root is
 // just a tree index and is intentionally not wrapped.
-func (n *Node) ReplicationStatus(ctx context.Context, id string) (status *NodeReplicationStatus, err error) {
-	status = &NodeReplicationStatus{}
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/replication/%s/status", n.Name, id), status)
-	return
+func (r *NodeReplicationJob) Status(ctx context.Context) error {
+	return r.client.Get(ctx, fmt.Sprintf("/nodes/%s/replication/%s/status", r.Node, r.ID), r)
 }
 
-// ReplicationLog returns the job's log lines. start/limit are optional
-// pagination — pass 0 for default. PVE returns a list of {n, t} entries
-// where n is line number and t is the line text.
-func (n *Node) ReplicationLog(ctx context.Context, id string, start, limit int) (entries []*LogEntry, err error) {
-	path := fmt.Sprintf("/nodes/%s/replication/%s/log", n.Name, id)
+// Log returns the job's log lines. start/limit are optional pagination — pass
+// 0 for default. PVE returns a list of {n, t} entries where n is line number
+// and t is the line text.
+func (r *NodeReplicationJob) Log(ctx context.Context, start, limit int) (entries []*LogEntry, err error) {
+	path := fmt.Sprintf("/nodes/%s/replication/%s/log", r.Node, r.ID)
 	q := ""
 	if start > 0 {
 		q = fmt.Sprintf("start=%d", start)
@@ -655,17 +670,17 @@ func (n *Node) ReplicationLog(ctx context.Context, id string, start, limit int) 
 	if q != "" {
 		path += "?" + q
 	}
-	err = n.client.Get(ctx, path, &entries)
+	err = r.client.Get(ctx, path, &entries)
 	return
 }
 
-// ReplicationScheduleNow asks PVE to run a replication job as soon as possible
+// ScheduleNow asks PVE to run this replication job as soon as possible
 // (bypassing its schedule). POST /nodes/{node}/replication/{id}/schedule_now —
 // returns a Task UPID.
-func (n *Node) ReplicationScheduleNow(ctx context.Context, id string) (*Task, error) {
+func (r *NodeReplicationJob) ScheduleNow(ctx context.Context) (*Task, error) {
 	var upid UPID
-	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/replication/%s/schedule_now", n.Name, id), nil, &upid); err != nil {
+	if err := r.client.Post(ctx, fmt.Sprintf("/nodes/%s/replication/%s/schedule_now", r.Node, r.ID), nil, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, n.client), nil
+	return NewTask(upid, r.client), nil
 }
