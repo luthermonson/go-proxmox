@@ -137,6 +137,7 @@ func Coverage() error {
 	}
 
 	covered := map[string]struct{}{}
+	var unmatched []extractedCall
 	matched, missed := 0, 0
 	for _, c := range calls {
 		k := key(c.Method, c.Path)
@@ -145,8 +146,15 @@ func Coverage() error {
 			covered[k] = struct{}{}
 		} else {
 			missed++
+			unmatched = append(unmatched, c)
 		}
 	}
+	sort.Slice(unmatched, func(i, j int) bool {
+		if unmatched[i].File != unmatched[j].File {
+			return unmatched[i].File < unmatched[j].File
+		}
+		return unmatched[i].Line < unmatched[j].Line
+	})
 
 	var uncovered []string
 	for _, e := range schema {
@@ -208,6 +216,13 @@ func Coverage() error {
 		len(covered), len(schema), pct(len(covered), len(schema)))
 	fmt.Println()
 	fmt.Print(areaBuf.String())
+	if len(unmatched) > 0 {
+		fmt.Printf("\ncall sites that don't resolve to a schema endpoint (%d):\n", len(unmatched))
+		fmt.Println("  (real coverage findings — either stale Go code, or one Go call covering multiple schema endpoints)")
+		for _, c := range unmatched {
+			fmt.Printf("  %s:%d  %s %s\n", c.File, c.Line, c.Method, c.Path)
+		}
+	}
 	fmt.Printf("\nwrote:\n  %s/coverage.txt           # %d uncovered endpoints\n  %s/coverage_by_area.txt\n",
 		cacheDir, len(uncovered), cacheDir)
 	return nil
@@ -284,16 +299,23 @@ var (
 	sprintfRE = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	braceRE   = regexp.MustCompile(`\{[^}]+\}`)
 	fmtVerbRE = regexp.MustCompile(`%[sdvqxXt]`)
+	// PVE volume identifiers serialize as `<storage>:<type>/<filename>` and are
+	// represented as a single `{volume}` segment in the schema. Go code that
+	// builds the path via `fmt.Sprintf(...content/%s:%s/%s, ...)` normalizes to
+	// `.../content/{}:{}/{}` and must collapse to `.../content/{}` to match.
+	volidRE = regexp.MustCompile(`\{\}:\{\}/\{\}`)
 )
 
 // normalizePath canonicalizes both schema and Go forms so they can be joined:
-// {var}/%s/%d → {}; query string and trailing slash stripped.
+// {var}/%s/%d → {}; volid-style {}:{}/{}  → {}; query string and trailing
+// slash stripped.
 func normalizePath(p string) string {
 	if i := strings.IndexByte(p, '?'); i >= 0 {
 		p = p[:i]
 	}
 	p = braceRE.ReplaceAllString(p, "{}")
 	p = fmtVerbRE.ReplaceAllString(p, "{}")
+	p = volidRE.ReplaceAllString(p, "{}")
 	if len(p) > 1 {
 		p = strings.TrimRight(p, "/")
 	}
