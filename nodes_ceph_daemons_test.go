@@ -36,11 +36,12 @@ func TestNode_CreateCephMon(t *testing.T) {
 func TestNode_DeleteCephMon(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	task, err := cephNode().DeleteCephMon(context.Background(), "node1")
+	task, err := cephNode().CephMon("node1").Delete(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroymon", task.Type)
 
-	_, err = cephNode().DeleteCephMon(context.Background(), "")
+	// empty monid → error
+	_, err = cephNode().CephMon("").Delete(context.Background())
 	assert.NotNil(t, err)
 }
 
@@ -70,11 +71,11 @@ func TestNode_CreateCephMgr(t *testing.T) {
 func TestNode_DeleteCephMgr(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	task, err := cephNode().DeleteCephMgr(context.Background(), "node1")
+	task, err := cephNode().CephMgr("node1").Delete(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroymgr", task.Type)
 
-	_, err = cephNode().DeleteCephMgr(context.Background(), "")
+	_, err = cephNode().CephMgr("").Delete(context.Background())
 	assert.NotNil(t, err)
 }
 
@@ -105,10 +106,10 @@ func TestNode_CreateCephMDS(t *testing.T) {
 func TestNode_DeleteCephMDS(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	task, err := cephNode().DeleteCephMDS(context.Background(), "node1")
+	task, err := cephNode().CephMDS("node1").Delete(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroymds", task.Type)
 
-	_, err = cephNode().DeleteCephMDS(context.Background(), "")
+	_, err = cephNode().CephMDS("").Delete(context.Background())
 	assert.NotNil(t, err)
 }

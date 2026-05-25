@@ -47,15 +47,15 @@ func TestNode_DeleteCephFS(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 
-	task, err := cephNode().DeleteCephFS(context.Background(), "cephfs", true, true)
+	task, err := cephNode().CephFS("cephfs").Delete(context.Background(), true, true)
 	require.NoError(t, err)
 	assert.Equal(t, "cephfs-destroy", task.Type)
 
 	// no cleanup flags
-	task, err = cephNode().DeleteCephFS(context.Background(), "cephfs", false, false)
+	task, err = cephNode().CephFS("cephfs").Delete(context.Background(), false, false)
 	require.NoError(t, err)
 	assert.NotNil(t, task)
 
-	_, err = cephNode().DeleteCephFS(context.Background(), "", false, false)
+	_, err = cephNode().CephFS("").Delete(context.Background(), false, false)
 	assert.Error(t, err)
 }

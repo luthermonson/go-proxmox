@@ -428,14 +428,17 @@ type CephMonMap struct {
 	MinMonRelease     int             `json:"min_mon_release"`
 	MinMonReleaseName string          `json:"min_mon_release_name"`
 	Modified          time.Time       `json:"modified"`
-	Mons              []CephMon       `json:"mons"`
+	Mons              []ClusterCephMon `json:"mons"`
 	Quorum            []int           `json:"quorum"`
 	RemovedRanks      string          `json:"removed_ranks: "`
 	StretchMode       bool            `json:"stretch_mode"`
 	TiebreakerMon     string          `json:"tiebreaker_mon"`
 }
 
-type CephMon struct {
+// ClusterCephMon is the cluster-status snapshot of a monitor (used inside
+// ClusterCephStatus.Monmap.Mons). It's distinct from *CephMon, the per-node
+// monitor handle returned by Node.CephMon(name) that carries operations.
+type ClusterCephMon struct {
 	Addr          string `json:"addr"`
 	CrushLocation string `json:"crush_location"`
 	Name          string `json:"name"`
@@ -566,11 +569,13 @@ type CephMgrAlwaysOnModules struct {
 	Squid   []string `json:"squid"`
 }
 
-// CephFS is a single entry from the list at GET /nodes/{node}/ceph/fs. A
-// CephFS may have multiple data pools — DataPool/MetadataPool are the legacy
-// scalar fields (kept for backwards compatibility) and DataPools/DataPoolIDs
-// expose the full set.
+// CephFS is a single entry from the list at GET /nodes/{node}/ceph/fs AND the
+// operations handle returned by Node.CephFS(name). A CephFS may have multiple
+// data pools — DataPool/MetadataPool are the legacy scalar fields (kept for
+// backwards compatibility) and DataPools/DataPoolIDs expose the full set.
 type CephFS struct {
+	client         *Client
+	Node           string   `json:"-"`
 	Name           string   `json:"name"`
 	MetadataPool   string   `json:"metadata_pool"`
 	MetadataPoolID int      `json:"metadata_pool_id,omitempty"`
@@ -660,10 +665,13 @@ type CephCmdSafety struct {
 
 // --- Ceph pool (per-node /nodes/{node}/ceph/pool/*) ------------------------
 
-// CephPool is one row returned by GET /nodes/{node}/ceph/pool — the per-node
-// list endpoint. Optional fields (statistics-bearing, autoscaler-derived) may
-// be absent depending on Ceph release and whether the pool reports usage.
+// CephPool is one row returned by GET /nodes/{node}/ceph/pool AND the
+// operations handle returned by Node.CephPool(name). Optional fields
+// (statistics-bearing, autoscaler-derived) may be absent depending on Ceph
+// release and whether the pool reports usage.
 type CephPool struct {
+	client              *Client
+	Node                string         `json:"-"`
 	ApplicationMetadata map[string]any `json:"application_metadata,omitempty"`
 	AutoscaleStatus     map[string]any `json:"autoscale_status,omitempty"`
 	BytesUsed           uint64         `json:"bytes_used,omitempty"`
@@ -3305,6 +3313,15 @@ type NodeZFSPoolOptions struct {
 
 // --- Ceph OSD (Object Storage Daemons) -------------------------------------
 
+// CephOSD is the operations handle for a single OSD on a node, returned by
+// Node.CephOSD(id). It carries no data fields — instance methods (In/Out/
+// Scrub/Delete/LVInfo/Metadata) call back into the API when invoked.
+type CephOSD struct {
+	client *Client
+	Node   string `json:"-"`
+	ID     int    `json:"-"`
+}
+
 // CephOSDTree is the response from GET /nodes/{node}/ceph/osd — the CRUSH
 // tree top-level plus any cluster-wide OSD flags. The CRUSH bucket structure
 // is recursive and per-node properties (status, weight, in, usage, latencies,
@@ -3768,15 +3785,22 @@ type VirtualMachineMigrationTunnelOptions struct {
 //
 // These types are the per-node daemon-registry entries returned by the
 // "list" GETs under /nodes/{node}/ceph/{mon,mgr,mds}. They are distinct
-// from the cluster-wide CephMon (used inside ClusterCephStatus.Monmap.Mons)
+// from the cluster-wide ClusterCephMon (used inside ClusterCephStatus.Monmap.Mons)
 // and CephMgrMap (the active manager map in cluster status) — those describe
 // what the Ceph cluster sees, while these describe what PVE has configured
 // on this node (including stopped/unknown daemons).
+//
+// Each carries unexported `client` and exported `Node` fields that the
+// Node.CephMons / Node.CephMon (and Mgr/MDS equivalents) accessors populate so
+// instance methods (`.Delete()`) can call back into the API without the caller
+// re-supplying Node + client.
 
-// CephMonDaemon is one row from GET /nodes/{node}/ceph/mon — the per-node
-// monitor registry entry. "name" is the monid; "state" mixes cluster
+// CephMon is one row from GET /nodes/{node}/ceph/mon AND the operations handle
+// returned by Node.CephMon(name). "Name" is the monid; "State" mixes cluster
 // reality (running) with PVE config state (stopped/unknown).
-type CephMonDaemon struct {
+type CephMon struct {
+	client           *Client
+	Node             string    `json:"-"`
 	Addr             string    `json:"addr,omitempty"`
 	CephVersion      string    `json:"ceph_version,omitempty"`
 	CephVersionShort string    `json:"ceph_version_short,omitempty"`
@@ -3796,8 +3820,12 @@ type CephMonOptions struct {
 	MonAddress string `json:"mon-address,omitempty"`
 }
 
-// CephMgrDaemon is one row from GET /nodes/{node}/ceph/mgr.
-type CephMgrDaemon struct {
+// CephMgr is one row from GET /nodes/{node}/ceph/mgr AND the operations handle
+// returned by Node.CephMgr(id). Distinct from CephMgrMap (the active manager
+// map in cluster-status snapshots).
+type CephMgr struct {
+	client           *Client
+	Node             string    `json:"-"`
 	Addr             string    `json:"addr,omitempty"`
 	CephVersion      string    `json:"ceph_version,omitempty"`
 	CephVersionShort string    `json:"ceph_version_short,omitempty"`
@@ -3808,8 +3836,11 @@ type CephMgrDaemon struct {
 	State            string    `json:"state,omitempty"`
 }
 
-// CephMDSDaemon is one row from GET /nodes/{node}/ceph/mds.
-type CephMDSDaemon struct {
+// CephMDS is one row from GET /nodes/{node}/ceph/mds AND the operations handle
+// returned by Node.CephMDS(name).
+type CephMDS struct {
+	client           *Client
+	Node             string    `json:"-"`
 	Addr             string    `json:"addr,omitempty"`
 	CephVersion      string    `json:"ceph_version,omitempty"`
 	CephVersionShort string    `json:"ceph_version_short,omitempty"`

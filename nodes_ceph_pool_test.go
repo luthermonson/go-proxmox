@@ -68,56 +68,56 @@ func TestNode_CreateCephPool(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestNode_CephPool(t *testing.T) {
+func TestCephPool_SubResources(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := cephPoolNode().CephPool(context.Background(), "rbd")
+	subdirs, err := cephPoolNode().CephPool("rbd").SubResources(context.Background())
 	assert.Nil(t, err)
 	assert.Len(t, subdirs, 1)
 	assert.Equal(t, "status", subdirs[0].Subdir)
 
-	_, err = cephPoolNode().CephPool(context.Background(), "")
+	_, err = cephPoolNode().CephPool("").SubResources(context.Background())
 	assert.NotNil(t, err)
 }
 
-func TestNode_UpdateCephPool(t *testing.T) {
+func TestCephPool_Update(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	task, err := cephPoolNode().UpdateCephPool(context.Background(), "rbd", &CephPoolOptions{
+	task, err := cephPoolNode().CephPool("rbd").Update(context.Background(), &CephPoolOptions{
 		Size:            intPtr(4),
 		PgAutoscaleMode: "warn",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "cephsetpool", task.Type)
 
-	_, err = cephPoolNode().UpdateCephPool(context.Background(), "", &CephPoolOptions{})
+	_, err = cephPoolNode().CephPool("").Update(context.Background(), &CephPoolOptions{})
 	assert.NotNil(t, err)
 
-	_, err = cephPoolNode().UpdateCephPool(context.Background(), "rbd", nil)
+	_, err = cephPoolNode().CephPool("rbd").Update(context.Background(), nil)
 	assert.NotNil(t, err)
 }
 
-func TestNode_DeleteCephPool(t *testing.T) {
+func TestCephPool_Delete(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	// default: removeECProfile=true matches PVE default so no override is sent
-	task, err := cephPoolNode().DeleteCephPool(context.Background(), "rbd", true, true, true)
+	task, err := cephPoolNode().CephPool("rbd").Delete(context.Background(), true, true, true)
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroypool", task.Type)
 
 	// force=false, removeStorages=false, removeECProfile=false should still hit
-	task, err = cephPoolNode().DeleteCephPool(context.Background(), "rbd", false, false, false)
+	task, err = cephPoolNode().CephPool("rbd").Delete(context.Background(), false, false, false)
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroypool", task.Type)
 
-	_, err = cephPoolNode().DeleteCephPool(context.Background(), "", false, false, true)
+	_, err = cephPoolNode().CephPool("").Delete(context.Background(), false, false, true)
 	assert.NotNil(t, err)
 }
 
-func TestNode_CephPoolStatus(t *testing.T) {
+func TestCephPool_Status(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	status, err := cephPoolNode().CephPoolStatus(context.Background(), "rbd", true)
+	status, err := cephPoolNode().CephPool("rbd").Status(context.Background(), true)
 	assert.Nil(t, err)
 	assert.NotNil(t, status)
 	assert.Equal(t, "rbd", status.Name)
@@ -132,10 +132,10 @@ func TestNode_CephPoolStatus(t *testing.T) {
 	assert.NotNil(t, status.Statistics)
 
 	// also verify the non-verbose path is callable
-	_, err = cephPoolNode().CephPoolStatus(context.Background(), "rbd", false)
+	_, err = cephPoolNode().CephPool("rbd").Status(context.Background(), false)
 	assert.Nil(t, err)
 
-	_, err = cephPoolNode().CephPoolStatus(context.Background(), "", false)
+	_, err = cephPoolNode().CephPool("").Status(context.Background(), false)
 	assert.NotNil(t, err)
 }
 

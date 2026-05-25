@@ -8,20 +8,28 @@ import (
 	"net/url"
 )
 
-// This file wraps the /nodes/{node}/ceph/pool/* family — Ceph pool list /
-// create / read / update / delete plus the pool-status endpoint. Mutating
-// endpoints return *Task because PVE runs them via the task queue (the API
-// answers with a UPID string).
+// /nodes/{node}/ceph/pool/* — Ceph pool wrappers.
+//
+// List + create stay on *Node. The per-pool getter returns a *CephPool handle;
+// read / update / delete / status are methods on the handle.
 
-// CephPools lists every Ceph pool visible to the node, with the same
-// settings exposed by the per-pool PUT endpoint plus a few read-only stats.
+// CephPools lists every Ceph pool visible to the node with the same settings
+// exposed by the per-pool PUT endpoint plus a few read-only stats. Each entry
+// is returned with `client` + `Node` populated so callers can chain methods.
 func (n *Node) CephPools(ctx context.Context) (pools []*CephPool, err error) {
-	return pools, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/pool", n.Name), &pools)
+	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/pool", n.Name), &pools); err != nil {
+		return nil, err
+	}
+	for _, p := range pools {
+		p.client = n.client
+		p.Node = n.Name
+	}
+	return pools, nil
 }
 
-// CreateCephPool creates a Ceph pool. opts.Name is required. For erasure-
-// coded pools pass opts.ErasureCoding (k/m are required, the rest optional);
-// PVE will additionally create a replicated metadata pool. Returns a Task.
+// CreateCephPool creates a Ceph pool. opts.Name is required. For erasure-coded
+// pools pass opts.ErasureCoding (k/m required, the rest optional); PVE will
+// additionally create a replicated metadata pool. Returns a Task.
 func (n *Node) CreateCephPool(ctx context.Context, opts *CephPoolOptions) (*Task, error) {
 	if opts == nil || opts.Name == "" {
 		return nil, errors.New("ceph pool name is required")
@@ -35,6 +43,13 @@ func (n *Node) CreateCephPool(ctx context.Context, opts *CephPoolOptions) (*Task
 		return nil, err
 	}
 	return NewTask(upid, n.client), nil
+}
+
+// CephPool returns an operations handle for the pool with the given name. No
+// API call is made — the handle holds Node + name and dispatches when methods
+// are invoked.
+func (n *Node) CephPool(name string) *CephPool {
+	return &CephPool{client: n.client, Node: n.Name, PoolName: name}
 }
 
 // cephPoolBody round-trips opts through JSON so the json tags on
@@ -57,20 +72,19 @@ func cephPoolBody(opts *CephPoolOptions) (map[string]any, error) {
 	return body, nil
 }
 
-// CephPool returns the sub-resource directory index for a pool (currently
-// just "status"). To fetch the actual pool configuration / utilization use
-// CephPoolStatus.
-func (n *Node) CephPool(ctx context.Context, name string) (subdirs []*CephPoolSubdir, err error) {
-	if name == "" {
+// SubResources returns the per-pool directory index (currently just "status").
+// To fetch the actual pool configuration / utilization use Status.
+func (p *CephPool) SubResources(ctx context.Context) (subdirs []*CephPoolSubdir, err error) {
+	if p.PoolName == "" {
 		return nil, errors.New("ceph pool name is required")
 	}
-	return subdirs, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/pool/%s", n.Name, name), &subdirs)
+	return subdirs, p.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/pool/%s", p.Node, p.PoolName), &subdirs)
 }
 
-// UpdateCephPool changes pool settings. Name is taken from the URL path;
+// Update changes pool settings. Name is taken from the handle (URL path);
 // any Name set on opts is ignored. Returns a Task.
-func (n *Node) UpdateCephPool(ctx context.Context, name string, opts *CephPoolOptions) (*Task, error) {
-	if name == "" {
+func (p *CephPool) Update(ctx context.Context, opts *CephPoolOptions) (*Task, error) {
+	if p.PoolName == "" {
 		return nil, errors.New("ceph pool name is required")
 	}
 	if opts == nil {
@@ -85,18 +99,18 @@ func (n *Node) UpdateCephPool(ctx context.Context, name string, opts *CephPoolOp
 	}
 	delete(body, "name")
 	var upid UPID
-	if err := n.client.Put(ctx, fmt.Sprintf("/nodes/%s/ceph/pool/%s", n.Name, name), body, &upid); err != nil {
+	if err := p.client.Put(ctx, fmt.Sprintf("/nodes/%s/ceph/pool/%s", p.Node, p.PoolName), body, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, n.client), nil
+	return NewTask(upid, p.client), nil
 }
 
-// DeleteCephPool destroys a pool. Pass force to destroy a pool even if it is
-// in use. removeStorages also strips any pveceph-managed storage.cfg entries
-// pointing at the pool. removeECProfile drops the EC profile when applicable
-// (PVE defaults this to true server-side; pass false to keep it).
-func (n *Node) DeleteCephPool(ctx context.Context, name string, force, removeStorages, removeECProfile bool) (*Task, error) {
-	if name == "" {
+// Delete destroys the pool. Pass force to destroy a pool even if it is in use.
+// removeStorages also strips any pveceph-managed storage.cfg entries pointing
+// at the pool. removeECProfile drops the EC profile when applicable (PVE
+// defaults this to true server-side; pass false to keep it).
+func (p *CephPool) Delete(ctx context.Context, force, removeStorages, removeECProfile bool) (*Task, error) {
+	if p.PoolName == "" {
 		return nil, errors.New("ceph pool name is required")
 	}
 	q := url.Values{}
@@ -111,27 +125,27 @@ func (n *Node) DeleteCephPool(ctx context.Context, name string, force, removeSto
 	if !removeECProfile {
 		q.Set("remove_ecprofile", "0")
 	}
-	path := fmt.Sprintf("/nodes/%s/ceph/pool/%s", n.Name, name)
+	path := fmt.Sprintf("/nodes/%s/ceph/pool/%s", p.Node, p.PoolName)
 	if len(q) > 0 {
 		path = path + "?" + q.Encode()
 	}
 	var upid UPID
-	if err := n.client.Delete(ctx, path, &upid); err != nil {
+	if err := p.client.Delete(ctx, path, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, n.client), nil
+	return NewTask(upid, p.client), nil
 }
 
-// CephPoolStatus returns the current configuration and (optionally)
-// statistics for a single pool. Set verbose=true to include usage and IO
-// statistics in the Statistics field.
-func (n *Node) CephPoolStatus(ctx context.Context, name string, verbose bool) (status *CephPoolStatus, err error) {
-	if name == "" {
+// Status returns the current configuration and (optionally) statistics for the
+// pool. Set verbose=true to include usage and IO statistics in the Statistics
+// field.
+func (p *CephPool) Status(ctx context.Context, verbose bool) (status *CephPoolStatus, err error) {
+	if p.PoolName == "" {
 		return nil, errors.New("ceph pool name is required")
 	}
-	path := fmt.Sprintf("/nodes/%s/ceph/pool/%s/status", n.Name, name)
+	path := fmt.Sprintf("/nodes/%s/ceph/pool/%s/status", p.Node, p.PoolName)
 	if verbose {
 		path = path + "?verbose=1"
 	}
-	return status, n.client.Get(ctx, path, &status)
+	return status, p.client.Get(ctx, path, &status)
 }

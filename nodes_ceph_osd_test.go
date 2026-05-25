@@ -37,68 +37,68 @@ func TestNode_CreateCephOSD(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestNode_CephOSD(t *testing.T) {
+func TestCephOSD_SubResources(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	items, err := cephOSDNode().CephOSD(context.Background(), 0)
+	items, err := cephOSDNode().CephOSD(0).SubResources(context.Background())
 	assert.Nil(t, err)
 	assert.Len(t, items, 5)
 	assert.Equal(t, "metadata", items[0]["name"])
 }
 
-func TestNode_DeleteCephOSD(t *testing.T) {
+func TestCephOSD_Delete(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	task, err := cephOSDNode().DeleteCephOSD(context.Background(), 0, true)
+	task, err := cephOSDNode().CephOSD(0).Delete(context.Background(), true)
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroyosd", task.Type)
 
-	task, err = cephOSDNode().DeleteCephOSD(context.Background(), 0, false)
+	task, err = cephOSDNode().CephOSD(0).Delete(context.Background(), false)
 	assert.Nil(t, err)
 	assert.Equal(t, "cephdestroyosd", task.Type)
 }
 
-func TestNode_CephOSDIn(t *testing.T) {
+func TestCephOSD_In(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	err := cephOSDNode().CephOSDIn(context.Background(), 0)
+	err := cephOSDNode().CephOSD(0).In(context.Background())
 	assert.Nil(t, err)
 }
 
-func TestNode_CephOSDOut(t *testing.T) {
+func TestCephOSD_Out(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	err := cephOSDNode().CephOSDOut(context.Background(), 0)
+	err := cephOSDNode().CephOSD(0).Out(context.Background())
 	assert.Nil(t, err)
 }
 
-func TestNode_CephOSDScrub(t *testing.T) {
+func TestCephOSD_Scrub(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	err := cephOSDNode().CephOSDScrub(context.Background(), 0, false)
+	err := cephOSDNode().CephOSD(0).Scrub(context.Background(), false)
 	assert.Nil(t, err)
 
-	err = cephOSDNode().CephOSDScrub(context.Background(), 0, true)
+	err = cephOSDNode().CephOSD(0).Scrub(context.Background(), true)
 	assert.Nil(t, err)
 }
 
-func TestNode_CephOSDLVInfo(t *testing.T) {
+func TestCephOSD_LVInfo(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	info, err := cephOSDNode().CephOSDLVInfo(context.Background(), 0, "")
+	info, err := cephOSDNode().CephOSD(0).LVInfo(context.Background(), "")
 	assert.Nil(t, err)
 	assert.Equal(t, "osd-block-abcd1234", info.LVName)
 	assert.Equal(t, "ceph-vg", info.VGName)
 
-	info, err = cephOSDNode().CephOSDLVInfo(context.Background(), 0, "db")
+	info, err = cephOSDNode().CephOSD(0).LVInfo(context.Background(), "db")
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 }
 
-func TestNode_CephOSDMetadata(t *testing.T) {
+func TestCephOSD_Metadata(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	details, err := cephOSDNode().CephOSDMetadata(context.Background(), 0)
+	details, err := cephOSDNode().CephOSD(0).Metadata(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 0, details.OSD.ID)
 	assert.Equal(t, "node1", details.OSD.Hostname)

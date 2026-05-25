@@ -7,12 +7,11 @@ import (
 	"net/url"
 )
 
-// Methods on *Node that wrap the /nodes/{node}/ceph/osd/* family — Ceph OSD
-// (Object Storage Daemon) lifecycle (create/destroy), state toggles
-// (in/out/scrub), and introspection (list/index/metadata/lv-info).
+// /nodes/{node}/ceph/osd/* — Ceph OSD (Object Storage Daemon) wrappers.
 //
-// createosd and destroyosd return UPIDs (wrapped as *Task); in/out/scrub
-// return null and are fire-and-forget; the GETs return data structures.
+// List + create stay on *Node. The per-OSD getter returns a *CephOSD handle;
+// state toggles (in/out/scrub), destroy, and per-OSD introspection (lv-info,
+// metadata) are methods on the handle.
 
 // CephOSDs returns the cluster CRUSH tree plus any cluster-wide OSD flags
 // from GET /nodes/{node}/ceph/osd. The CRUSH bucket hierarchy is recursive
@@ -34,68 +33,73 @@ func (n *Node) CreateCephOSD(ctx context.Context, opts *CephOSDCreateOptions) (*
 	return NewTask(upid, n.client), nil
 }
 
-// CephOSD is the per-OSD index page (GET /nodes/{node}/ceph/osd/{osdid}).
-// PVE returns a free-form list of child resource descriptors; surfaced as
-// raw maps because the schema declares no concrete fields.
-func (n *Node) CephOSD(ctx context.Context, osdID int) (items []map[string]interface{}, err error) {
-	return items, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d", n.Name, osdID), &items)
+// CephOSD returns an operations handle for the OSD with the given id. No API
+// call is made — the handle holds Node + id and dispatches when methods are
+// invoked.
+func (n *Node) CephOSD(osdID int) *CephOSD {
+	return &CephOSD{client: n.client, Node: n.Name, ID: osdID}
 }
 
-// DeleteCephOSD destroys an OSD. With cleanup=true PVE also zaps the
-// underlying logical volumes (via `ceph-volume lvm zap --destroy`), removes
-// the VG's PV, and wipes any leftover journal/block.db/block.wal partitions.
-// Returns a Task.
-func (n *Node) DeleteCephOSD(ctx context.Context, osdID int, cleanup bool) (*Task, error) {
+// SubResources returns the per-OSD index page (GET /nodes/{node}/ceph/osd/{id}).
+// PVE returns a free-form list of child resource descriptors; surfaced as raw
+// maps because the schema declares no concrete fields.
+func (o *CephOSD) SubResources(ctx context.Context) (items []map[string]interface{}, err error) {
+	return items, o.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d", o.Node, o.ID), &items)
+}
+
+// Delete destroys the OSD. With cleanup=true PVE also zaps the underlying
+// logical volumes (via `ceph-volume lvm zap --destroy`), removes the VG's PV,
+// and wipes any leftover journal/block.db/block.wal partitions. Returns a Task.
+func (o *CephOSD) Delete(ctx context.Context, cleanup bool) (*Task, error) {
 	q := url.Values{}
 	if cleanup {
 		q.Set("cleanup", "1")
 	}
-	path := fmt.Sprintf("/nodes/%s/ceph/osd/%d", n.Name, osdID)
+	path := fmt.Sprintf("/nodes/%s/ceph/osd/%d", o.Node, o.ID)
 	if len(q) > 0 {
 		path = path + "?" + q.Encode()
 	}
 	var upid UPID
-	if err := n.client.Delete(ctx, path, &upid); err != nil {
+	if err := o.client.Delete(ctx, path, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, n.client), nil
+	return NewTask(upid, o.client), nil
 }
 
-// CephOSDIn marks an OSD as `in` (eligible to hold data). Returns no value
-// per the PVE schema — succeed = nil err.
-func (n *Node) CephOSDIn(ctx context.Context, osdID int) error {
-	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/in", n.Name, osdID), nil, nil)
+// In marks the OSD as `in` (eligible to hold data). Returns no value per the
+// PVE schema — success = nil err.
+func (o *CephOSD) In(ctx context.Context) error {
+	return o.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/in", o.Node, o.ID), nil, nil)
 }
 
-// CephOSDOut marks an OSD as `out` (data will migrate off it).
-func (n *Node) CephOSDOut(ctx context.Context, osdID int) error {
-	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/out", n.Name, osdID), nil, nil)
+// Out marks the OSD as `out` (data will migrate off it).
+func (o *CephOSD) Out(ctx context.Context) error {
+	return o.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/out", o.Node, o.ID), nil, nil)
 }
 
-// CephOSDScrub instructs an OSD to scrub. Pass deep=true for a deep scrub
+// Scrub instructs the OSD to scrub. Pass deep=true for a deep scrub
 // (checksum-verifies every object) instead of the default metadata-only scrub.
-func (n *Node) CephOSDScrub(ctx context.Context, osdID int, deep bool) error {
+func (o *CephOSD) Scrub(ctx context.Context, deep bool) error {
 	body := map[string]interface{}{}
 	if deep {
 		body["deep"] = 1
 	}
-	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/scrub", n.Name, osdID), body, nil)
+	return o.client.Post(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/scrub", o.Node, o.ID), body, nil)
 }
 
-// CephOSDLVInfo returns LVM details for one of the OSD's logical volumes.
-// devType is "block" (default), "db", or "wal" — pass "" for block.
-func (n *Node) CephOSDLVInfo(ctx context.Context, osdID int, devType string) (info *CephOSDLVInfo, err error) {
-	path := fmt.Sprintf("/nodes/%s/ceph/osd/%d/lv-info", n.Name, osdID)
+// LVInfo returns LVM details for one of the OSD's logical volumes. devType is
+// "block" (default), "db", or "wal" — pass "" for block.
+func (o *CephOSD) LVInfo(ctx context.Context, devType string) (info *CephOSDLVInfo, err error) {
+	path := fmt.Sprintf("/nodes/%s/ceph/osd/%d/lv-info", o.Node, o.ID)
 	if devType != "" {
 		q := url.Values{}
 		q.Set("type", devType)
 		path = path + "?" + q.Encode()
 	}
-	return info, n.client.Get(ctx, path, &info)
+	return info, o.client.Get(ctx, path, &info)
 }
 
-// CephOSDMetadata returns daemon-level info plus the list of backing devices
-// for one OSD.
-func (n *Node) CephOSDMetadata(ctx context.Context, osdID int) (details *CephOSDDetails, err error) {
-	return details, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/metadata", n.Name, osdID), &details)
+// Metadata returns daemon-level info plus the list of backing devices.
+func (o *CephOSD) Metadata(ctx context.Context) (details *CephOSDDetails, err error) {
+	return details, o.client.Get(ctx, fmt.Sprintf("/nodes/%s/ceph/osd/%d/metadata", o.Node, o.ID), &details)
 }
