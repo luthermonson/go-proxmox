@@ -17,6 +17,38 @@ import (
 // the standard {"data": ...} envelope the client already strips. The helpers
 // below unwrap that inner "result" before returning a typed value.
 
+// AgentCommandIndex lists the QEMU guest-agent sub-commands the PVE node
+// exposes for this VM. This is the index served at GET /agent — it surfaces
+// the routing table the proxy itself knows about and is independent of what
+// the in-guest agent actually advertises (see AgentGetInfo for that).
+func (v *VirtualMachine) AgentCommandIndex(ctx context.Context) ([]*AgentCommandIndexEntry, error) {
+	var out []*AgentCommandIndexEntry
+	if err := v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent", v.Node, v.VMID), &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentCommand is the low-level POST /agent helper that runs any QGA command
+// by name. The specific helpers (AgentPing, AgentGetTime, …) are preferable
+// for known commands because they return typed values; this exists for the
+// rare command not otherwise wrapped (or for forward-compat with new QGA
+// verbs PVE adds). PVE constrains the accepted names — see the enum on the
+// API endpoint — but we don't gate that here so callers stay forward-compat.
+// The raw {"result": ...} envelope payload is returned as a JSON map.
+func (v *VirtualMachine) AgentCommand(ctx context.Context, command string) (map[string]interface{}, error) {
+	body := map[string]interface{}{
+		"command": command,
+	}
+	var resp struct {
+		Result map[string]interface{} `json:"result"`
+	}
+	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent", v.Node, v.VMID), body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Result, nil
+}
+
 // AgentPing is a cheap probe that the guest-agent socket is reachable. PVE
 // returns an empty result on success; any non-nil error means the agent is
 // unreachable or the VM is off.
@@ -93,6 +125,19 @@ func (v *VirtualMachine) AgentGetMemoryBlocks(ctx context.Context) ([]*AgentMemo
 		Result []*AgentMemoryBlock `json:"result"`
 	}
 	if err := v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-memory-blocks", v.Node, v.VMID), &resp); err != nil {
+		return nil, err
+	}
+	return resp.Result, nil
+}
+
+// AgentGetMemoryBlockInfo returns hot-pluggable memory-block sizing for the
+// guest — the per-block byte size that AgentGetMemoryBlocks's phys-index
+// references. Returns zero on guests without memory-hotplug support.
+func (v *VirtualMachine) AgentGetMemoryBlockInfo(ctx context.Context) (*AgentMemoryBlockInfo, error) {
+	var resp struct {
+		Result *AgentMemoryBlockInfo `json:"result"`
+	}
+	if err := v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-memory-block-info", v.Node, v.VMID), &resp); err != nil {
 		return nil, err
 	}
 	return resp.Result, nil

@@ -1997,6 +1997,19 @@ type AgentMemoryBlock struct {
 	CanOffline  bool `json:"can-offline,omitempty"`
 }
 
+// AgentMemoryBlockInfo is the response payload from qga's
+// guest-get-memory-block-info — currently just the per-block size in bytes.
+type AgentMemoryBlockInfo struct {
+	Size uint64 `json:"size"`
+}
+
+// AgentCommandIndexEntry is one entry in the GET /agent command index. PVE
+// only documents `{}` items, but exposes the subroute as the link's "name",
+// so we accept it as an open struct and surface the name when present.
+type AgentCommandIndexEntry struct {
+	Name string `json:"name,omitempty"`
+}
+
 // AgentFsfreezeStatus is the freeze state string ("thawed" or "frozen")
 // returned by qga's guest-fsfreeze-status.
 type AgentFsfreezeStatus string
