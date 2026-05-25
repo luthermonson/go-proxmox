@@ -7,6 +7,7 @@ func Load() {
 	cluster()
 	pool()
 	ceph()
+	nodesCeph()
 	containers()
 	virtualMachines()
 	storage()

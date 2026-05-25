@@ -566,6 +566,122 @@ type CephMgrAlwaysOnModules struct {
 	Squid   []string `json:"squid"`
 }
 
+// --- Ceph pool (per-node /nodes/{node}/ceph/pool/*) ------------------------
+
+// CephPool is one row returned by GET /nodes/{node}/ceph/pool — the per-node
+// list endpoint. Optional fields (statistics-bearing, autoscaler-derived) may
+// be absent depending on Ceph release and whether the pool reports usage.
+type CephPool struct {
+	ApplicationMetadata map[string]any `json:"application_metadata,omitempty"`
+	AutoscaleStatus     map[string]any `json:"autoscale_status,omitempty"`
+	BytesUsed           uint64         `json:"bytes_used,omitempty"`
+	CrushRule           int            `json:"crush_rule"`
+	CrushRuleName       string         `json:"crush_rule_name,omitempty"`
+	MinSize             int            `json:"min_size"`
+	PercentUsed         float64        `json:"percent_used,omitempty"`
+	PgAutoscaleMode     string         `json:"pg_autoscale_mode,omitempty"`
+	PgNum               int            `json:"pg_num"`
+	PgNumFinal          int            `json:"pg_num_final,omitempty"`
+	PgNumMin            int            `json:"pg_num_min,omitempty"`
+	Pool                int            `json:"pool"`
+	PoolName            string         `json:"pool_name"`
+	Size                int            `json:"size"`
+	TargetSize          uint64         `json:"target_size,omitempty"`
+	TargetSizeRatio     float64        `json:"target_size_ratio,omitempty"`
+	Type                string         `json:"type"`
+}
+
+// CephPoolSubdir is one row from GET /nodes/{node}/ceph/pool/{name} — the
+// sub-resource directory index. Currently the only entry is "status".
+type CephPoolSubdir struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// CephPoolStatus is the response body of GET /nodes/{node}/ceph/pool/{name}/status.
+// Statistics is only populated when the request was made with verbose=1.
+type CephPoolStatus struct {
+	Application          string         `json:"application,omitempty"`
+	ApplicationList      []string       `json:"application_list,omitempty"`
+	AutoscaleStatus      map[string]any `json:"autoscale_status,omitempty"`
+	CrushRule            string         `json:"crush_rule,omitempty"`
+	FastRead             bool           `json:"fast_read"`
+	HashPSPool           bool           `json:"hashpspool"`
+	ID                   int            `json:"id"`
+	MinSize              int            `json:"min_size,omitempty"`
+	Name                 string         `json:"name"`
+	NoDeepScrub          bool           `json:"nodeep-scrub"`
+	NoDelete             bool           `json:"nodelete"`
+	NoPGChange           bool           `json:"nopgchange"`
+	NoScrub              bool           `json:"noscrub"`
+	NoSizeChange         bool           `json:"nosizechange"`
+	PgAutoscaleMode      string         `json:"pg_autoscale_mode,omitempty"`
+	PgNum                int            `json:"pg_num,omitempty"`
+	PgNumMin             int            `json:"pg_num_min,omitempty"`
+	PgpNum               int            `json:"pgp_num"`
+	Size                 int            `json:"size,omitempty"`
+	Statistics           map[string]any `json:"statistics,omitempty"`
+	TargetSize           string         `json:"target_size,omitempty"`
+	TargetSizeRatio      float64        `json:"target_size_ratio,omitempty"`
+	UseGMTHitset         bool           `json:"use_gmt_hitset"`
+	WriteFadviseDontneed bool           `json:"write_fadvise_dontneed"`
+}
+
+// CephPoolErasureCoding is the inline "erasure-coding" parameter accepted by
+// POST /nodes/{node}/ceph/pool. PVE serializes it as a single comma-separated
+// string of key=value pairs (e.g. "k=4,m=2,failure-domain=host"). K and M are
+// required; the rest are optional. Build the string with String().
+type CephPoolErasureCoding struct {
+	K             int    // required: number of data chunks
+	M             int    // required: number of coding chunks
+	DeviceClass   string // optional: CRUSH device class
+	FailureDomain string // optional: CRUSH failure domain (default "host")
+	Profile       string // optional: override EC profile name
+}
+
+// String serializes the EC config to the PVE wire format
+// "k=<int>,m=<int>[,device-class=<class>][,failure-domain=<domain>][,profile=<name>]".
+func (ec *CephPoolErasureCoding) String() string {
+	if ec == nil {
+		return ""
+	}
+	parts := []string{
+		fmt.Sprintf("k=%d", ec.K),
+		fmt.Sprintf("m=%d", ec.M),
+	}
+	if ec.DeviceClass != "" {
+		parts = append(parts, "device-class="+ec.DeviceClass)
+	}
+	if ec.FailureDomain != "" {
+		parts = append(parts, "failure-domain="+ec.FailureDomain)
+	}
+	if ec.Profile != "" {
+		parts = append(parts, "profile="+ec.Profile)
+	}
+	return strings.Join(parts, ",")
+}
+
+// CephPoolOptions is the POST body for /nodes/{node}/ceph/pool (create) and
+// the PUT body for /nodes/{node}/ceph/pool/{name} (update). Name is required
+// on create and immutable on update — the URL path supplies it for PUT.
+//
+// Pointer fields (*int, *bool) are used wherever PVE has a server-side default
+// that should be preserved when the caller leaves the field unset; this avoids
+// silently clobbering Ceph defaults (size=3, min_size=2, pg_num=128, etc.).
+type CephPoolOptions struct {
+	Name             string                 `json:"name,omitempty"`
+	AddStorages      *bool                  `json:"add_storages,omitempty"`
+	Application      string                 `json:"application,omitempty"`
+	CrushRule        string                 `json:"crush_rule,omitempty"`
+	ErasureCoding    *CephPoolErasureCoding `json:"-"` // serialized by helper, see CreateCephPool
+	MinSize          *int                   `json:"min_size,omitempty"`
+	PgAutoscaleMode  string                 `json:"pg_autoscale_mode,omitempty"`
+	PgNum            *int                   `json:"pg_num,omitempty"`
+	PgNumMin         *int                   `json:"pg_num_min,omitempty"`
+	Size             *int                   `json:"size,omitempty"`
+	TargetSize       string                 `json:"target_size,omitempty"`
+	TargetSizeRatio  *float64               `json:"target_size_ratio,omitempty"`
+}
+
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
 	// shared
