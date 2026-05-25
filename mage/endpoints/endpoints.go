@@ -237,6 +237,13 @@ func Coverage() error {
 //	u.RawQuery = params.Encode()
 //	err := v.client.Get(ctx, u.String(), &out)
 //
+// Additionally recognizes the websocket call signature used by *.VNCWebSocket
+// and *.TermWebSocket — these wrap GET /…/vncwebsocket and do not take a
+// context, so their first argument is the path:
+//
+//	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?…", …)
+//	return v.client.VNCWebSocket(p, vnc)
+//
 // Returns normalized (method, path) pairs.
 func scanCallSites(root string) ([]extractedCall, error) {
 	var out []extractedCall
@@ -271,6 +278,10 @@ func scanCallSites(root string) ([]extractedCall, error) {
 		// which is correct because the corresponding Get/Post call always
 		// follows the assignment in the same function.
 		urlVars := map[string]string{}
+		// Per-file map of `<var>` → path for `<var> := fmt.Sprintf("/…", …)` or
+		// `<var> := "/…"` bindings, used by call sites that pass the path as a
+		// pre-built variable rather than inline (e.g. the websocket helpers).
+		pathVars := map[string]string{}
 		for line := 1; s.Scan(); line++ {
 			text := s.Text()
 
@@ -279,32 +290,62 @@ func scanCallSites(root string) ([]extractedCall, error) {
 					urlVars[am[1]] = p
 				}
 			}
-
-			m := callRE.FindStringSubmatch(text)
-			if m == nil {
-				continue
-			}
-			method := m[1]
-			rest := m[2]
-			pathLit := extractPathExpr(rest)
-			if pathLit == "" {
-				if um := urlStringRE.FindStringSubmatch(strings.TrimSpace(rest)); um != nil {
-					pathLit = urlVars[um[1]]
+			if pm := pathAssignRE.FindStringSubmatch(text); pm != nil {
+				if p := extractPathExpr(pm[2]); p != "" {
+					pathVars[pm[1]] = p
 				}
 			}
-			if pathLit == "" {
+
+			if m := callRE.FindStringSubmatch(text); m != nil {
+				method := m[1]
+				rest := m[2]
+				pathLit := resolvePath(rest, urlVars, pathVars)
+				if pathLit != "" {
+					out = append(out, extractedCall{
+						Method: method,
+						Path:   normalizePath(pathLit),
+						File:   filepath.ToSlash(path),
+						Line:   line,
+					})
+				}
 				continue
 			}
-			out = append(out, extractedCall{
-				Method: method,
-				Path:   normalizePath(pathLit),
-				File:   filepath.ToSlash(path),
-				Line:   line,
-			})
+
+			if wm := wsCallRE.FindStringSubmatch(text); wm != nil {
+				rest := wm[2]
+				pathLit := resolvePath(rest, urlVars, pathVars)
+				if pathLit == "" {
+					continue
+				}
+				// VNCWebSocket and TermWebSocket both wrap GET /…/vncwebsocket.
+				out = append(out, extractedCall{
+					Method: "GET",
+					Path:   normalizePath(pathLit),
+					File:   filepath.ToSlash(path),
+					Line:   line,
+				})
+			}
 		}
 		return s.Err()
 	})
 	return out, err
+}
+
+// resolvePath extracts a path literal from a call argument expression. It
+// understands fmt.Sprintf literals, bare string literals, url.URL{}.String()
+// indirection, and previously-tracked path variables.
+func resolvePath(expr string, urlVars, pathVars map[string]string) string {
+	if p := extractPathExpr(expr); p != "" {
+		return p
+	}
+	trimmed := strings.TrimSpace(expr)
+	if um := urlStringRE.FindStringSubmatch(trimmed); um != nil {
+		return urlVars[um[1]]
+	}
+	if vm := varRefRE.FindStringSubmatch(trimmed); vm != nil {
+		return pathVars[vm[1]]
+	}
+	return ""
 }
 
 // extractPathExpr pulls the path literal out of an expression like:
@@ -332,11 +373,18 @@ type extractedCall struct {
 
 var (
 	callRE      = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)\s*\(\s*ctx\s*,\s*(.*?)$`)
+	wsCallRE    = regexp.MustCompile(`\b\w+\.(VNCWebSocket|TermWebSocket)\s*\(\s*(.*?)$`)
 	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
-	urlStringRE = regexp.MustCompile(`^(\w+)\.String\(\)`)
-	braceRE     = regexp.MustCompile(`\{[^}]+\}`)
-	fmtVerbRE   = regexp.MustCompile(`%[sdvqxXt]`)
+	// `<var> := fmt.Sprintf("/…", …)` or `<var> := "/…"` — bindings that later
+	// flow into a Get/Post/WS call as a bare variable reference. Captures only
+	// the rhs head so extractPathExpr can pull the string literal; the rest of
+	// the Sprintf arglist may continue on subsequent lines.
+	pathAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*(fmt\.Sprintf\(\s*"[^"]+"|"/[^"]*")`)
+	urlStringRE  = regexp.MustCompile(`^(\w+)\.String\(\)`)
+	varRefRE     = regexp.MustCompile(`^(\w+)\s*[,)]`)
+	braceRE      = regexp.MustCompile(`\{[^}]+\}`)
+	fmtVerbRE    = regexp.MustCompile(`%[sdvqxXt]`)
 	// PVE volume identifiers serialize as `<storage>:<type>/<filename>` and are
 	// represented as a single `{volume}` segment in the schema. Go code that
 	// builds the path via `fmt.Sprintf(...content/%s:%s/%s, ...)` normalizes to

@@ -325,6 +325,13 @@ func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan 
 	return v.client.VNCWebSocket(p, vnc)
 }
 
+// SpiceProxy returns SPICE proxy connection info for the VM. Mirrors the
+// Container.SpiceProxy surface and serializes the .vv file fields remote-viewer
+// expects.
+func (v *VirtualMachine) SpiceProxy(ctx context.Context) (spice *SpiceProxy, err error) {
+	return spice, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/spiceproxy", v.Node, v.VMID), nil, &spice)
+}
+
 func (v *VirtualMachine) IsRunning() bool {
 	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
 }

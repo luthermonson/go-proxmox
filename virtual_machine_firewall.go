@@ -26,7 +26,7 @@ func (v *VirtualMachine) FirewallGetRule(ctx context.Context, pos int) (rule *Fi
 // FirewallLog returns the per-VM firewall log entries. start/limit page the
 // result; since/until filter by UNIX epoch — pass 0 to omit.
 func (v *VirtualMachine) FirewallLog(ctx context.Context, start, limit, since, until int) (entries []*FirewallLogEntry, err error) {
-	path := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/log", v.Node, v.VMID)
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/firewall/log", v.Node, v.VMID)}
 	q := url.Values{}
 	if start > 0 {
 		q.Set("start", strconv.Itoa(start))
@@ -40,23 +40,21 @@ func (v *VirtualMachine) FirewallLog(ctx context.Context, start, limit, since, u
 	if until > 0 {
 		q.Set("until", strconv.Itoa(until))
 	}
-	if len(q) > 0 {
-		path = path + "?" + q.Encode()
-	}
-	return entries, v.client.Get(ctx, path, &entries)
+	u.RawQuery = q.Encode()
+	return entries, v.client.Get(ctx, u.String(), &entries)
 }
 
 // FirewallRefs lists IPSets and aliases reachable from this VM's scope —
 // useful when authoring rules that reference cluster/node-level objects
 // alongside VM-local ones. Pass refType ("alias"|"ipset"|"") to filter.
 func (v *VirtualMachine) FirewallRefs(ctx context.Context, refType string) (refs []*FirewallRef, err error) {
-	path := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/refs", v.Node, v.VMID)
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/firewall/refs", v.Node, v.VMID)}
 	if refType != "" {
 		q := url.Values{}
 		q.Set("type", refType)
-		path = path + "?" + q.Encode()
+		u.RawQuery = q.Encode()
 	}
-	return refs, v.client.Get(ctx, path, &refs)
+	return refs, v.client.Get(ctx, u.String(), &refs)
 }
 
 // GetFirewallAliases lists per-VM firewall aliases.

@@ -1129,4 +1129,27 @@ func virtualMachines() {
 		Post("^/nodes/node1/qemu/101/agent/file-write$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/spiceproxy
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/spiceproxy$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "type": "spice",
+        "host": "node1.example.com",
+        "port": "61024",
+        "tls-port": "61025",
+        "password": "secret-ticket",
+        "proxy": "http://proxy.example.com",
+        "title": "VM 101",
+        "host-subject": "OU=PVE Cluster Node,O=Proxmox VE,CN=node1",
+        "ca": "-----BEGIN CERTIFICATE-----\nMIIB...==\n-----END CERTIFICATE-----",
+        "delete-this-file": "1",
+        "secure-attention": "Ctrl+Alt+Ins",
+        "release-cursor": "Ctrl+Alt+R",
+        "toggle-fullscreen": "Shift+F11"
+    }
+}`)
 }

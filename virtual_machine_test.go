@@ -724,6 +724,23 @@ func TestMakeCloudInitISO_JolietSVD(t *testing.T) {
 	assert.True(t, foundJoliet, "Joliet Supplementary Volume Descriptor not found in ISO")
 }
 
+func TestVirtualMachine_SpiceProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	vm := &VirtualMachine{client: client, Node: "node1", VMID: 101}
+	spice, err := vm.SpiceProxy(ctx)
+	assert.Nil(t, err)
+	require.NotNil(t, spice)
+	assert.Equal(t, "spice", spice.Type)
+	assert.Equal(t, "node1.example.com", spice.Host)
+	assert.Equal(t, "61024", spice.Port)
+	assert.Equal(t, "secret-ticket", spice.Password)
+	assert.Equal(t, "61025", spice.TLSPort)
+}
+
 func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
 	isoPath, err := makeCloudInitISO("test-volid.iso", "userdata", "metadata", "", "")
 	require.NoError(t, err)
