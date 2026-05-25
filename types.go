@@ -566,6 +566,44 @@ type CephMgrAlwaysOnModules struct {
 	Squid   []string `json:"squid"`
 }
 
+// CephFS is a single entry from the list at GET /nodes/{node}/ceph/fs. A
+// CephFS may have multiple data pools — DataPool/MetadataPool are the legacy
+// scalar fields (kept for backwards compatibility) and DataPools/DataPoolIDs
+// expose the full set.
+type CephFS struct {
+	Name           string   `json:"name"`
+	MetadataPool   string   `json:"metadata_pool"`
+	MetadataPoolID int      `json:"metadata_pool_id,omitempty"`
+	DataPool       string   `json:"data_pool"`
+	DataPools      []string `json:"data_pools,omitempty"`
+	DataPoolIDs    []int    `json:"data_pool_ids,omitempty"`
+}
+
+// CephFSOptions is the body for POST /nodes/{node}/ceph/fs/{name}. All
+// fields are optional: PVE defaults Name to "cephfs", PgNum to 128, and
+// AddStorage to false.
+type CephFSOptions struct {
+	PgNum      int       `json:"pg_num,omitempty"`
+	AddStorage IntOrBool `json:"add-storage,omitempty"`
+}
+
+// CephCfgDBEntry is a single row from the Ceph mon config DB
+// (GET /nodes/{node}/ceph/cfg/db). Value is always a string — Ceph stores
+// every option as a string regardless of its underlying type.
+type CephCfgDBEntry struct {
+	Section            string    `json:"section"`
+	Name               string    `json:"name"`
+	Value              string    `json:"value"`
+	Level              string    `json:"level,omitempty"`
+	Mask               string    `json:"mask,omitempty"`
+	CanUpdateAtRuntime IntOrBool `json:"can_update_at_runtime,omitempty"`
+}
+
+// CephCfgValue is the response to GET /nodes/{node}/ceph/cfg/value: a
+// two-level map of section → key → value. Underscores in both section and
+// key names are normalised to hyphens by PVE.
+type CephCfgValue map[string]map[string]string
+
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
 	// shared
