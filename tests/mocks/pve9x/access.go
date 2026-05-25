@@ -952,4 +952,69 @@ func access() {
     }
 }`)
 
+	// --- /access/tfa ---------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/access/tfa$").
+		Reply(200).
+		JSON(`{"data": [
+			{"userid": "alice@pve", "totp": true, "webauthn": false, "u2f": false}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/access/tfa/alice@pve$").
+		Reply(200).
+		JSON(`{"data": [
+			{"id": "totp-1", "type": "totp", "description": "phone", "created": 1715000000, "enable": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/access/tfa/alice@pve/totp-1$").
+		Reply(200).
+		JSON(`{"data": {"id": "totp-1", "type": "totp", "description": "phone", "enable": 1}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/access/tfa/alice@pve$").
+		Reply(200).
+		JSON(`{"data": {"id": "totp-2"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/access/tfa/alice@pve/totp-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/access/tfa/alice@pve/totp-1$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/access/users/alice@pve/unlock-tfa$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// --- /access/openid ------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/access/openid/auth-url$").
+		Reply(200).
+		JSON(`{"data": "https://idp.example.com/authorize?response_type=code&client_id=pve&state=xyz"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/access/openid/login$").
+		Reply(200).
+		JSON(`{"data": {
+			"ticket": "PVE:alice@pve:abc123",
+			"CSRFPreventionToken": "csrf123",
+			"username": "alice@pve"
+		}}`)
 }
