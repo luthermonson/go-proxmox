@@ -14108,4 +14108,108 @@ func ceph() {
         }
     }
 }`)
+
+	// --- /nodes/{node}/ceph/osd/* ---------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/osd$").
+		Reply(200).
+		JSON(`{"data": {
+			"flags": "noout",
+			"root": {
+				"id": -1,
+				"name": "default",
+				"type": "root",
+				"children": [
+					{"id": 0, "name": "osd.0", "type": "osd", "status": "up", "in": 1, "weight": 1.0}
+				]
+			}
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/osd$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreateosd:0:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/osd/0$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "metadata"},
+			{"name": "lv-info"},
+			{"name": "in"},
+			{"name": "out"},
+			{"name": "scrub"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/osd/0").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroyosd:0:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/osd/0/in$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/osd/0/out$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/osd/0/scrub").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/osd/0/lv-info").
+		Reply(200).
+		JSON(`{"data": {
+			"creation_time": "2024-01-15 10:00:00",
+			"lv_name": "osd-block-abcd1234",
+			"lv_path": "/dev/ceph-vg/osd-block-abcd1234",
+			"lv_size": 1000000000000,
+			"lv_uuid": "abcd1234-5678-90ab-cdef-1234567890ab",
+			"vg_name": "ceph-vg"
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/osd/0/metadata$").
+		Reply(200).
+		JSON(`{"data": {
+			"osd": {
+				"back_addr": "10.0.0.1:6800",
+				"encrypted": false,
+				"front_addr": "10.0.0.1:6801",
+				"hb_back_addr": "10.0.0.1:6802",
+				"hb_front_addr": "10.0.0.1:6803",
+				"hostname": "node1",
+				"id": 0,
+				"mem_usage": 1073741824,
+				"osd_data": "/var/lib/ceph/osd/ceph-0",
+				"osd_objectstore": "bluestore",
+				"pid": 12345,
+				"version": "18.2.0"
+			},
+			"devices": [
+				{
+					"dev_node": "/dev/sda",
+					"device": "block",
+					"physical_device": "/dev/sda",
+					"size": 1000000000000,
+					"support_discard": true,
+					"type": "ssd"
+				}
+			]
+		}}`)
 }

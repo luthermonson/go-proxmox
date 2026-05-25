@@ -3095,6 +3095,75 @@ type NodeZFSPoolOptions struct {
 	AddStorage  IntOrBool `json:"add_storage,omitempty"`
 }
 
+// --- Ceph OSD (Object Storage Daemons) -------------------------------------
+
+// CephOSDTree is the response from GET /nodes/{node}/ceph/osd — the CRUSH
+// tree top-level plus any cluster-wide OSD flags. The CRUSH bucket structure
+// is recursive and per-node properties (status, weight, in, usage, latencies,
+// etc.) vary by bucket type, so Root is kept as a raw map.
+type CephOSDTree struct {
+	Flags string                 `json:"flags,omitempty"`
+	Root  map[string]interface{} `json:"root,omitempty"`
+}
+
+// CephOSDDetails is the response from GET /nodes/{node}/ceph/osd/{osdid}/metadata
+// — daemon-level info plus the list of backing devices.
+type CephOSDDetails struct {
+	OSD     CephOSDMetadata `json:"osd"`
+	Devices []CephOSDDevice `json:"devices,omitempty"`
+}
+
+// CephOSDMetadata is the "osd" sub-object inside CephOSDDetails.
+type CephOSDMetadata struct {
+	BackAddr       string `json:"back_addr,omitempty"`
+	Encrypted      bool   `json:"encrypted,omitempty"`
+	FrontAddr      string `json:"front_addr,omitempty"`
+	HBBackAddr     string `json:"hb_back_addr,omitempty"`
+	HBFrontAddr    string `json:"hb_front_addr,omitempty"`
+	Hostname       string `json:"hostname,omitempty"`
+	ID             int    `json:"id"`
+	MemUsage       int64  `json:"mem_usage,omitempty"`
+	OSDData        string `json:"osd_data,omitempty"`
+	OSDObjectStore string `json:"osd_objectstore,omitempty"`
+	PID            int    `json:"pid,omitempty"`
+	Version        string `json:"version,omitempty"`
+}
+
+// CephOSDDevice is one row in CephOSDDetails.Devices.
+type CephOSDDevice struct {
+	DevNode        string `json:"dev_node,omitempty"`
+	Device         string `json:"device,omitempty"` // block|db|wal
+	PhysicalDevice string `json:"physical_device,omitempty"`
+	Size           uint64 `json:"size,omitempty"`
+	SupportDiscard bool   `json:"support_discard,omitempty"`
+	Type           string `json:"type,omitempty"` // hdd|ssd
+}
+
+// CephOSDLVInfo is the response from GET /nodes/{node}/ceph/osd/{osdid}/lv-info
+// — LVM details for the OSD's block / db / wal logical volume.
+type CephOSDLVInfo struct {
+	CreationTime string `json:"creation_time,omitempty"`
+	LVName       string `json:"lv_name,omitempty"`
+	LVPath       string `json:"lv_path,omitempty"`
+	LVSize       uint64 `json:"lv_size,omitempty"`
+	LVUUID       string `json:"lv_uuid,omitempty"`
+	VGName       string `json:"vg_name,omitempty"`
+}
+
+// CephOSDCreateOptions is the POST body for /nodes/{node}/ceph/osd.
+// Dev is required. DBDevSize requires DBDev; WALDevSize requires WALDev.
+// OSDsPerDevice is mutually exclusive with DBDev/WALDev.
+type CephOSDCreateOptions struct {
+	Dev              string    `json:"dev"`
+	CrushDeviceClass string    `json:"crush-device-class,omitempty"`
+	DBDev            string    `json:"db_dev,omitempty"`
+	DBDevSize        float64   `json:"db_dev_size,omitempty"`
+	Encrypted        IntOrBool `json:"encrypted,omitempty"`
+	OSDsPerDevice    int       `json:"osds-per-device,omitempty"`
+	WALDev           string    `json:"wal_dev,omitempty"`
+	WALDevSize       float64   `json:"wal_dev_size,omitempty"`
+}
+
 // --- ACME (Let's Encrypt-style automated certificate issuance) -------------
 
 // ACMEDirectory is one row in GET /cluster/acme/directories — a friendly name
