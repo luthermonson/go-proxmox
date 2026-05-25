@@ -762,6 +762,33 @@ func virtualMachines() {
     "data": "UPID:node1:00000004:00000004:00000004:qmconfig:100:root@pam:"
 }`)
 
+	// PUT /nodes/{node}/qemu/{vmid}/config - synchronous VM config update
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/100/config$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/feature - feature availability check
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/feature$").
+		MatchParam("feature", "[a-z]+").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "hasFeature": true,
+        "nodes": ["node1", "node2"]
+    }
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/dbus-vmstate - control dbus-vmstate helper
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/100/dbus-vmstate$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
 	// POST /nodes/{node}/qemu/{vmid}/status/start - Start VM
 	gock.New(config.C.URI).
 		Post("^/nodes/node1/qemu/100/status/start$").

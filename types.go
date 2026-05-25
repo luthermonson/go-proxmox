@@ -1076,6 +1076,15 @@ func indexedDeviceKey(k string) (prefix string, ok bool) {
 	return "", false
 }
 
+// VirtualMachineFeature is the response payload of
+// GET /nodes/{node}/qemu/{vmid}/feature. HasFeature reports whether the
+// requested feature is available for the VM (and optional snapshot); Nodes
+// lists the cluster nodes on which the feature is available.
+type VirtualMachineFeature struct {
+	HasFeature bool     `json:"hasFeature"`
+	Nodes      []string `json:"nodes,omitempty"`
+}
+
 type VirtualMachineMigrateOptions struct {
 	Target           string    `json:"target"`
 	BWLimit          uint64    `json:"bwlimit,omitempty"` // FIXME(issue-199): PVE default = datacenter/storage migrate limit; use *uint64 so unset doesn't impose 0.

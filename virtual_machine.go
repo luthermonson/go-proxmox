@@ -54,6 +54,44 @@ func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOp
 	return NewTask(upid, v.client), err
 }
 
+// ConfigSync sets virtual machine options using the synchronous API
+// (PUT /nodes/{node}/qemu/{vmid}/config). It blocks until the change is
+// applied and does not return a task. Per the upstream docs, prefer the
+// asynchronous variant (Config) for any actions involving hotplug or storage
+// allocation.
+func (v *VirtualMachine) ConfigSync(ctx context.Context, options ...VirtualMachineOption) error {
+	data := make(map[string]interface{})
+	for _, opt := range options {
+		data[opt.Name] = opt.Value
+	}
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), data, nil)
+}
+
+// Feature checks whether a given feature (for example "snapshot", "clone",
+// or "copy") is available for this VM. When snapname is non-empty the check
+// is performed against that specific snapshot. The returned VirtualMachineFeature
+// also lists which cluster nodes the feature is available on.
+func (v *VirtualMachine) Feature(ctx context.Context, feature, snapname string) (VirtualMachineFeature, error) {
+	var result VirtualMachineFeature
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/feature", v.Node, v.VMID)}
+	params := url.Values{}
+	params.Set("feature", feature)
+	if snapname != "" {
+		params.Set("snapname", snapname)
+	}
+	u.RawQuery = params.Encode()
+	err := v.client.Get(ctx, u.String(), &result)
+	return result, err
+}
+
+// DBusVMState controls the dbus-vmstate helper for a running VM. Valid
+// actions are "start" and "stop". This is a niche endpoint used to migrate
+// additional VM state via the dbus-vmstate helper.
+func (v *VirtualMachine) DBusVMState(ctx context.Context, action string) error {
+	data := map[string]interface{}{"action": action}
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/dbus-vmstate", v.Node, v.VMID), data, nil)
+}
+
 func (v *VirtualMachine) Monitor(ctx context.Context, command string) (s string, err error) {
 	data := make(map[string]interface{})
 	data["command"] = command
