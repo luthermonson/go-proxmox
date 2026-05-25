@@ -1086,4 +1086,68 @@ func nodes() {
 		Delete("^/nodes/node1/disks/zfs/rpool").
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmzfs:rpool:root@pam:"}`)
+
+	// --- /nodes/{node}/ceph/{mon,mgr,mds} daemon registries -----------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mon$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6789/0", "host": "node1", "rank": 0, "quorum": 1, "state": "running", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1},
+			{"name": "node2", "addr": "10.0.0.2:6789/0", "host": "node2", "rank": 1, "quorum": 1, "state": "running", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mon/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemon:mon.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mon/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymon:mon.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mgr$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6859/2343", "host": "node1", "state": "active", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mgr/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemgr:mgr.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mgr/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymgr:mgr.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mds$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6800/1234", "host": "node1", "rank": 0, "state": "up:active", "fs_name": "cephfs", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1},
+			{"name": "node2", "host": "node2", "rank": -1, "state": "up:standby", "standby_replay": 0, "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mds/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemds:mds.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mds/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymds:mds.node1:root@pam:"}`)
 }
