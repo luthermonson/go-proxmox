@@ -325,6 +325,13 @@ func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan 
 	return v.client.VNCWebSocket(p, vnc)
 }
 
+// SpiceProxy returns SPICE proxy connection info for the VM. Mirrors the
+// Container.SpiceProxy surface and serializes the .vv file fields remote-viewer
+// expects.
+func (v *VirtualMachine) SpiceProxy(ctx context.Context) (spice *SpiceProxy, err error) {
+	return spice, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/spiceproxy", v.Node, v.VMID), nil, &spice)
+}
+
 func (v *VirtualMachine) IsRunning() bool {
 	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
 }
@@ -860,4 +867,65 @@ func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string)
 func (v *VirtualMachine) Pending(ctx context.Context) (pending *PendingConfiguration, err error) {
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/pending", v.Node, v.VMID), &pending)
 	return
+}
+
+// DirIndex returns the per-VM directory index
+// (GET /nodes/{node}/qemu/{vmid}) — one entry per child resource (config,
+// status, snapshot, firewall, agent, …). Mostly useful for discovery; the
+// actual resources are wrapped as their own methods on *VirtualMachine.
+func (v *VirtualMachine) DirIndex(ctx context.Context) (entries []*VirtualMachineDirIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &entries)
+	return
+}
+
+// StatusIndex returns the VM status directory index
+// (GET /nodes/{node}/qemu/{vmid}/status) — one entry per status sub-command
+// (current, start, stop, reboot, …). The actual operations are wrapped as
+// Start/Stop/Reboot/etc. on *VirtualMachine.
+func (v *VirtualMachine) StatusIndex(ctx context.Context) (entries []*VirtualMachineStatusIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status", v.Node, v.VMID), &entries)
+	return
+}
+
+// SnapshotIndex returns the per-snapshot directory index
+// (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — one entry per
+// sub-resource (config, rollback) on the named snapshot.
+func (v *VirtualMachine) SnapshotIndex(ctx context.Context, snapshot string) (entries []*VirtualMachineSnapshotIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", v.Node, v.VMID, snapshot), &entries)
+	return
+}
+
+// MigrationTunnel opens a migration tunnel for this VM
+// (POST /nodes/{node}/qemu/{vmid}/mtunnel) and returns the Unix socket path,
+// authentication ticket, and worker UPID.
+//
+// PVE marks this endpoint as "for internal use by VM migration" — callers
+// should generally use Migrate or the higher-level migration flow rather
+// than wiring this up directly. It is wrapped here only for full API
+// surface coverage.
+func (v *VirtualMachine) MigrationTunnel(ctx context.Context, options *VirtualMachineMigrationTunnelOptions) (tunnel *VirtualMachineMigrationTunnel, err error) {
+	if options == nil {
+		options = &VirtualMachineMigrationTunnelOptions{}
+	}
+	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/mtunnel", v.Node, v.VMID), options, &tunnel)
+	return
+}
+
+// MigrationTunnelWebSocketPath returns the path callers can pass to a
+// websocket dialer (or to Client.VNCWebSocket-style helpers) to upgrade the
+// migration tunnel returned by MigrationTunnel
+// (GET /nodes/{node}/qemu/{vmid}/mtunnelwebsocket).
+//
+// PVE marks this endpoint as "for internal use by VM migration"; this
+// helper just builds the path with the correct query string. There is no
+// generic Client helper for migration-tunnel websockets — the protocol
+// differs from the VNC/term tunnels — so dial it directly with the
+// authenticated cookies/headers if you need to consume it.
+func (v *VirtualMachine) MigrationTunnelWebSocketPath(tunnel *VirtualMachineMigrationTunnel) string {
+	q := url.Values{}
+	if tunnel != nil {
+		q.Set("socket", tunnel.Socket)
+		q.Set("ticket", tunnel.Ticket)
+	}
+	return fmt.Sprintf("/nodes/%s/qemu/%d/mtunnelwebsocket?%s", v.Node, v.VMID, q.Encode())
 }
