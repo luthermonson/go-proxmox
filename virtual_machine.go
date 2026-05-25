@@ -815,21 +815,47 @@ func (v *VirtualMachine) FirewallOptionSet(ctx context.Context, firewallOption *
 	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
 }
 
-func (v *VirtualMachine) FirewallGetRules(ctx context.Context) (rules []*FirewallRule, err error) {
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), &rules)
-	return
+// FirewallRules lists firewall rules for the VM. Returned rules carry the
+// parent context required to call (*FirewallRule).Get/Update/Delete.
+func (v *VirtualMachine) FirewallRules(ctx context.Context) (rules []*FirewallRule, err error) {
+	if err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), &rules); err != nil {
+		return nil, err
+	}
+	for _, r := range rules {
+		r.client = v.client
+		r.kind = fwRuleKindQemu
+		r.node = v.Node
+		r.vmid = uint64(v.VMID)
+	}
+	return rules, nil
 }
 
-func (v *VirtualMachine) FirewallRulesCreate(ctx context.Context, rule *FirewallRule) error {
-	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil)
+// FirewallRule returns a *FirewallRule wired to the VM's firewall scope at
+// the given position. The returned instance is a lazy handle — call Get(ctx)
+// to populate it from /firewall/rules/{pos}.
+func (v *VirtualMachine) FirewallRule(pos int) *FirewallRule {
+	return &FirewallRule{
+		client: v.client,
+		kind:   fwRuleKindQemu,
+		node:   v.Node,
+		vmid:   uint64(v.VMID),
+		Pos:    pos,
+	}
 }
 
-func (v *VirtualMachine) FirewallRulesUpdate(ctx context.Context, rule *FirewallRule) error {
-	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rule.Pos), rule, nil)
-}
-
-func (v *VirtualMachine) FirewallRulesDelete(ctx context.Context, rulePos int) error {
-	return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rulePos), nil)
+// NewFirewallRule creates a firewall rule on the VM. After a successful
+// POST the rule is wired with parent context so subsequent
+// Update/Delete/Get calls route correctly. Note: PVE's POST does not return
+// the assigned position; callers that need it should re-list via FirewallRules.
+func (v *VirtualMachine) NewFirewallRule(ctx context.Context, rule *FirewallRule) error {
+	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", v.Node, v.VMID), rule, nil); err != nil {
+		return err
+	}
+	rule.client = v.client
+	rule.kind = fwRuleKindQemu
+	rule.node = v.Node
+	rule.vmid = uint64(v.VMID)
+	return nil
 }
 
 func (v *VirtualMachine) NewSnapshot(ctx context.Context, name string) (task *Task, err error) {

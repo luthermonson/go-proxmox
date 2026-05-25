@@ -22,12 +22,13 @@ func TestVirtualMachine_Firewall(t *testing.T) {
 	assert.NotEmpty(t, fw.Aliases)
 }
 
-func TestVirtualMachine_FirewallGetRule(t *testing.T) {
+func TestVirtualMachine_FirewallRule_Get(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	rule, err := vm100().FirewallGetRule(context.Background(), 0)
-	assert.Nil(t, err)
+	rule := vm100().FirewallRule(0)
 	assert.NotNil(t, rule)
+	err := rule.Get(context.Background())
+	assert.Nil(t, err)
 	assert.Equal(t, "ACCEPT", rule.Action)
 }
 

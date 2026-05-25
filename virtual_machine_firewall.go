@@ -18,11 +18,6 @@ func (v *VirtualMachine) Firewall(ctx context.Context) (firewall *Firewall, err 
 	return firewall, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall", v.Node, v.VMID), &firewall)
 }
 
-// FirewallGetRule reads a single firewall rule by position.
-func (v *VirtualMachine) FirewallGetRule(ctx context.Context, pos int) (rule *FirewallRule, err error) {
-	return rule, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, pos), &rule)
-}
-
 // FirewallLog returns the per-VM firewall log entries. start/limit page the
 // result; since/until filter by UNIX epoch — pass 0 to omit.
 func (v *VirtualMachine) FirewallLog(ctx context.Context, start, limit, since, until int) (entries []*FirewallLogEntry, err error) {

@@ -289,7 +289,7 @@ func TestNode_FirewallOptionSet(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestNode_FirewallGetRules(t *testing.T) {
+func TestNode_FirewallRules(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -298,7 +298,7 @@ func TestNode_FirewallGetRules(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
-	rules, err := node.FirewallGetRules(ctx)
+	rules, err := node.FirewallRules(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, rules)
 	assert.GreaterOrEqual(t, len(rules), 1)
@@ -310,7 +310,7 @@ func TestNode_FirewallGetRules(t *testing.T) {
 	assert.NotEmpty(t, rule.Action)
 }
 
-func TestNode_FirewallRulesCreate(t *testing.T) {
+func TestNode_NewFirewallRule(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -327,11 +327,11 @@ func TestNode_FirewallRulesCreate(t *testing.T) {
 		Dport:  "22",
 	}
 
-	err = node.FirewallRulesCreate(ctx, rule)
+	err = node.NewFirewallRule(ctx, rule)
 	assert.Nil(t, err)
 }
 
-func TestNode_FirewallRulesUpdate(t *testing.T) {
+func TestFirewallRule_UpdateAndDelete_Node(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -340,30 +340,15 @@ func TestNode_FirewallRulesUpdate(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
-	rule := &FirewallRule{
-		Pos:    0,
-		Type:   "in",
-		Action: "DROP",
-		Enable: 1,
-		Proto:  "tcp",
-		Dport:  "22",
-	}
+	rule := node.FirewallRule(0)
+	rule.Type = "in"
+	rule.Action = "DROP"
+	rule.Enable = 1
+	rule.Proto = "tcp"
+	rule.Dport = "22"
 
-	err = node.FirewallRulesUpdate(ctx, rule)
-	assert.Nil(t, err)
-}
-
-func TestNode_FirewallRulesDelete(t *testing.T) {
-	mocks.On(mockConfig)
-	defer mocks.Off()
-	client := mockClient()
-	ctx := context.Background()
-
-	node, err := client.Node(ctx, "node1")
-	assert.Nil(t, err)
-
-	err = node.FirewallRulesDelete(ctx, 0)
-	assert.Nil(t, err)
+	assert.Nil(t, rule.Update(ctx))
+	assert.Nil(t, rule.Delete(ctx))
 }
 
 func TestNode_GetCustomCertificates(t *testing.T) {

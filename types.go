@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -2375,7 +2376,33 @@ type FirewallSecurityGroup struct {
 	Comment string          `json:"comment,omitempty"`
 	Rules   []*FirewallRule `json:"rules,omitempty"`
 }
+
+// fwRuleKind identifies which parent /firewall/rules tree a *FirewallRule
+// instance belongs to. The kind drives endpoint dispatch in Get/Update/Delete.
+// Kept as a typed constant rather than the URL prefix so the dispatch site
+// can use inline fmt.Sprintf literals — the endpoint coverage scanner only
+// resolves call sites whose path is a literal format string.
+type fwRuleKind uint8
+
+const (
+	fwRuleKindUnknown fwRuleKind = iota
+	fwRuleKindNode
+	fwRuleKindQemu
+	fwRuleKindLXC
+)
+
 type FirewallRule struct {
+	// client + kind + node + vmid identify the owning resource so the instance
+	// methods (Get/Update/Delete) can resolve to the correct /firewall/rules/{pos}
+	// endpoint. They are unexported and excluded from JSON marshaling so the
+	// struct remains a clean POST/PUT body for every owner kind (node, qemu,
+	// lxc, cluster security group). Populated by the parent getter — never
+	// set by JSON deserialization.
+	client *Client
+	kind   fwRuleKind
+	node   string
+	vmid   uint64
+
 	Type     string `json:"type,omitempty"`
 	Action   string `json:"action,omitempty"`
 	Pos      int    `json:"pos,omitempty"`
@@ -2394,6 +2421,60 @@ type FirewallRule struct {
 
 func (r *FirewallRule) IsEnable() bool {
 	return r.Enable == 1
+}
+
+// errFirewallRuleNoParent is returned by Get/Update/Delete when the rule was
+// constructed without being attached to a parent (e.g. zero-value struct).
+var errFirewallRuleNoParent = fmt.Errorf("firewall rule has no parent context; obtain via Node/VirtualMachine/Container.FirewallRule")
+
+// Get fetches /firewall/rules/{pos} for the owning resource and refreshes
+// the receiver in place. Requires the rule to have been produced by a parent
+// getter (Node.FirewallRule, VirtualMachine.FirewallRule, Container.FirewallRule).
+func (r *FirewallRule) Get(ctx context.Context) error {
+	if r.client == nil {
+		return errFirewallRuleNoParent
+	}
+	switch r.kind {
+	case fwRuleKindNode:
+		return r.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", r.node, r.Pos), r)
+	case fwRuleKindQemu:
+		return r.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), r)
+	case fwRuleKindLXC:
+		return r.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), r)
+	}
+	return errFirewallRuleNoParent
+}
+
+// Update PUTs the receiver to /firewall/rules/{pos} on the owning resource.
+func (r *FirewallRule) Update(ctx context.Context) error {
+	if r.client == nil {
+		return errFirewallRuleNoParent
+	}
+	switch r.kind {
+	case fwRuleKindNode:
+		return r.client.Put(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", r.node, r.Pos), r, nil)
+	case fwRuleKindQemu:
+		return r.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), r, nil)
+	case fwRuleKindLXC:
+		return r.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), r, nil)
+	}
+	return errFirewallRuleNoParent
+}
+
+// Delete removes /firewall/rules/{pos} on the owning resource.
+func (r *FirewallRule) Delete(ctx context.Context) error {
+	if r.client == nil {
+		return errFirewallRuleNoParent
+	}
+	switch r.kind {
+	case fwRuleKindNode:
+		return r.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", r.node, r.Pos), nil)
+	case fwRuleKindQemu:
+		return r.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), nil)
+	case fwRuleKindLXC:
+		return r.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", r.node, r.vmid, r.Pos), nil)
+	}
+	return errFirewallRuleNoParent
 }
 
 // PVE's three-gate firewall design: cluster + node + VM. Node-level ships
