@@ -2825,6 +2825,147 @@ type ClusterMetricServerOptions struct {
 	Delete                 string `json:"delete,omitempty"`              // PUT only — comma-separated keys to clear
 }
 
+// --- /nodes/{node}/disks ---------------------------------------------------
+
+// Disk is one row returned by GET /nodes/{node}/disks/list. Fields are
+// best-effort optional — PVE omits keys that don't apply to a given device.
+type Disk struct {
+	DevPath     string    `json:"devpath,omitempty"`
+	Used        string    `json:"used,omitempty"`
+	GPT         IntOrBool `json:"gpt,omitempty"`
+	Size        uint64    `json:"size,omitempty"`
+	Health      string    `json:"health,omitempty"`
+	Model       string    `json:"model,omitempty"`
+	Serial      string    `json:"serial,omitempty"`
+	Type        string    `json:"type,omitempty"`
+	Vendor      string    `json:"vendor,omitempty"`
+	WWN         string    `json:"wwn,omitempty"`
+	ByIDLink    string    `json:"by_id_link,omitempty"`
+	Wearout     string    `json:"wearout,omitempty"`
+	OSDID       int       `json:"osdid,omitempty"`
+	OSDEncrypted IntOrBool `json:"osdencrypted,omitempty"`
+	Parent      string    `json:"parent,omitempty"`
+	RPM         int       `json:"rpm,omitempty"`
+	BLKSize     int       `json:"blocksize,omitempty"`
+	MountPoint  string    `json:"mounted,omitempty"`
+	Vendor2     string    `json:"vendor2,omitempty"`
+}
+
+// DiskSMART is the response from GET /nodes/{node}/disks/smart.
+type DiskSMART struct {
+	Health     string                 `json:"health,omitempty"`
+	Type       string                 `json:"type,omitempty"`
+	Text       string                 `json:"text,omitempty"`
+	Attributes []map[string]any       `json:"attributes,omitempty"`
+}
+
+// NodeDirectory is one row returned by GET /nodes/{node}/disks/directory.
+type NodeDirectory struct {
+	Device  string `json:"device,omitempty"`
+	Options string `json:"options,omitempty"`
+	Path    string `json:"path,omitempty"`
+	Type    string `json:"type,omitempty"`
+	UUID    string `json:"unitfile,omitempty"`
+}
+
+// NodeDirectoryOptions is the POST body for /nodes/{node}/disks/directory.
+type NodeDirectoryOptions struct {
+	Name       string `json:"name"`
+	Device     string `json:"device"`
+	Filesystem string `json:"filesystem,omitempty"` // PVE default ext4
+	AddStorage IntOrBool `json:"add_storage,omitempty"`
+}
+
+// NodeLVMTree is the nested response from GET /nodes/{node}/disks/lvm. Each
+// child is a volume group whose own children are the constituent physical
+// volumes.
+type NodeLVMTree struct {
+	Children []NodeLVMVolumeGroup `json:"children,omitempty"`
+	Leaf     IntOrBool            `json:"leaf,omitempty"`
+}
+
+type NodeLVMVolumeGroup struct {
+	Name     string             `json:"name,omitempty"`
+	Size     uint64             `json:"size,omitempty"`
+	Free     uint64             `json:"free,omitempty"`
+	Leaf     IntOrBool          `json:"leaf,omitempty"`
+	Children []NodeLVMPhysical  `json:"children,omitempty"`
+}
+
+type NodeLVMPhysical struct {
+	Name string `json:"name,omitempty"`
+	Size uint64 `json:"size,omitempty"`
+	Free uint64 `json:"free,omitempty"`
+	Leaf IntOrBool `json:"leaf,omitempty"`
+}
+
+// NodeLVMOptions is the POST body for /nodes/{node}/disks/lvm.
+type NodeLVMOptions struct {
+	Name       string    `json:"name"`
+	Device     string    `json:"device"`
+	AddStorage IntOrBool `json:"add_storage,omitempty"`
+}
+
+// NodeLVMThin is one row from GET /nodes/{node}/disks/lvmthin.
+type NodeLVMThin struct {
+	LV           string `json:"lv,omitempty"`
+	LVSize       uint64 `json:"lv_size,omitempty"`
+	MetadataSize uint64 `json:"metadata_size,omitempty"`
+	MetadataUsed uint64 `json:"metadata_used,omitempty"`
+	Used         uint64 `json:"used,omitempty"`
+}
+
+// NodeLVMThinOptions is the POST body for /nodes/{node}/disks/lvmthin.
+type NodeLVMThinOptions struct {
+	Name       string    `json:"name"`
+	Device     string    `json:"device"`
+	AddStorage IntOrBool `json:"add_storage,omitempty"`
+}
+
+// NodeZFSPoolSummary is one row from GET /nodes/{node}/disks/zfs.
+type NodeZFSPoolSummary struct {
+	Name    string  `json:"name,omitempty"`
+	Health  string  `json:"health,omitempty"`
+	Size    uint64  `json:"size,omitempty"`
+	Alloc   uint64  `json:"alloc,omitempty"`
+	Free    uint64  `json:"free,omitempty"`
+	Frag    int     `json:"frag,omitempty"`
+	Dedup   float64 `json:"dedup,omitempty"`
+}
+
+// NodeZFSPool is the detailed pool status from GET /nodes/{node}/disks/zfs/{name}.
+type NodeZFSPool struct {
+	Name     string           `json:"name,omitempty"`
+	State    string           `json:"state,omitempty"`
+	Status   string           `json:"status,omitempty"`
+	Action   string           `json:"action,omitempty"`
+	Scan     string           `json:"scan,omitempty"`
+	Errors   string           `json:"errors,omitempty"`
+	Children []NodeZFSVdev    `json:"children,omitempty"`
+}
+
+type NodeZFSVdev struct {
+	Name     string        `json:"name,omitempty"`
+	State    string        `json:"state,omitempty"`
+	Read     uint64        `json:"read,omitempty"`
+	Write    uint64        `json:"write,omitempty"`
+	Cksum    uint64        `json:"cksum,omitempty"`
+	Msg      string        `json:"msg,omitempty"`
+	Children []NodeZFSVdev `json:"children,omitempty"`
+	Leaf     IntOrBool     `json:"leaf,omitempty"`
+}
+
+// NodeZFSPoolOptions is the POST body for /nodes/{node}/disks/zfs.
+type NodeZFSPoolOptions struct {
+	Name        string    `json:"name"`
+	Devices     string    `json:"devices"` // space-separated device list per PVE
+	RaidLevel   string    `json:"raidlevel"`
+	Ashift      int       `json:"ashift,omitempty"`
+	Compression string    `json:"compression,omitempty"`
+	DraidConfig string    `json:"draid-config,omitempty"`
+	AddStorage  IntOrBool `json:"add_storage,omitempty"`
+}
+
 // --- ACME (Let's Encrypt-style automated certificate issuance) -------------
 
 // ACMEDirectory is one row in GET /cluster/acme/directories — a friendly name

@@ -954,4 +954,136 @@ func nodes() {
 			{"Package": "pve-manager", "Title": "Proxmox VE Management", "Description": "PVE manager", "Version": "9.1-1", "Origin": "Proxmox", "Arch": "amd64", "Section": "admin", "Priority": "optional", "CurrentState": "Installed", "ManagerVersion": "9.1-1"},
 			{"Package": "proxmox-ve", "Title": "Proxmox VE", "Description": "Proxmox VE metapackage", "Version": "9.1-1", "Origin": "Proxmox", "Arch": "all", "Section": "admin", "Priority": "optional", "CurrentState": "Installed", "RunningKernel": "6.8.12-1-pve"}
 		]}`)
+
+	// --- /nodes/{node}/disks -------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/list").
+		Reply(200).
+		JSON(`{"data": [
+			{"devpath": "/dev/sda", "size": 512000000000, "model": "Samsung SSD 870 EVO", "type": "ssd", "health": "PASSED", "gpt": 1, "used": "LVM"},
+			{"devpath": "/dev/sdb", "size": 2000000000000, "model": "Seagate ST2000DM008", "type": "hdd", "health": "PASSED", "gpt": 0}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/smart").
+		Reply(200).
+		JSON(`{"data": {"health": "PASSED", "type": "ata", "attributes": []}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/disks/initgpt$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:diskinit:/dev/sda:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/disks/wipedisk$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:wipedisk:/dev/sda:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/directory$").
+		Reply(200).
+		JSON(`{"data": [
+			{"path": "/mnt/pve/iso", "device": "/dev/sda1", "type": "ext4", "options": "defaults"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/disks/directory$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:mkdir:iso:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/disks/directory/iso").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmdir:iso:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/lvm$").
+		Reply(200).
+		JSON(`{"data": {
+			"leaf": 0,
+			"children": [
+				{"name": "pve", "size": 500000000000, "free": 100000000000, "leaf": 0, "children": [
+					{"name": "/dev/sda", "size": 500000000000, "free": 100000000000, "leaf": 1}
+				]}
+			]
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/disks/lvm$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:mklvm:pve:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/disks/lvm/pve").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmlvm:pve:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/lvmthin$").
+		Reply(200).
+		JSON(`{"data": [
+			{"lv": "data", "lv_size": 400000000000, "metadata_size": 100000000, "metadata_used": 1000000, "used": 50000000000}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/disks/lvmthin$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:mklvmthin:data:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/disks/lvmthin/data").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmlvmthin:data:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/zfs$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "rpool", "health": "ONLINE", "size": 1000000000000, "alloc": 200000000000, "free": 800000000000, "frag": 5, "dedup": 1.0}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks/zfs/rpool$").
+		Reply(200).
+		JSON(`{"data": {
+			"name": "rpool",
+			"state": "ONLINE",
+			"status": "healthy",
+			"scan": "scrub repaired 0B in 00:12:34 with 0 errors on Sun Apr 14 00:24:35 2024",
+			"errors": "No known data errors",
+			"children": [
+				{"name": "raidz2-0", "state": "ONLINE", "leaf": 0, "children": [
+					{"name": "/dev/sda", "state": "ONLINE", "leaf": 1, "read": 0, "write": 0, "cksum": 0},
+					{"name": "/dev/sdb", "state": "ONLINE", "leaf": 1, "read": 0, "write": 0, "cksum": 0}
+				]}
+			]
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/disks/zfs$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:mkzfs:rpool:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/disks/zfs/rpool").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmzfs:rpool:root@pam:"}`)
 }
