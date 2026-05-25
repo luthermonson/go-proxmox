@@ -336,6 +336,12 @@ func TestContainerSnapshots(t *testing.T) {
 	snapshots, err := container.Snapshots(ctx)
 	assert.Nil(t, err)
 	assert.Len(t, snapshots, 3)
+	// Returned snapshots must be wired to their parent container so
+	// instance methods can target the right snapshot path.
+	for _, s := range snapshots {
+		assert.Equal(t, "node1", s.Node)
+		assert.Equal(t, 101, s.VMID)
+	}
 }
 
 func TestContainerNewSnapshot(t *testing.T) {
@@ -353,22 +359,19 @@ func TestContainerNewSnapshot(t *testing.T) {
 	assert.NotEmpty(t, task)
 }
 
-func TestContainerGetSnapshot(t *testing.T) {
+func TestContainer_Snapshot_Getter(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
-	ctx := context.Background()
-	container := Container{
-		client: client,
-		Node:   "node1",
-		VMID:   101,
-	}
-	snapshot, err := container.GetSnapshot(ctx, "snapshot1")
-	assert.Nil(t, err)
-	assert.NotNil(t, snapshot)
+	c := &Container{client: client, Node: "node1", VMID: 101}
+	s := c.Snapshot("snapshot1")
+	assert.NotNil(t, s)
+	assert.Equal(t, "snapshot1", s.Name)
+	assert.Equal(t, "node1", s.Node)
+	assert.Equal(t, 101, s.VMID)
 }
 
-func TestContainerDeleteSnapshot(t *testing.T) {
+func TestContainerSnapshot_SubResources(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -378,12 +381,27 @@ func TestContainerDeleteSnapshot(t *testing.T) {
 		Node:   "node1",
 		VMID:   101,
 	}
-	task, err := container.DeleteSnapshot(ctx, "snapshot1")
+	entries, err := container.Snapshot("snapshot1").SubResources(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, entries)
+}
+
+func TestContainerSnapshot_Delete(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	container := Container{
+		client: client,
+		Node:   "node1",
+		VMID:   101,
+	}
+	task, err := container.Snapshot("snapshot1").Delete(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 }
 
-func TestContainerRollbackSnapshot(t *testing.T) {
+func TestContainerSnapshot_Rollback(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -393,7 +411,7 @@ func TestContainerRollbackSnapshot(t *testing.T) {
 		Node:   "node1",
 		VMID:   101,
 	}
-	task, err := container.RollbackSnapshot(ctx, "snapshot1", true)
+	task, err := container.Snapshot("snapshot1").Rollback(ctx, true)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 }
@@ -587,19 +605,19 @@ func TestContainerFirewallRefs(t *testing.T) {
 	assert.Equal(t, "blocked", refs[1].Name)
 }
 
-func TestContainerGetSnapshotConfig(t *testing.T) {
+func TestContainerSnapshot_Config(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
 	ctx := context.Background()
 
 	c := &Container{client: client, Node: "node1", VMID: 101}
-	config, err := c.GetSnapshotConfig(ctx, "snapshot1")
+	config, err := c.Snapshot("snapshot1").Config(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, "First snapshot", config["description"])
 }
 
-func TestContainerUpdateSnapshot(t *testing.T) {
+func TestContainerSnapshot_UpdateConfig(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -608,10 +626,10 @@ func TestContainerUpdateSnapshot(t *testing.T) {
 	c := &Container{client: client, Node: "node1", VMID: 101}
 
 	// nil options still posts a body successfully (was broken pre-fix)
-	assert.Nil(t, c.UpdateSnapshot(ctx, "snapshot1", nil))
+	assert.Nil(t, c.Snapshot("snapshot1").UpdateConfig(ctx, nil))
 
 	// explicit description
-	assert.Nil(t, c.UpdateSnapshot(ctx, "snapshot1", &ContainerSnapshotUpdateOptions{
+	assert.Nil(t, c.Snapshot("snapshot1").UpdateConfig(ctx, &ContainerSnapshotUpdateOptions{
 		Description: "updated by tests",
 	}))
 }

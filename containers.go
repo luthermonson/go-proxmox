@@ -192,11 +192,24 @@ func (c *Container) VNCProxy(ctx context.Context, vncOptions VNCProxyOptions) (v
 	return vnc, c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/vncproxy", c.Node, c.VMID), vncOptions, &vnc)
 }
 
+// Snapshots lists every snapshot of the container. Each returned
+// *ContainerSnapshot has its client/Node/VMID pre-populated so callers can
+// invoke instance methods (Rollback, Delete, Config, …) directly.
 func (c *Container) Snapshots(ctx context.Context) (snapshots []*ContainerSnapshot, err error) {
-	err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot", c.Node, c.VMID), &snapshots)
-	return
+	if err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot", c.Node, c.VMID), &snapshots); err != nil {
+		return nil, err
+	}
+	for _, s := range snapshots {
+		s.client = c.client
+		s.Node = c.Node
+		s.VMID = int(c.VMID)
+	}
+	return snapshots, nil
 }
 
+// NewSnapshot creates a snapshot of the container and returns the worker
+// task. The returned snapshot's metadata is reachable via c.Snapshot(name)
+// once the task completes.
 func (c *Container) NewSnapshot(ctx context.Context, snapName string) (task *Task, err error) {
 	var upid UPID
 	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot", c.Node, c.VMID), map[string]interface{}{"snapname": snapName}, &upid); err != nil {
@@ -205,37 +218,60 @@ func (c *Container) NewSnapshot(ctx context.Context, snapName string) (task *Tas
 	return NewTask(upid, c.client), nil
 }
 
-func (c *Container) GetSnapshot(ctx context.Context, snapshot string) (snap []*ContainerSnapshot, err error) {
-	return snap, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s", c.Node, c.VMID, snapshot), &snap)
+// Snapshot constructs a handle to a single snapshot by name. It performs no
+// API call; the returned *ContainerSnapshot is wired to the container's
+// client and node/vmid so its instance methods (Rollback, Delete, Config,
+// UpdateConfig, SubResources) target the correct snapshot path.
+func (c *Container) Snapshot(name string) *ContainerSnapshot {
+	return &ContainerSnapshot{
+		client: c.client,
+		Node:   c.Node,
+		VMID:   int(c.VMID),
+		Name:   name,
+	}
 }
 
-func (c *Container) DeleteSnapshot(ctx context.Context, snapshot string) (task *Task, err error) {
+// Rollback rolls the container back to this snapshot. When start is true the
+// container is started after the rollback completes.
+func (s *ContainerSnapshot) Rollback(ctx context.Context, start bool) (task *Task, err error) {
 	var upid UPID
-	if err := c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s", c.Node, c.VMID, snapshot), &upid); err != nil {
+	if err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/rollback", s.Node, s.VMID, s.Name), map[string]interface{}{"start": start}, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, c.client), nil
+	return NewTask(upid, s.client), nil
 }
 
-func (c *Container) RollbackSnapshot(ctx context.Context, snapshot string, start bool) (task *Task, err error) {
+// Delete removes this snapshot from the container. Returns the worker task.
+func (s *ContainerSnapshot) Delete(ctx context.Context) (task *Task, err error) {
 	var upid UPID
-	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/rollback", c.Node, c.VMID, snapshot), map[string]interface{}{"start": start}, &upid); err != nil {
+	if err := s.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s", s.Node, s.VMID, s.Name), &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, c.client), nil
+	return NewTask(upid, s.client), nil
 }
 
-func (c *Container) GetSnapshotConfig(ctx context.Context, snapshot string) (config map[string]interface{}, err error) {
-	return config, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", c.Node, c.VMID, snapshot), &config)
+// Config reads this snapshot's metadata (description, parent, etc.). PVE
+// returns a free-form map since snapshot configs include arbitrary device
+// keys snapshotted at the time of creation.
+func (s *ContainerSnapshot) Config(ctx context.Context) (config map[string]interface{}, err error) {
+	return config, s.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", s.Node, s.VMID, s.Name), &config)
 }
 
-// UpdateSnapshot updates a container snapshot's metadata. PVE only allows
-// changing the description on this endpoint; pass nil options to clear it.
-func (c *Container) UpdateSnapshot(ctx context.Context, snapshot string, options *ContainerSnapshotUpdateOptions) error {
+// UpdateConfig updates this snapshot's metadata. PVE only allows changing
+// the description on this endpoint; pass nil options to clear it.
+func (s *ContainerSnapshot) UpdateConfig(ctx context.Context, options *ContainerSnapshotUpdateOptions) error {
 	if options == nil {
 		options = &ContainerSnapshotUpdateOptions{}
 	}
-	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", c.Node, c.VMID, snapshot), options, nil)
+	return s.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s/config", s.Node, s.VMID, s.Name), options, nil)
+}
+
+// SubResources returns the per-snapshot directory index
+// (GET /nodes/{node}/lxc/{vmid}/snapshot/{snapname}) — one entry per
+// sub-resource (config, rollback) on this snapshot.
+func (s *ContainerSnapshot) SubResources(ctx context.Context) (entries []*ContainerSnapshotIndexEntry, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/snapshot/%s", s.Node, s.VMID, s.Name), &entries)
+	return
 }
 
 func (c *Container) Firewall(ctx context.Context) (firewall *Firewall, err error) {

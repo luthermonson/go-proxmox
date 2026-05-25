@@ -652,6 +652,12 @@ func TestVirtualMachine_Snapshots(t *testing.T) {
 	assert.Equal(t, "snap1", snapshots[1].Name)
 	assert.Equal(t, "Before upgrade", snapshots[1].Description)
 	assert.Equal(t, "snap2", snapshots[2].Name)
+	// Returned snapshots must be wired to their parent VM so instance
+	// methods can target the right snapshot path.
+	for _, s := range snapshots {
+		assert.Equal(t, "node1", s.Node)
+		assert.Equal(t, 100, s.VMID)
+	}
 }
 
 func TestVirtualMachine_NewSnapshot(t *testing.T) {
@@ -683,7 +689,7 @@ func TestVirtualMachine_DeleteSnapshot(t *testing.T) {
 		Node:   "node1",
 		VMID:   100,
 	}
-	task, err := vm.DeleteSnapshot(ctx, "snap2")
+	task, err := vm.Snapshot("snap2").Delete(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 }
@@ -699,12 +705,23 @@ func TestVirtualMachine_SnapshotRollback(t *testing.T) {
 		Node:   "node1",
 	}
 
-	task, err := vm.SnapshotRollback(ctx, "snap1")
+	task, err := vm.Snapshot("snap1").Rollback(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, task)
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmrollback", task.Type)
 	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_Snapshot_Getter(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := vm100()
+	s := vm.Snapshot("snap1")
+	assert.NotNil(t, s)
+	assert.Equal(t, "snap1", s.Name)
+	assert.Equal(t, "node1", s.Node)
+	assert.Equal(t, 100, s.VMID)
 }
 
 func cleanupISO(t *testing.T, path string) {
@@ -946,10 +963,10 @@ func TestVirtualMachine_StatusIndex(t *testing.T) {
 	assert.True(t, names["reboot"])
 }
 
-func TestVirtualMachine_SnapshotIndex(t *testing.T) {
+func TestVirtualMachineSnapshot_SubResources(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	entries, err := vm100().SnapshotIndex(context.Background(), "snap1")
+	entries, err := vm100().Snapshot("snap1").SubResources(context.Background())
 	assert.Nil(t, err)
 	assert.Len(t, entries, 2)
 	names := make(map[string]bool, len(entries))

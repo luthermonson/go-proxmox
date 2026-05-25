@@ -8,20 +8,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVirtualMachine_GetSnapshotConfig(t *testing.T) {
+func TestVirtualMachineSnapshot_Config(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	cfg, err := vm100().GetSnapshotConfig(context.Background(), "snap1")
+	cfg, err := vm100().Snapshot("snap1").Config(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, "Before upgrade", cfg["description"])
 	assert.Equal(t, "snap0", cfg["parent"])
 }
 
-func TestVirtualMachine_UpdateSnapshot(t *testing.T) {
+func TestVirtualMachineSnapshot_UpdateConfig(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	err := vm100().UpdateSnapshot(context.Background(), "snap1", &VirtualMachineSnapshotUpdateOptions{Description: "renamed"})
+	err := vm100().Snapshot("snap1").UpdateConfig(context.Background(), &VirtualMachineSnapshotUpdateOptions{Description: "renamed"})
 	assert.Nil(t, err)
 	// nil options path
-	assert.Nil(t, vm100().UpdateSnapshot(context.Background(), "snap1", nil))
+	assert.Nil(t, vm100().Snapshot("snap1").UpdateConfig(context.Background(), nil))
 }
