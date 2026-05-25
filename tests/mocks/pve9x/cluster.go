@@ -654,6 +654,129 @@ func clusterBackup() {
 		Reply(200).
 		JSON(`{"data": null}`)
 
+	// --- /cluster/acme -------------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/directories$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"name": "Let's Encrypt V2", "url": "https://acme-v02.api.letsencrypt.org/directory"},
+        {"name": "Let's Encrypt V2 Staging", "url": "https://acme-staging-v02.api.letsencrypt.org/directory"}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/challenge-schema$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"id": "dns-01", "name": "dns-01 challenge", "type": "dns", "schema": {}},
+        {"id": "http-01", "name": "http-01 challenge", "type": "standalone", "schema": {}}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/tos").
+		Reply(200).
+		JSON(`{"data": "https://letsencrypt.org/documents/LE-SA-v1.4-April-3-2024.pdf"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/meta").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "caaIdentities": ["letsencrypt.org"],
+        "externalAccountRequired": 0,
+        "termsOfService": "https://letsencrypt.org/documents/LE-SA-v1.4-April-3-2024.pdf",
+        "website": "https://letsencrypt.org"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/account$").
+		Reply(200).
+		JSON(`{"data": [{"name": "default"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/account/default$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "directory": "https://acme-v02.api.letsencrypt.org/directory",
+        "location": "https://acme-v02.api.letsencrypt.org/acme/acct/123456",
+        "tos": "https://letsencrypt.org/documents/LE-SA-v1.4-April-3-2024.pdf",
+        "account": {"status": "valid", "contact": ["mailto:admin@example.com"]}
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/acme/account$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:acme-register:default:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/acme/account/default$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:acme-update:default:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/acme/account/default$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:acme-deactivate:default:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/plugins$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"plugin": "cloudflare", "type": "dns", "api": "cf", "data": "Y2YtdG9rZW49c2VjcmV0", "disable": 0, "validation-delay": 30}
+    ]
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme/plugins/cloudflare$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "plugin": "cloudflare",
+        "type": "dns",
+        "api": "cf",
+        "data": "Y2YtdG9rZW49c2VjcmV0",
+        "disable": 0,
+        "validation-delay": 30,
+        "digest": "abc123"
+    }
+}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/acme/plugins$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/acme/plugins/cloudflare$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Delete("^/cluster/acme/plugins/cloudflare$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
 	// --- /cluster/mapping ----------------------------------------------------
 
 	// GET /cluster/mapping — directory index

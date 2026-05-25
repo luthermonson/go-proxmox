@@ -785,6 +785,29 @@ func (v *VirtualMachine) DeleteSnapshot(ctx context.Context, snapshot string) (t
 	return NewTask(upid, v.client), nil
 }
 
+// GetSnapshotConfig reads a snapshot's metadata (description, parent, etc.).
+// PVE returns a free-form map since snapshot configs include arbitrary
+// device keys snapshotted at the time of creation.
+func (v *VirtualMachine) GetSnapshotConfig(ctx context.Context, snapshot string) (config map[string]interface{}, err error) {
+	return config, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), &config)
+}
+
+// VirtualMachineSnapshotUpdateOptions is the body for PUT
+// /qemu/{vmid}/snapshot/{name}/config. PVE only lets you change the
+// description through this endpoint.
+type VirtualMachineSnapshotUpdateOptions struct {
+	Description string `json:"description,omitempty"`
+}
+
+// UpdateSnapshot updates a VM snapshot's metadata. PVE only allows changing
+// the description on this endpoint; pass nil options to clear it.
+func (v *VirtualMachine) UpdateSnapshot(ctx context.Context, snapshot string, options *VirtualMachineSnapshotUpdateOptions) error {
+	if options == nil {
+		options = &VirtualMachineSnapshotUpdateOptions{}
+	}
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), options, nil)
+}
+
 // RRDData takes a timeframe enum and an optional consolidation function
 // usage: vm.RRDData(HOURLY) or vm.RRDData(HOURLY, AVERAGE)
 func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {

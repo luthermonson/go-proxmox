@@ -2867,6 +2867,88 @@ type ClusterRealmSyncJobOptions struct {
 	Delete         string `json:"delete,omitempty"` // PUT only — comma-separated keys to clear
 }
 
+// --- ACME (Let's Encrypt-style automated certificate issuance) -------------
+
+// ACMEDirectory is one row in GET /cluster/acme/directories — a friendly name
+// + URL for a known ACME CA endpoint.
+type ACMEDirectory struct {
+	Name string `json:"name,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
+// ACMEMeta is the metadata document returned by GET /cluster/acme/meta — what
+// the CA itself advertises about its capabilities and policies.
+type ACMEMeta struct {
+	CAAIdentities           []string `json:"caaIdentities,omitempty"`
+	ExternalAccountRequired IntOrBool `json:"externalAccountRequired,omitempty"`
+	TermsOfService          string   `json:"termsOfService,omitempty"`
+	Website                 string   `json:"website,omitempty"`
+}
+
+// ACMEChallengeSchema is one entry in GET /cluster/acme/challenge-schema —
+// the catalog of DNS plugin types PVE understands. Schema is the per-plugin
+// parameter spec (left as raw map since each plugin defines its own).
+type ACMEChallengeSchema struct {
+	ID     string                 `json:"id,omitempty"`
+	Name   string                 `json:"name,omitempty"`
+	Type   string                 `json:"type,omitempty"`
+	Schema map[string]interface{} `json:"schema,omitempty"`
+}
+
+// ACMEAccountIndex is one row in GET /cluster/acme/account — just the name.
+type ACMEAccountIndex struct {
+	Name string `json:"name,omitempty"`
+}
+
+// ACMEAccount is the full account record from GET /cluster/acme/account/{name}.
+// `Account` is the raw CA-returned JSON (status, contacts, etc.) — left
+// untyped because RFC 8555 leaves the shape extensible.
+type ACMEAccount struct {
+	Account   map[string]interface{} `json:"account,omitempty"`
+	Directory string                 `json:"directory,omitempty"`
+	Location  string                 `json:"location,omitempty"`
+	TOS       string                 `json:"tos,omitempty"`
+}
+
+// ACMEAccountOptions is the POST body for creating an account. Contact is the
+// only required field; PVE defaults Name to "default" and Directory to LE prod.
+// EABKid + EABHMACKey are for External Account Binding (e.g. ZeroSSL).
+type ACMEAccountOptions struct {
+	Contact     string `json:"contact"`
+	Directory   string `json:"directory,omitempty"`
+	EABKid      string `json:"eab-kid,omitempty"`
+	EABHMACKey  string `json:"eab-hmac-key,omitempty"`
+	Name        string `json:"name,omitempty"`
+	TOSURL      string `json:"tos_url,omitempty"`
+}
+
+// ACMEPlugin is the read shape from GET /cluster/acme/plugins[/{id}]. The
+// per-provider parameters live in Data (a base64-encoded blob per PVE).
+type ACMEPlugin struct {
+	ID              string    `json:"plugin,omitempty"`
+	Type            string    `json:"type,omitempty"`
+	API             string    `json:"api,omitempty"`
+	Data            string    `json:"data,omitempty"`
+	Disable         IntOrBool `json:"disable,omitempty"`
+	Nodes           string    `json:"nodes,omitempty"`
+	ValidationDelay int       `json:"validation-delay,omitempty"`
+	Digest          string    `json:"digest,omitempty"`
+}
+
+// ACMEPluginOptions is the create/update payload. POST requires ID + Type;
+// PUT identifies the plugin by URL and accepts Delete to clear keys.
+type ACMEPluginOptions struct {
+	ID              string `json:"id,omitempty"`
+	Type            string `json:"type,omitempty"` // "dns" | "standalone" — POST only
+	API             string `json:"api,omitempty"`
+	Data            string `json:"data,omitempty"`
+	Disable         *bool  `json:"disable,omitempty"`
+	Nodes           string `json:"nodes,omitempty"`
+	ValidationDelay *int   `json:"validation-delay,omitempty"` // PVE default 30; pointer so unset doesn't reset to 0
+	Digest          string `json:"digest,omitempty"`           // PUT only
+	Delete          string `json:"delete,omitempty"`           // PUT only
+}
+
 // ClusterMappings is the directory index returned by GET /cluster/mapping.
 type ClusterMappings []*ClusterMappingIndexEntry
 
