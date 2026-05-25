@@ -54,6 +54,44 @@ func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOp
 	return NewTask(upid, v.client), err
 }
 
+// ConfigSync sets virtual machine options using the synchronous API
+// (PUT /nodes/{node}/qemu/{vmid}/config). It blocks until the change is
+// applied and does not return a task. Per the upstream docs, prefer the
+// asynchronous variant (Config) for any actions involving hotplug or storage
+// allocation.
+func (v *VirtualMachine) ConfigSync(ctx context.Context, options ...VirtualMachineOption) error {
+	data := make(map[string]interface{})
+	for _, opt := range options {
+		data[opt.Name] = opt.Value
+	}
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", v.Node, v.VMID), data, nil)
+}
+
+// Feature checks whether a given feature (for example "snapshot", "clone",
+// or "copy") is available for this VM. When snapname is non-empty the check
+// is performed against that specific snapshot. The returned VirtualMachineFeature
+// also lists which cluster nodes the feature is available on.
+func (v *VirtualMachine) Feature(ctx context.Context, feature, snapname string) (VirtualMachineFeature, error) {
+	var result VirtualMachineFeature
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/feature", v.Node, v.VMID)}
+	params := url.Values{}
+	params.Set("feature", feature)
+	if snapname != "" {
+		params.Set("snapname", snapname)
+	}
+	u.RawQuery = params.Encode()
+	err := v.client.Get(ctx, u.String(), &result)
+	return result, err
+}
+
+// DBusVMState controls the dbus-vmstate helper for a running VM. Valid
+// actions are "start" and "stop". This is a niche endpoint used to migrate
+// additional VM state via the dbus-vmstate helper.
+func (v *VirtualMachine) DBusVMState(ctx context.Context, action string) error {
+	data := map[string]interface{}{"action": action}
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/dbus-vmstate", v.Node, v.VMID), data, nil)
+}
+
 func (v *VirtualMachine) Monitor(ctx context.Context, command string) (s string, err error) {
 	data := make(map[string]interface{})
 	data["command"] = command
@@ -325,6 +363,13 @@ func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan 
 	return v.client.VNCWebSocket(p, vnc)
 }
 
+// SpiceProxy returns SPICE proxy connection info for the VM. Mirrors the
+// Container.SpiceProxy surface and serializes the .vv file fields remote-viewer
+// expects.
+func (v *VirtualMachine) SpiceProxy(ctx context.Context) (spice *SpiceProxy, err error) {
+	return spice, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/spiceproxy", v.Node, v.VMID), nil, &spice)
+}
+
 func (v *VirtualMachine) IsRunning() bool {
 	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
 }
@@ -470,6 +515,23 @@ func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err e
 	return true, nil
 }
 
+// MigratePreconditions is the pre-flight sibling of Migrate: it returns
+// whether the VM is movable, which target nodes accept it, and what local
+// state (disks, PCI/USB resources, HA dependencies) would have to be moved
+// along with it. target is optional — pass "" to query against every node
+// in the cluster; pass a node name to scope the answer to just that target.
+// No task is created.
+func (v *VirtualMachine) MigratePreconditions(ctx context.Context, target string) (preconditions *VirtualMachineMigratePreconditions, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/migrate", v.Node, v.VMID)}
+	if target != "" {
+		params := url.Values{}
+		params.Add("target", target)
+		u.RawQuery = params.Encode()
+	}
+	err = v.client.Get(ctx, u.String(), &preconditions)
+	return
+}
+
 func (v *VirtualMachine) Migrate(
 	ctx context.Context,
 	params *VirtualMachineMigrateOptions,
@@ -484,6 +546,22 @@ func (v *VirtualMachine) Migrate(
 		return nil, err
 	}
 
+	return NewTask(upid, v.client), nil
+}
+
+// RemoteMigrate triggers a cross-cluster migration of this VM. The target
+// endpoint is an API-token bundle string per PVE's pvesh docs (e.g.
+// "apitoken=PVEAPIToken=user@pam!tok=secret host=target.example.com
+// fingerprint=AA:BB:..."). EXPERIMENTAL upstream — the schema and behavior
+// may change between PVE versions.
+func (v *VirtualMachine) RemoteMigrate(ctx context.Context, params *VirtualMachineRemoteMigrateOptions) (task *Task, err error) {
+	var upid UPID
+	if params == nil {
+		params = &VirtualMachineRemoteMigrateOptions{}
+	}
+	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/remote_migrate", v.Node, v.VMID), params, &upid); err != nil {
+		return nil, err
+	}
 	return NewTask(upid, v.client), nil
 }
 
@@ -808,6 +886,26 @@ func (v *VirtualMachine) UpdateSnapshot(ctx context.Context, snapshot string, op
 	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), options, nil)
 }
 
+// RRD asks PVE to render a single-datasource PNG on the server and returns
+// its on-disk filename (the file lives in PVE's rrdcached directory). Most
+// callers want RRDData instead for numeric series; this exists for API
+// parity with the web UI's graph rendering.
+func (v *VirtualMachine) RRD(ctx context.Context, ds string, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrd *VirtualMachineRRD, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrd", v.Node, v.VMID)}
+	params := url.Values{}
+	if len(consolidationFunction) > 0 {
+		if len(consolidationFunction) != 1 {
+			return nil, fmt.Errorf("only one consolidation function allowed")
+		}
+		params.Add("cf", string(consolidationFunction[0]))
+	}
+	params.Add("ds", ds)
+	params.Add("timeframe", string(timeframe))
+	u.RawQuery = params.Encode()
+	err = v.client.Get(ctx, u.String(), &rrd)
+	return
+}
+
 // RRDData takes a timeframe enum and an optional consolidation function
 // usage: vm.RRDData(HOURLY) or vm.RRDData(HOURLY, AVERAGE)
 func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
@@ -860,4 +958,65 @@ func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string)
 func (v *VirtualMachine) Pending(ctx context.Context) (pending *PendingConfiguration, err error) {
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/pending", v.Node, v.VMID), &pending)
 	return
+}
+
+// DirIndex returns the per-VM directory index
+// (GET /nodes/{node}/qemu/{vmid}) — one entry per child resource (config,
+// status, snapshot, firewall, agent, …). Mostly useful for discovery; the
+// actual resources are wrapped as their own methods on *VirtualMachine.
+func (v *VirtualMachine) DirIndex(ctx context.Context) (entries []*VirtualMachineDirIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &entries)
+	return
+}
+
+// StatusIndex returns the VM status directory index
+// (GET /nodes/{node}/qemu/{vmid}/status) — one entry per status sub-command
+// (current, start, stop, reboot, …). The actual operations are wrapped as
+// Start/Stop/Reboot/etc. on *VirtualMachine.
+func (v *VirtualMachine) StatusIndex(ctx context.Context) (entries []*VirtualMachineStatusIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status", v.Node, v.VMID), &entries)
+	return
+}
+
+// SnapshotIndex returns the per-snapshot directory index
+// (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — one entry per
+// sub-resource (config, rollback) on the named snapshot.
+func (v *VirtualMachine) SnapshotIndex(ctx context.Context, snapshot string) (entries []*VirtualMachineSnapshotIndexEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", v.Node, v.VMID, snapshot), &entries)
+	return
+}
+
+// MigrationTunnel opens a migration tunnel for this VM
+// (POST /nodes/{node}/qemu/{vmid}/mtunnel) and returns the Unix socket path,
+// authentication ticket, and worker UPID.
+//
+// PVE marks this endpoint as "for internal use by VM migration" — callers
+// should generally use Migrate or the higher-level migration flow rather
+// than wiring this up directly. It is wrapped here only for full API
+// surface coverage.
+func (v *VirtualMachine) MigrationTunnel(ctx context.Context, options *VirtualMachineMigrationTunnelOptions) (tunnel *VirtualMachineMigrationTunnel, err error) {
+	if options == nil {
+		options = &VirtualMachineMigrationTunnelOptions{}
+	}
+	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/mtunnel", v.Node, v.VMID), options, &tunnel)
+	return
+}
+
+// MigrationTunnelWebSocketPath returns the path callers can pass to a
+// websocket dialer (or to Client.VNCWebSocket-style helpers) to upgrade the
+// migration tunnel returned by MigrationTunnel
+// (GET /nodes/{node}/qemu/{vmid}/mtunnelwebsocket).
+//
+// PVE marks this endpoint as "for internal use by VM migration"; this
+// helper just builds the path with the correct query string. There is no
+// generic Client helper for migration-tunnel websockets — the protocol
+// differs from the VNC/term tunnels — so dial it directly with the
+// authenticated cookies/headers if you need to consume it.
+func (v *VirtualMachine) MigrationTunnelWebSocketPath(tunnel *VirtualMachineMigrationTunnel) string {
+	q := url.Values{}
+	if tunnel != nil {
+		q.Set("socket", tunnel.Socket)
+		q.Set("ticket", tunnel.Ticket)
+	}
+	return fmt.Sprintf("/nodes/%s/qemu/%d/mtunnelwebsocket?%s", v.Node, v.VMID, q.Encode())
 }

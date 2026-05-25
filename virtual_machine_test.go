@@ -49,6 +49,73 @@ func TestVirtualMachine_RRDData(t *testing.T) {
 	assert.Len(t, rdddata, 70)
 }
 
+func TestVirtualMachine_RRD(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	rrd, err := vm.RRD(ctx, "cpu", TimeframeHour)
+	assert.Nil(t, err)
+	require.NotNil(t, rrd)
+	assert.Contains(t, rrd.Filename, "101.png")
+}
+
+func TestVirtualMachine_MigratePreconditions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	pre, err := vm.MigratePreconditions(ctx, "")
+	assert.Nil(t, err)
+	require.NotNil(t, pre)
+	assert.True(t, pre.Running)
+	assert.True(t, pre.HasDBusVMState)
+	assert.Equal(t, []string{"node2", "node3"}, pre.AllowedNodes)
+	require.Contains(t, pre.NotAllowedNodes, "node4")
+	assert.Equal(t, []string{"local-lvm"}, pre.NotAllowedNodes["node4"].UnavailableStorages)
+	require.Len(t, pre.NotAllowedNodes["node4"].BlockingHAResources, 1)
+	assert.Equal(t, "vm:101", pre.NotAllowedNodes["node4"].BlockingHAResources[0].SID)
+	assert.Equal(t, "node-affinity", pre.NotAllowedNodes["node4"].BlockingHAResources[0].Cause)
+	require.Len(t, pre.LocalDisks, 1)
+	assert.Equal(t, "local-lvm:vm-101-disk-0", pre.LocalDisks[0].VolID)
+	assert.Equal(t, uint64(34359738368), pre.LocalDisks[0].Size)
+}
+
+func TestVirtualMachine_RemoteMigrate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	task, err := vm.RemoteMigrate(ctx, &VirtualMachineRemoteMigrateOptions{
+		TargetEndpoint: "apitoken=PVEAPIToken=user@pam!tok=secret host=target.example.com fingerprint=AA:BB",
+		TargetBridge:   "vmbr0=vmbr0",
+		TargetStorage:  "local=local",
+		TargetVMID:     201,
+		Online:         IntOrBool(true),
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "qmremote-migrate")
+}
+
 func TestVirtualMachineClone(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -184,6 +251,60 @@ func TestVirtualMachine_Config(t *testing.T) {
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmconfig", task.Type)
 	assert.Equal(t, "100", task.ID)
+}
+
+func TestVirtualMachine_ConfigSync(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	// ConfigSync blocks until the change is applied and returns no task.
+	err := vm.ConfigSync(ctx, VirtualMachineOption{Name: "description", Value: "synchronous update"})
+	assert.Nil(t, err)
+}
+
+func TestVirtualMachine_Feature(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	// Feature without a snapshot.
+	feature, err := vm.Feature(ctx, "snapshot", "")
+	assert.Nil(t, err)
+	assert.True(t, feature.HasFeature)
+	assert.Equal(t, []string{"node1", "node2"}, feature.Nodes)
+
+	// Feature against a specific snapshot.
+	feature, err = vm.Feature(ctx, "clone", "snap1")
+	assert.Nil(t, err)
+	assert.True(t, feature.HasFeature)
+}
+
+func TestVirtualMachine_DBusVMState(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	assert.Nil(t, vm.DBusVMState(ctx, "start"))
+	assert.Nil(t, vm.DBusVMState(ctx, "stop"))
 }
 
 func TestVirtualMachine_Start(t *testing.T) {
@@ -482,6 +603,36 @@ func TestVirtualMachine_AgentFileWrite(t *testing.T) {
 	assert.Nil(t, vm.AgentFileWrite(context.Background(), "/tmp/foo", []byte("hello")))
 }
 
+func TestVirtualMachine_AgentCommandIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	cmds, err := vm.AgentCommandIndex(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, cmds, 3)
+	assert.Equal(t, "exec", cmds[0].Name)
+	assert.Equal(t, "ping", cmds[1].Name)
+}
+
+func TestVirtualMachine_AgentCommand(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	out, err := vm.AgentCommand(context.Background(), "ping")
+	assert.Nil(t, err)
+	assert.Equal(t, "ping", out["echoed"])
+}
+
+func TestVirtualMachine_AgentGetMemoryBlockInfo(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	info, err := vm.AgentGetMemoryBlockInfo(context.Background())
+	assert.Nil(t, err)
+	assert.NotNil(t, info)
+	assert.Equal(t, uint64(134217728), info.Size)
+}
+
 func TestVirtualMachine_Snapshots(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -724,6 +875,23 @@ func TestMakeCloudInitISO_JolietSVD(t *testing.T) {
 	assert.True(t, foundJoliet, "Joliet Supplementary Volume Descriptor not found in ISO")
 }
 
+func TestVirtualMachine_SpiceProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	vm := &VirtualMachine{client: client, Node: "node1", VMID: 101}
+	spice, err := vm.SpiceProxy(ctx)
+	assert.Nil(t, err)
+	require.NotNil(t, spice)
+	assert.Equal(t, "spice", spice.Type)
+	assert.Equal(t, "node1.example.com", spice.Host)
+	assert.Equal(t, "61024", spice.Port)
+	assert.Equal(t, "secret-ticket", spice.Password)
+	assert.Equal(t, "61025", spice.TLSPort)
+}
+
 func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
 	isoPath, err := makeCloudInitISO("test-volid.iso", "userdata", "metadata", "", "")
 	require.NoError(t, err)
@@ -742,4 +910,90 @@ func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
 
 	volID := strings.TrimRight(string(pvd[40:72]), " \x00")
 	assert.Equal(t, volumeIdentifier, volID)
+}
+
+func TestVirtualMachine_DirIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().DirIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	// at minimum the canonical PVE child resources should be present
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["config"])
+	assert.True(t, names["status"])
+	assert.True(t, names["snapshot"])
+	assert.True(t, names["firewall"])
+	assert.True(t, names["mtunnel"])
+}
+
+func TestVirtualMachine_StatusIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().StatusIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["current"])
+	assert.True(t, names["start"])
+	assert.True(t, names["stop"])
+	assert.True(t, names["reboot"])
+}
+
+func TestVirtualMachine_SnapshotIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().SnapshotIndex(context.Background(), "snap1")
+	assert.Nil(t, err)
+	assert.Len(t, entries, 2)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["config"])
+	assert.True(t, names["rollback"])
+}
+
+func TestVirtualMachine_MigrationTunnel(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	tunnel, err := vm100().MigrationTunnel(context.Background(), nil)
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel)
+	assert.Equal(t, "/run/qemu-server/100.mtunnel", tunnel.Socket)
+	assert.Equal(t, "PVEMTUNNELTICKET:abc123", tunnel.Ticket)
+	assert.Contains(t, tunnel.UPID, "qmtunnel")
+
+	// with explicit options
+	tunnel2, err := vm100().MigrationTunnel(context.Background(), &VirtualMachineMigrationTunnelOptions{
+		Bridges:  "vmbr0",
+		Storages: "local-lvm",
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel2)
+	assert.Equal(t, tunnel.Socket, tunnel2.Socket)
+}
+
+func TestVirtualMachine_MigrationTunnelWebSocketPath(t *testing.T) {
+	vm := vm100()
+	tunnel := &VirtualMachineMigrationTunnel{
+		Socket: "/run/qemu-server/100.mtunnel",
+		Ticket: "PVEMTUNNELTICKET:abc123",
+	}
+	path := vm.MigrationTunnelWebSocketPath(tunnel)
+	assert.Contains(t, path, "/nodes/node1/qemu/100/mtunnelwebsocket")
+	assert.Contains(t, path, "socket=")
+	assert.Contains(t, path, "ticket=")
+	// ticket should be URL-encoded (':' becomes %3A)
+	assert.Contains(t, path, "PVEMTUNNELTICKET%3Aabc123")
+
+	// nil tunnel still returns a valid path skeleton
+	emptyPath := vm.MigrationTunnelWebSocketPath(nil)
+	assert.Contains(t, emptyPath, "/nodes/node1/qemu/100/mtunnelwebsocket")
 }

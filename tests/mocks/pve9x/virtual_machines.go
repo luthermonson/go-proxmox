@@ -715,6 +715,48 @@ func virtualMachines() {
     ]
 }`)
 
+	// GET /nodes/{node}/qemu/{vmid}/rrd - render single-DS PNG, returns filename
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/rrd$").
+		Reply(200).
+		JSON(`{"data": {"filename": "/var/lib/rrdcached/db/pve2-vm/101.png"}}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/migrate - migration preconditions
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/migrate$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "running": true,
+        "has-dbus-vmstate": true,
+        "allowed_nodes": ["node2", "node3"],
+        "not_allowed_nodes": {
+            "node4": {
+                "unavailable_storages": ["local-lvm"],
+                "blocking-ha-resources": [
+                    {"sid": "vm:101", "cause": "node-affinity"}
+                ]
+            }
+        },
+        "local_disks": [
+            {"volid": "local-lvm:vm-101-disk-0", "size": 34359738368, "cdrom": false, "is_unused": false}
+        ],
+        "local_resources": [],
+        "mapped-resources": [],
+        "mapped-resource-info": {},
+        "dependent-ha-resources": []
+    }
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/remote_migrate - cross-cluster migration
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/remote_migrate$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00009ABC:0000DEAD:5A3B7C8D:qmremote-migrate:101:root@pam:"}`)
+
 	// POST /nodes/{node}/qemu/{vmid}/clone - Clone VM
 	gock.New(config.C.URI).
 		Post("^/nodes/node1/qemu/101/clone").
@@ -761,6 +803,33 @@ func virtualMachines() {
 		JSON(`{
     "data": "UPID:node1:00000004:00000004:00000004:qmconfig:100:root@pam:"
 }`)
+
+	// PUT /nodes/{node}/qemu/{vmid}/config - synchronous VM config update
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/100/config$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/feature - feature availability check
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/feature$").
+		MatchParam("feature", "[a-z]+").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "hasFeature": true,
+        "nodes": ["node1", "node2"]
+    }
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/dbus-vmstate - control dbus-vmstate helper
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/100/dbus-vmstate$").
+		Reply(200).
+		JSON(`{"data": null}`)
 
 	// POST /nodes/{node}/qemu/{vmid}/status/start - Start VM
 	gock.New(config.C.URI).
@@ -1010,6 +1079,28 @@ func virtualMachines() {
 
 	gock.New(config.C.URI).
 		Persist().
+		Get("^/nodes/node1/qemu/101/agent$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "exec"},
+			{"name": "ping"},
+			{"name": "fsfreeze-status"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent$").
+		Reply(200).
+		JSON(`{"data": {"result": {"echoed": "ping"}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-memory-block-info$").
+		Reply(200).
+		JSON(`{"data": {"result": {"size": 134217728}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
 		Post("^/nodes/node1/qemu/101/agent/ping$").
 		Reply(200).
 		JSON(`{"data": {"result": {}}}`)
@@ -1129,4 +1220,104 @@ func virtualMachines() {
 		Post("^/nodes/node1/qemu/101/agent/file-write$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/spiceproxy
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/spiceproxy$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "type": "spice",
+        "host": "node1.example.com",
+        "port": "61024",
+        "tls-port": "61025",
+        "password": "secret-ticket",
+        "proxy": "http://proxy.example.com",
+        "title": "VM 101",
+        "host-subject": "OU=PVE Cluster Node,O=Proxmox VE,CN=node1",
+        "ca": "-----BEGIN CERTIFICATE-----\nMIIB...==\n-----END CERTIFICATE-----",
+        "delete-this-file": "1",
+        "secure-attention": "Ctrl+Alt+Ins",
+        "release-cursor": "Ctrl+Alt+R",
+        "toggle-fullscreen": "Shift+F11"
+    }
+}`)
+
+	// GET /nodes/{node}/qemu/{vmid} — per-VM directory index (vmdiridx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "config"},
+        {"subdir": "status"},
+        {"subdir": "snapshot"},
+        {"subdir": "firewall"},
+        {"subdir": "agent"},
+        {"subdir": "rrd"},
+        {"subdir": "rrddata"},
+        {"subdir": "monitor"},
+        {"subdir": "termproxy"},
+        {"subdir": "vncproxy"},
+        {"subdir": "vncwebsocket"},
+        {"subdir": "spiceproxy"},
+        {"subdir": "feature"},
+        {"subdir": "clone"},
+        {"subdir": "move_disk"},
+        {"subdir": "migrate"},
+        {"subdir": "resize"},
+        {"subdir": "sendkey"},
+        {"subdir": "unlink"},
+        {"subdir": "template"},
+        {"subdir": "cloudinit"},
+        {"subdir": "pending"},
+        {"subdir": "mtunnel"},
+        {"subdir": "mtunnelwebsocket"}
+    ]
+}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/status — status directory index (vmcmdidx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/status$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "current"},
+        {"subdir": "start"},
+        {"subdir": "stop"},
+        {"subdir": "reset"},
+        {"subdir": "shutdown"},
+        {"subdir": "suspend"},
+        {"subdir": "resume"},
+        {"subdir": "reboot"}
+    ]
+}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname} — snapshot directory index (snapshot_cmd_idx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/snapshot/snap1$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "config"},
+        {"subdir": "rollback"}
+    ]
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/mtunnel — open migration tunnel
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/100/mtunnel$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "socket": "/run/qemu-server/100.mtunnel",
+        "ticket": "PVEMTUNNELTICKET:abc123",
+        "upid": "UPID:node1:00001234:00005678:00009ABC:qmtunnel:100:root@pam:"
+    }
+}`)
 }

@@ -1076,6 +1076,15 @@ func indexedDeviceKey(k string) (prefix string, ok bool) {
 	return "", false
 }
 
+// VirtualMachineFeature is the response payload of
+// GET /nodes/{node}/qemu/{vmid}/feature. HasFeature reports whether the
+// requested feature is available for the VM (and optional snapshot); Nodes
+// lists the cluster nodes on which the feature is available.
+type VirtualMachineFeature struct {
+	HasFeature bool     `json:"hasFeature"`
+	Nodes      []string `json:"nodes,omitempty"`
+}
+
 type VirtualMachineMigrateOptions struct {
 	Target           string    `json:"target"`
 	BWLimit          uint64    `json:"bwlimit,omitempty"` // FIXME(issue-199): PVE default = datacenter/storage migrate limit; use *uint64 so unset doesn't impose 0.
@@ -1140,6 +1149,71 @@ type ContainerPending struct {
 // callers typically want RRDData instead for usable numeric series.
 type ContainerRRD struct {
 	Filename string `json:"filename"`
+}
+
+// VirtualMachineRRD is the response from GET /nodes/{node}/qemu/{vmid}/rrd.
+// PVE renders a single PNG on the server (one datasource per call) and
+// returns its on-disk filename; callers typically want RRDData instead for
+// usable numeric series.
+type VirtualMachineRRD struct {
+	Filename string `json:"filename"`
+}
+
+// VirtualMachineRemoteMigrateOptions configures POST
+// /nodes/{node}/qemu/{vmid}/remote_migrate (cross-cluster VM migration —
+// flagged EXPERIMENTAL upstream). TargetEndpoint is the API-token bundle
+// string PVE accepts ("apitoken=PVEAPIToken=... host=... fingerprint=...");
+// see the pvesh docs for the exact shape. TargetBridge and TargetStorage are
+// "src=tgt,src2=tgt2" pair-list maps; the special value "1" maps each source
+// to itself.
+type VirtualMachineRemoteMigrateOptions struct {
+	TargetEndpoint string    `json:"target-endpoint"`
+	TargetBridge   string    `json:"target-bridge"`
+	TargetStorage  string    `json:"target-storage"`
+	TargetVMID     int       `json:"target-vmid,omitempty"`
+	BWLimit        uint64    `json:"bwlimit,omitempty"`
+	Delete         IntOrBool `json:"delete,omitempty"`
+	Online         IntOrBool `json:"online,omitempty"`
+}
+
+// VirtualMachineMigratePreconditionsLocalDisk describes one local disk
+// surfaced by GET /nodes/{node}/qemu/{vmid}/migrate. Local disks block
+// live migration unless WithLocalDisks is enabled on Migrate.
+type VirtualMachineMigratePreconditionsLocalDisk struct {
+	VolID    string `json:"volid"`
+	Size     uint64 `json:"size,omitempty"`
+	CDROM    bool   `json:"cdrom,omitempty"`
+	IsUnused bool   `json:"is_unused,omitempty"`
+}
+
+// VirtualMachineMigratePreconditionsBlockingHAResource identifies a HA
+// resource preventing the VM from migrating to a particular node.
+type VirtualMachineMigratePreconditionsBlockingHAResource struct {
+	SID   string `json:"sid"`
+	Cause string `json:"cause"` // "node-affinity" or "resource-affinity"
+}
+
+// VirtualMachineMigratePreconditionsNotAllowedNodes carries the per-node
+// reasons a target node is rejected for migration.
+type VirtualMachineMigratePreconditionsNotAllowedNodes struct {
+	UnavailableStorages  []string                                                `json:"unavailable_storages,omitempty"`
+	BlockingHAResources  []*VirtualMachineMigratePreconditionsBlockingHAResource `json:"blocking-ha-resources,omitempty"`
+}
+
+// VirtualMachineMigratePreconditions is the response from
+// GET /nodes/{node}/qemu/{vmid}/migrate — a dry-run summary of whether the
+// VM can be migrated, which nodes accept it, and what local state would
+// have to be moved along with it. Pre-flight only; no task is created.
+type VirtualMachineMigratePreconditions struct {
+	Running             bool                                                          `json:"running"`
+	HasDBusVMState      bool                                                          `json:"has-dbus-vmstate"`
+	AllowedNodes        []string                                                      `json:"allowed_nodes,omitempty"`
+	NotAllowedNodes     map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
+	LocalDisks          []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
+	LocalResources      []string                                                      `json:"local_resources,omitempty"`
+	MappedResources     []string                                                      `json:"mapped-resources,omitempty"`
+	MappedResourceInfo  map[string]interface{}                                        `json:"mapped-resource-info,omitempty"`
+	DependentHAResources []string                                                     `json:"dependent-ha-resources,omitempty"`
 }
 
 // SpiceProxy carries the SPICE connection info returned by /spiceproxy.
@@ -1995,6 +2069,19 @@ type AgentMemoryBlock struct {
 	PhysIndex   int  `json:"phys-index"`
 	Online      bool `json:"online"`
 	CanOffline  bool `json:"can-offline,omitempty"`
+}
+
+// AgentMemoryBlockInfo is the response payload from qga's
+// guest-get-memory-block-info — currently just the per-block size in bytes.
+type AgentMemoryBlockInfo struct {
+	Size uint64 `json:"size"`
+}
+
+// AgentCommandIndexEntry is one entry in the GET /agent command index. PVE
+// only documents `{}` items, but exposes the subroute as the link's "name",
+// so we accept it as an open struct and surface the name when present.
+type AgentCommandIndexEntry struct {
+	Name string `json:"name,omitempty"`
 }
 
 // AgentFsfreezeStatus is the freeze state string ("thawed" or "frozen")
@@ -3352,4 +3439,50 @@ type ClusterNotificationWebhookOptions struct {
 	Disable *bool    `json:"disable,omitempty"`
 	Digest  string   `json:"digest,omitempty"`
 	Delete  []string `json:"delete,omitempty"`
+}
+
+// --- /nodes/{node}/qemu/{vmid} directory indexes --------------------------
+
+// VirtualMachineDirIndexEntry is one row in the per-VM directory index
+// (GET /nodes/{node}/qemu/{vmid}) — each entry names a child resource
+// (config, status, snapshot, firewall, agent, …).
+type VirtualMachineDirIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// VirtualMachineStatusIndexEntry is one row in the VM status directory index
+// (GET /nodes/{node}/qemu/{vmid}/status) — each entry names a status
+// sub-command (current, start, stop, reboot, …).
+type VirtualMachineStatusIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// VirtualMachineSnapshotIndexEntry is one row in the per-snapshot directory
+// index (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — each entry
+// names a sub-resource on the snapshot (config, rollback).
+type VirtualMachineSnapshotIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// --- /nodes/{node}/qemu/{vmid}/mtunnel ------------------------------------
+
+// VirtualMachineMigrationTunnel is the response from POST
+// /nodes/{node}/qemu/{vmid}/mtunnel — a Unix socket path plus an
+// authentication ticket the caller can use with the mtunnelwebsocket
+// endpoint. PVE marks this endpoint as "for internal use by VM migration".
+type VirtualMachineMigrationTunnel struct {
+	Socket string `json:"socket,omitempty"`
+	Ticket string `json:"ticket,omitempty"`
+	UPID   string `json:"upid,omitempty"`
+}
+
+// VirtualMachineMigrationTunnelOptions is the request body for POST
+// /nodes/{node}/qemu/{vmid}/mtunnel.
+type VirtualMachineMigrationTunnelOptions struct {
+	// Bridges is a comma-separated list of network bridges to check
+	// availability for. Optional.
+	Bridges string `json:"bridges,omitempty"`
+	// Storages is a comma-separated list of storages to check permission
+	// and availability for. Optional.
+	Storages string `json:"storages,omitempty"`
 }
