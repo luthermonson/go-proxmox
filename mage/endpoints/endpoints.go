@@ -230,7 +230,14 @@ func Coverage() error {
 
 // scanCallSites walks .go files (skipping tests, examples, mage, .claude, .cache)
 // and extracts `c.Get|Post|Put|Delete(ctx, "/path"|fmt.Sprintf("/path", ...), ...)`
-// call sites. Returns normalized (method, path) pairs.
+// call sites. Also recognizes the `url.URL{Path: ...}.String()` indirection
+// used by call sites that need to attach query parameters, e.g.
+//
+//	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrddata", v.Node, v.VMID)}
+//	u.RawQuery = params.Encode()
+//	err := v.client.Get(ctx, u.String(), &out)
+//
+// Returns normalized (method, path) pairs.
 func scanCallSites(root string) ([]extractedCall, error) {
 	var out []extractedCall
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -258,20 +265,31 @@ func scanCallSites(root string) ([]extractedCall, error) {
 		}()
 		s := bufio.NewScanner(f)
 		s.Buffer(make([]byte, 1<<16), 1<<20)
+		// Per-file map of `<var>` → path for `<var> := url.URL{Path: ...}`
+		// declarations. Reset per file so that vars in different files don't
+		// bleed. Reused vars within a file simply track the most recent binding,
+		// which is correct because the corresponding Get/Post call always
+		// follows the assignment in the same function.
+		urlVars := map[string]string{}
 		for line := 1; s.Scan(); line++ {
 			text := s.Text()
+
+			if am := urlAssignRE.FindStringSubmatch(text); am != nil {
+				if p := extractPathExpr(am[2]); p != "" {
+					urlVars[am[1]] = p
+				}
+			}
+
 			m := callRE.FindStringSubmatch(text)
 			if m == nil {
 				continue
 			}
 			method := m[1]
 			rest := m[2]
-			var pathLit string
-			if sm := sprintfRE.FindStringSubmatch(rest); sm != nil {
-				pathLit = sm[1]
-			} else if t := strings.TrimSpace(rest); strings.HasPrefix(t, `"`) {
-				if end := strings.Index(t[1:], `"`); end > 0 {
-					pathLit = t[1 : 1+end]
+			pathLit := extractPathExpr(rest)
+			if pathLit == "" {
+				if um := urlStringRE.FindStringSubmatch(strings.TrimSpace(rest)); um != nil {
+					pathLit = urlVars[um[1]]
 				}
 			}
 			if pathLit == "" {
@@ -289,16 +307,36 @@ func scanCallSites(root string) ([]extractedCall, error) {
 	return out, err
 }
 
+// extractPathExpr pulls the path literal out of an expression like:
+//
+//	"/some/path"
+//	fmt.Sprintf("/some/path", args...)
+//
+// Returns "" if neither form is present.
+func extractPathExpr(expr string) string {
+	if sm := sprintfRE.FindStringSubmatch(expr); sm != nil {
+		return sm[1]
+	}
+	if t := strings.TrimSpace(expr); strings.HasPrefix(t, `"`) {
+		if end := strings.Index(t[1:], `"`); end > 0 {
+			return t[1 : 1+end]
+		}
+	}
+	return ""
+}
+
 type extractedCall struct {
 	Method, Path, File string
 	Line               int
 }
 
 var (
-	callRE    = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)\s*\(\s*ctx\s*,\s*(.*?)$`)
-	sprintfRE = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
-	braceRE   = regexp.MustCompile(`\{[^}]+\}`)
-	fmtVerbRE = regexp.MustCompile(`%[sdvqxXt]`)
+	callRE      = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)\s*\(\s*ctx\s*,\s*(.*?)$`)
+	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
+	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
+	urlStringRE = regexp.MustCompile(`^(\w+)\.String\(\)`)
+	braceRE     = regexp.MustCompile(`\{[^}]+\}`)
+	fmtVerbRE   = regexp.MustCompile(`%[sdvqxXt]`)
 	// PVE volume identifiers serialize as `<storage>:<type>/<filename>` and are
 	// represented as a single `{volume}` segment in the schema. Go code that
 	// builds the path via `fmt.Sprintf(...content/%s:%s/%s, ...)` normalizes to
