@@ -1010,6 +1010,28 @@ func virtualMachines() {
 
 	gock.New(config.C.URI).
 		Persist().
+		Get("^/nodes/node1/qemu/101/agent$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "exec"},
+			{"name": "ping"},
+			{"name": "fsfreeze-status"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent$").
+		Reply(200).
+		JSON(`{"data": {"result": {"echoed": "ping"}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-memory-block-info$").
+		Reply(200).
+		JSON(`{"data": {"result": {"size": 134217728}}}`)
+
+	gock.New(config.C.URI).
+		Persist().
 		Post("^/nodes/node1/qemu/101/agent/ping$").
 		Reply(200).
 		JSON(`{"data": {"result": {}}}`)

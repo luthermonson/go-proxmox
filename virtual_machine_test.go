@@ -482,6 +482,36 @@ func TestVirtualMachine_AgentFileWrite(t *testing.T) {
 	assert.Nil(t, vm.AgentFileWrite(context.Background(), "/tmp/foo", []byte("hello")))
 }
 
+func TestVirtualMachine_AgentCommandIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	cmds, err := vm.AgentCommandIndex(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, cmds, 3)
+	assert.Equal(t, "exec", cmds[0].Name)
+	assert.Equal(t, "ping", cmds[1].Name)
+}
+
+func TestVirtualMachine_AgentCommand(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	out, err := vm.AgentCommand(context.Background(), "ping")
+	assert.Nil(t, err)
+	assert.Equal(t, "ping", out["echoed"])
+}
+
+func TestVirtualMachine_AgentGetMemoryBlockInfo(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := VirtualMachine{client: mockClient(), VMID: 101, Node: "node1"}
+	info, err := vm.AgentGetMemoryBlockInfo(context.Background())
+	assert.Nil(t, err)
+	assert.NotNil(t, info)
+	assert.Equal(t, uint64(134217728), info.Size)
+}
+
 func TestVirtualMachine_Snapshots(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
