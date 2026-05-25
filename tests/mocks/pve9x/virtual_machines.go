@@ -1243,4 +1243,81 @@ func virtualMachines() {
         "toggle-fullscreen": "Shift+F11"
     }
 }`)
+
+	// GET /nodes/{node}/qemu/{vmid} — per-VM directory index (vmdiridx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "config"},
+        {"subdir": "status"},
+        {"subdir": "snapshot"},
+        {"subdir": "firewall"},
+        {"subdir": "agent"},
+        {"subdir": "rrd"},
+        {"subdir": "rrddata"},
+        {"subdir": "monitor"},
+        {"subdir": "termproxy"},
+        {"subdir": "vncproxy"},
+        {"subdir": "vncwebsocket"},
+        {"subdir": "spiceproxy"},
+        {"subdir": "feature"},
+        {"subdir": "clone"},
+        {"subdir": "move_disk"},
+        {"subdir": "migrate"},
+        {"subdir": "resize"},
+        {"subdir": "sendkey"},
+        {"subdir": "unlink"},
+        {"subdir": "template"},
+        {"subdir": "cloudinit"},
+        {"subdir": "pending"},
+        {"subdir": "mtunnel"},
+        {"subdir": "mtunnelwebsocket"}
+    ]
+}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/status — status directory index (vmcmdidx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/status$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "current"},
+        {"subdir": "start"},
+        {"subdir": "stop"},
+        {"subdir": "reset"},
+        {"subdir": "shutdown"},
+        {"subdir": "suspend"},
+        {"subdir": "resume"},
+        {"subdir": "reboot"}
+    ]
+}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname} — snapshot directory index (snapshot_cmd_idx)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/100/snapshot/snap1$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "config"},
+        {"subdir": "rollback"}
+    ]
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/mtunnel — open migration tunnel
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/100/mtunnel$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "socket": "/run/qemu-server/100.mtunnel",
+        "ticket": "PVEMTUNNELTICKET:abc123",
+        "upid": "UPID:node1:00001234:00005678:00009ABC:qmtunnel:100:root@pam:"
+    }
+}`)
 }

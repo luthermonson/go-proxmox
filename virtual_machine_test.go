@@ -911,3 +911,89 @@ func TestMakeCloudInitISO_VolumeIdentifier(t *testing.T) {
 	volID := strings.TrimRight(string(pvd[40:72]), " \x00")
 	assert.Equal(t, volumeIdentifier, volID)
 }
+
+func TestVirtualMachine_DirIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().DirIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	// at minimum the canonical PVE child resources should be present
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["config"])
+	assert.True(t, names["status"])
+	assert.True(t, names["snapshot"])
+	assert.True(t, names["firewall"])
+	assert.True(t, names["mtunnel"])
+}
+
+func TestVirtualMachine_StatusIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().StatusIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["current"])
+	assert.True(t, names["start"])
+	assert.True(t, names["stop"])
+	assert.True(t, names["reboot"])
+}
+
+func TestVirtualMachine_SnapshotIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := vm100().SnapshotIndex(context.Background(), "snap1")
+	assert.Nil(t, err)
+	assert.Len(t, entries, 2)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["config"])
+	assert.True(t, names["rollback"])
+}
+
+func TestVirtualMachine_MigrationTunnel(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	tunnel, err := vm100().MigrationTunnel(context.Background(), nil)
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel)
+	assert.Equal(t, "/run/qemu-server/100.mtunnel", tunnel.Socket)
+	assert.Equal(t, "PVEMTUNNELTICKET:abc123", tunnel.Ticket)
+	assert.Contains(t, tunnel.UPID, "qmtunnel")
+
+	// with explicit options
+	tunnel2, err := vm100().MigrationTunnel(context.Background(), &VirtualMachineMigrationTunnelOptions{
+		Bridges:  "vmbr0",
+		Storages: "local-lvm",
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel2)
+	assert.Equal(t, tunnel.Socket, tunnel2.Socket)
+}
+
+func TestVirtualMachine_MigrationTunnelWebSocketPath(t *testing.T) {
+	vm := vm100()
+	tunnel := &VirtualMachineMigrationTunnel{
+		Socket: "/run/qemu-server/100.mtunnel",
+		Ticket: "PVEMTUNNELTICKET:abc123",
+	}
+	path := vm.MigrationTunnelWebSocketPath(tunnel)
+	assert.Contains(t, path, "/nodes/node1/qemu/100/mtunnelwebsocket")
+	assert.Contains(t, path, "socket=")
+	assert.Contains(t, path, "ticket=")
+	// ticket should be URL-encoded (':' becomes %3A)
+	assert.Contains(t, path, "PVEMTUNNELTICKET%3Aabc123")
+
+	// nil tunnel still returns a valid path skeleton
+	emptyPath := vm.MigrationTunnelWebSocketPath(nil)
+	assert.Contains(t, emptyPath, "/nodes/node1/qemu/100/mtunnelwebsocket")
+}

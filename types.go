@@ -3440,3 +3440,49 @@ type ClusterNotificationWebhookOptions struct {
 	Digest  string   `json:"digest,omitempty"`
 	Delete  []string `json:"delete,omitempty"`
 }
+
+// --- /nodes/{node}/qemu/{vmid} directory indexes --------------------------
+
+// VirtualMachineDirIndexEntry is one row in the per-VM directory index
+// (GET /nodes/{node}/qemu/{vmid}) — each entry names a child resource
+// (config, status, snapshot, firewall, agent, …).
+type VirtualMachineDirIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// VirtualMachineStatusIndexEntry is one row in the VM status directory index
+// (GET /nodes/{node}/qemu/{vmid}/status) — each entry names a status
+// sub-command (current, start, stop, reboot, …).
+type VirtualMachineStatusIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// VirtualMachineSnapshotIndexEntry is one row in the per-snapshot directory
+// index (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — each entry
+// names a sub-resource on the snapshot (config, rollback).
+type VirtualMachineSnapshotIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// --- /nodes/{node}/qemu/{vmid}/mtunnel ------------------------------------
+
+// VirtualMachineMigrationTunnel is the response from POST
+// /nodes/{node}/qemu/{vmid}/mtunnel — a Unix socket path plus an
+// authentication ticket the caller can use with the mtunnelwebsocket
+// endpoint. PVE marks this endpoint as "for internal use by VM migration".
+type VirtualMachineMigrationTunnel struct {
+	Socket string `json:"socket,omitempty"`
+	Ticket string `json:"ticket,omitempty"`
+	UPID   string `json:"upid,omitempty"`
+}
+
+// VirtualMachineMigrationTunnelOptions is the request body for POST
+// /nodes/{node}/qemu/{vmid}/mtunnel.
+type VirtualMachineMigrationTunnelOptions struct {
+	// Bridges is a comma-separated list of network bridges to check
+	// availability for. Optional.
+	Bridges string `json:"bridges,omitempty"`
+	// Storages is a comma-separated list of storages to check permission
+	// and availability for. Optional.
+	Storages string `json:"storages,omitempty"`
+}
