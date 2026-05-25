@@ -14108,4 +14108,87 @@ func ceph() {
         }
     }
 }`)
+
+	// --- /nodes/{node}/ceph/fs ---
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/fs$").
+		Reply(200).
+		JSON(`{"data": [
+			{
+				"name": "cephfs",
+				"metadata_pool": "cephfs_metadata",
+				"metadata_pool_id": 7,
+				"data_pool": "cephfs_data",
+				"data_pools": ["cephfs_data", "cephfs_data_ec"],
+				"data_pool_ids": [8, 9]
+			}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/fs/cephfs$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephfs-create:cephfs:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/fs/cephfs").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephfs-destroy:cephfs:root@pam:"}`)
+
+	// --- /nodes/{node}/ceph/cfg ---
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cfg$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "db"},
+			{"name": "raw"},
+			{"name": "value"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cfg/db$").
+		Reply(200).
+		JSON(`{"data": [
+			{
+				"section": "global",
+				"name": "auth-cluster-required",
+				"value": "cephx",
+				"level": "basic",
+				"mask": "",
+				"can_update_at_runtime": 0
+			},
+			{
+				"section": "osd",
+				"name": "osd-pool-default-size",
+				"value": "3",
+				"level": "advanced",
+				"mask": "",
+				"can_update_at_runtime": 1
+			}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cfg/raw$").
+		Reply(200).
+		JSON(`{"data": "[global]\n\tauth_cluster_required = cephx\n\tfsid = 12345678-1234-1234-1234-1234567890ab\n"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cfg/value").
+		Reply(200).
+		JSON(`{"data": {
+			"global": {
+				"auth-cluster-required": "cephx"
+			},
+			"osd": {
+				"osd-pool-default-size": "3"
+			}
+		}}`)
 }
