@@ -566,6 +566,60 @@ type CephMgrAlwaysOnModules struct {
 	Squid   []string `json:"squid"`
 }
 
+// CephIndexEntry is one row of the /nodes/{node}/ceph directory index — each
+// entry names a child resource (osd, mon, mgr, pool, fs, status, log, …).
+type CephIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// CephInitOptions are the parameters for POST /nodes/{node}/ceph/init — the
+// one-time bootstrap that seeds /etc/ceph/ceph.conf with cluster fsid,
+// default pool sizing, and network settings. All fields are optional; PVE
+// applies sensible defaults (size=3, min_size=2, etc.). Re-calling init on
+// a node that already has a [global] section is a no-op for most fields.
+type CephInitOptions struct {
+	// Network restricts all Ceph traffic to the given CIDR. Required when
+	// you want to pin Ceph to a non-default subnet.
+	Network string `json:"network,omitempty"`
+	// ClusterNetwork is the optional separate CIDR for OSD heartbeat /
+	// replication / recovery traffic. PVE rejects this without Network.
+	ClusterNetwork string `json:"cluster-network,omitempty"`
+	// Size is the target number of replicas per object (1-7). PVE default 3.
+	Size int `json:"size,omitempty"`
+	// MinSize is the minimum replicas required to accept I/O (1-7). PVE
+	// default 2. Must be <= Size.
+	MinSize int `json:"min_size,omitempty"`
+	// PGBits is the legacy default placement-group bit count (6-14, default
+	// 6). Deprecated upstream in recent Ceph releases; usually leave unset.
+	PGBits int `json:"pg_bits,omitempty"`
+	// DisableCephx turns off cephx authentication. Dangerous on untrusted
+	// networks — only set true when the cluster network is fully private.
+	DisableCephx bool `json:"disable_cephx,omitempty"`
+}
+
+// CephLogEntry is one line of the cluster log as returned by
+// /nodes/{node}/ceph/log. PVE uses single-letter field names ("n", "t") for
+// the line-number and text — matching the dump_logfile wire format.
+type CephLogEntry struct {
+	N int    `json:"n"` // 1-based log-file line number
+	T string `json:"t"` // log line text
+}
+
+// CephRule is one entry of the CRUSH rules list. PVE returns only the rule
+// name here; the rule body lives in the CRUSH map dumped by CephCrush.
+type CephRule struct {
+	Name string `json:"name"`
+}
+
+// CephCmdSafety is the response from the cmd-safety probe — true means Ceph
+// considers the requested action (stop/destroy of a service) safe to perform
+// right now without losing data redundancy. Status carries the
+// human-readable reason when Safe is false.
+type CephCmdSafety struct {
+	Safe   bool   `json:"safe"`
+	Status string `json:"status,omitempty"`
+}
+
 type NodeStatuses []*NodeStatus
 type NodeStatus struct {
 	// shared

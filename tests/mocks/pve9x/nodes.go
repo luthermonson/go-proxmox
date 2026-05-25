@@ -1086,4 +1086,95 @@ func nodes() {
 		Delete("^/nodes/node1/disks/zfs/rpool").
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmzfs:rpool:root@pam:"}`)
+
+	// --- /nodes/{node}/ceph -------------------------------------------------
+
+	// GET /nodes/{node}/ceph — directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph$").
+		Reply(200).
+		JSON(`{"data": [
+			{"subdir": "osd"},
+			{"subdir": "mon"},
+			{"subdir": "mgr"},
+			{"subdir": "pool"},
+			{"subdir": "fs"},
+			{"subdir": "status"},
+			{"subdir": "log"}
+		]}`)
+
+	// POST /nodes/{node}/ceph/init — bootstrap, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/init$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreate:init:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/start — start services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/start$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvstart:ceph.target:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/stop — stop services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/stop$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvstop:ceph.target:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/restart — restart services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/restart$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvrestart:ceph.target:root@pam:"}`)
+
+	// GET /nodes/{node}/ceph/status — small slice of the full ceph status (the
+	// full payload is already exercised by /cluster/ceph/status in ceph.go)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/status$").
+		Reply(200).
+		JSON(`{"data": {
+			"fsid": "d11c6ea1-7ab2-41fa-99c5-b85f4d7ffd49",
+			"health": {"status": "HEALTH_OK", "checks": {}, "mutes": []},
+			"quorum_names": ["node1", "node2", "node3"]
+		}}`)
+
+	// GET /nodes/{node}/ceph/log — log lines
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/log").
+		Reply(200).
+		JSON(`{"data": [
+			{"n": 1, "t": "2025-05-12 10:00:00.000 mon.node1 cluster [INF] osdmap e123: 3 total"},
+			{"n": 2, "t": "2025-05-12 10:00:01.000 mon.node1 cluster [INF] pgmap v456: 128 pgs"}
+		]}`)
+
+	// GET /nodes/{node}/ceph/crush — raw text dump
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/crush$").
+		Reply(200).
+		JSON(`{"data": "# begin crush map\ntunable choose_local_tries 0\nrule replicated_rule { id 0 type replicated step take default step chooseleaf firstn 0 type host step emit }\n# end crush map\n"}`)
+
+	// GET /nodes/{node}/ceph/rules — CRUSH rule list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/rules$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "replicated_rule"},
+			{"name": "erasure-code"}
+		]}`)
+
+	// GET /nodes/{node}/ceph/cmd-safety — heuristical pre-flight check
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cmd-safety").
+		Reply(200).
+		JSON(`{"data": {"safe": true}}`)
 }
