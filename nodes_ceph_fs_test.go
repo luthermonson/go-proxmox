@@ -9,10 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func cephNode() *Node {
-	return &Node{client: mockClient(), Name: "node1"}
-}
-
 func TestNode_CephFSs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

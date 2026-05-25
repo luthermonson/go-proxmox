@@ -14295,4 +14295,255 @@ func ceph() {
 				"osd-pool-default-size": "3"
 			}
 		}}`)
+	// --- /nodes/{node}/ceph/{mon,mgr,mds} daemon registries -----------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mon$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6789/0", "host": "node1", "rank": 0, "quorum": 1, "state": "running", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1},
+			{"name": "node2", "addr": "10.0.0.2:6789/0", "host": "node2", "rank": 1, "quorum": 1, "state": "running", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mon/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemon:mon.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mon/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymon:mon.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mgr$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6859/2343", "host": "node1", "state": "active", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mgr/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemgr:mgr.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mgr/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymgr:mgr.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/mds$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "node1", "addr": "10.0.0.1:6800/1234", "host": "node1", "rank": 0, "state": "up:active", "fs_name": "cephfs", "ceph_version_short": "19.2.0", "direxists": 1, "service": 1},
+			{"name": "node2", "host": "node2", "rank": -1, "state": "up:standby", "standby_replay": 0, "ceph_version_short": "19.2.0", "direxists": 1, "service": 1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/mds/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatemds:mds.node1:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/mds/node1$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroymds:mds.node1:root@pam:"}`)
+
+	// --- /nodes/{node}/ceph -------------------------------------------------
+
+	// GET /nodes/{node}/ceph — directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph$").
+		Reply(200).
+		JSON(`{"data": [
+			{"subdir": "osd"},
+			{"subdir": "mon"},
+			{"subdir": "mgr"},
+			{"subdir": "pool"},
+			{"subdir": "fs"},
+			{"subdir": "status"},
+			{"subdir": "log"}
+		]}`)
+
+	// POST /nodes/{node}/ceph/init — bootstrap, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/init$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreate:init:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/start — start services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/start$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvstart:ceph.target:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/stop — stop services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/stop$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvstop:ceph.target:root@pam:"}`)
+
+	// POST /nodes/{node}/ceph/restart — restart services, returns UPID
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/restart$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:srvrestart:ceph.target:root@pam:"}`)
+
+	// GET /nodes/{node}/ceph/status — small slice of the full ceph status (the
+	// full payload is already exercised by /cluster/ceph/status in ceph.go)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/status$").
+		Reply(200).
+		JSON(`{"data": {
+			"fsid": "d11c6ea1-7ab2-41fa-99c5-b85f4d7ffd49",
+			"health": {"status": "HEALTH_OK", "checks": {}, "mutes": []},
+			"quorum_names": ["node1", "node2", "node3"]
+		}}`)
+
+	// GET /nodes/{node}/ceph/log — log lines
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/log").
+		Reply(200).
+		JSON(`{"data": [
+			{"n": 1, "t": "2025-05-12 10:00:00.000 mon.node1 cluster [INF] osdmap e123: 3 total"},
+			{"n": 2, "t": "2025-05-12 10:00:01.000 mon.node1 cluster [INF] pgmap v456: 128 pgs"}
+		]}`)
+
+	// GET /nodes/{node}/ceph/crush — raw text dump
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/crush$").
+		Reply(200).
+		JSON(`{"data": "# begin crush map\ntunable choose_local_tries 0\nrule replicated_rule { id 0 type replicated step take default step chooseleaf firstn 0 type host step emit }\n# end crush map\n"}`)
+
+	// GET /nodes/{node}/ceph/rules — CRUSH rule list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/rules$").
+		Reply(200).
+		JSON(`{"data": [
+			{"name": "replicated_rule"},
+			{"name": "erasure-code"}
+		]}`)
+
+	// GET /nodes/{node}/ceph/cmd-safety — heuristical pre-flight check
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/cmd-safety").
+		Reply(200).
+		JSON(`{"data": {"safe": true}}`)
+
+	// GET /nodes/node1/ceph/pool - list pools
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/pool$").
+		Reply(200).
+		JSON(`{"data": [
+			{
+				"pool": 1,
+				"pool_name": "rbd",
+				"type": "replicated",
+				"size": 3,
+				"min_size": 2,
+				"pg_num": 128,
+				"pg_num_min": 32,
+				"pg_num_final": 128,
+				"pg_autoscale_mode": "on",
+				"crush_rule": 0,
+				"crush_rule_name": "replicated_rule",
+				"percent_used": 0.12,
+				"bytes_used": 12884901888,
+				"target_size": 0,
+				"target_size_ratio": 0.0,
+				"application_metadata": {"rbd": {}},
+				"autoscale_status": {"would_adjust": false}
+			},
+			{
+				"pool": 2,
+				"pool_name": "cephfs_metadata",
+				"type": "replicated",
+				"size": 3,
+				"min_size": 2,
+				"pg_num": 32,
+				"crush_rule": 0,
+				"crush_rule_name": "replicated_rule"
+			}
+		]}`)
+
+	// POST /nodes/node1/ceph/pool - create pool (returns UPID)
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/ceph/pool$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephcreatepool:rbd:root@pam:"}`)
+
+	// GET /nodes/node1/ceph/pool/{name} - sub-resource directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/pool/rbd$").
+		Reply(200).
+		JSON(`{"data": [{"subdir": "status"}]}`)
+
+	// PUT /nodes/node1/ceph/pool/{name} - update pool (returns UPID)
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/ceph/pool/rbd$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephsetpool:rbd:root@pam:"}`)
+
+	// DELETE /nodes/node1/ceph/pool/{name} - destroy pool (returns UPID)
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/ceph/pool/rbd").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:cephdestroypool:rbd:root@pam:"}`)
+
+	// GET /nodes/node1/ceph/pool/{name}/status - pool status
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/ceph/pool/rbd/status$").
+		Reply(200).
+		JSON(`{"data": {
+			"id": 1,
+			"name": "rbd",
+			"size": 3,
+			"min_size": 2,
+			"pg_num": 128,
+			"pg_num_min": 32,
+			"pgp_num": 128,
+			"crush_rule": "replicated_rule",
+			"pg_autoscale_mode": "on",
+			"application": "rbd",
+			"application_list": ["rbd"],
+			"fast_read": false,
+			"hashpspool": true,
+			"nodeep-scrub": false,
+			"nodelete": false,
+			"nopgchange": false,
+			"noscrub": false,
+			"nosizechange": false,
+			"use_gmt_hitset": true,
+			"write_fadvise_dontneed": false,
+			"target_size": "0",
+			"target_size_ratio": 0.0,
+			"autoscale_status": {"would_adjust": false},
+			"statistics": {"stored": 12884901888, "objects": 4096}
+		}}`)
 }

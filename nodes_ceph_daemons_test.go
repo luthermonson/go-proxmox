@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func cephNode() *Node {
-	return &Node{client: mockClient(), Name: "node1"}
-}
-
 func TestNode_CephMons(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
