@@ -253,6 +253,60 @@ func TestVirtualMachine_Config(t *testing.T) {
 	assert.Equal(t, "100", task.ID)
 }
 
+func TestVirtualMachine_ConfigSync(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	// ConfigSync blocks until the change is applied and returns no task.
+	err := vm.ConfigSync(ctx, VirtualMachineOption{Name: "description", Value: "synchronous update"})
+	assert.Nil(t, err)
+}
+
+func TestVirtualMachine_Feature(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	// Feature without a snapshot.
+	feature, err := vm.Feature(ctx, "snapshot", "")
+	assert.Nil(t, err)
+	assert.True(t, feature.HasFeature)
+	assert.Equal(t, []string{"node1", "node2"}, feature.Nodes)
+
+	// Feature against a specific snapshot.
+	feature, err = vm.Feature(ctx, "clone", "snap1")
+	assert.Nil(t, err)
+	assert.True(t, feature.HasFeature)
+}
+
+func TestVirtualMachine_DBusVMState(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   100,
+		Node:   "node1",
+	}
+
+	assert.Nil(t, vm.DBusVMState(ctx, "start"))
+	assert.Nil(t, vm.DBusVMState(ctx, "stop"))
+}
+
 func TestVirtualMachine_Start(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
