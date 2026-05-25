@@ -715,6 +715,48 @@ func virtualMachines() {
     ]
 }`)
 
+	// GET /nodes/{node}/qemu/{vmid}/rrd - render single-DS PNG, returns filename
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/rrd$").
+		Reply(200).
+		JSON(`{"data": {"filename": "/var/lib/rrdcached/db/pve2-vm/101.png"}}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/migrate - migration preconditions
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/migrate$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "running": true,
+        "has-dbus-vmstate": true,
+        "allowed_nodes": ["node2", "node3"],
+        "not_allowed_nodes": {
+            "node4": {
+                "unavailable_storages": ["local-lvm"],
+                "blocking-ha-resources": [
+                    {"sid": "vm:101", "cause": "node-affinity"}
+                ]
+            }
+        },
+        "local_disks": [
+            {"volid": "local-lvm:vm-101-disk-0", "size": 34359738368, "cdrom": false, "is_unused": false}
+        ],
+        "local_resources": [],
+        "mapped-resources": [],
+        "mapped-resource-info": {},
+        "dependent-ha-resources": []
+    }
+}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/remote_migrate - cross-cluster migration
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/remote_migrate$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00009ABC:0000DEAD:5A3B7C8D:qmremote-migrate:101:root@pam:"}`)
+
 	// POST /nodes/{node}/qemu/{vmid}/clone - Clone VM
 	gock.New(config.C.URI).
 		Post("^/nodes/node1/qemu/101/clone").

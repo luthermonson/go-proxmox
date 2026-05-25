@@ -49,6 +49,73 @@ func TestVirtualMachine_RRDData(t *testing.T) {
 	assert.Len(t, rdddata, 70)
 }
 
+func TestVirtualMachine_RRD(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	rrd, err := vm.RRD(ctx, "cpu", TimeframeHour)
+	assert.Nil(t, err)
+	require.NotNil(t, rrd)
+	assert.Contains(t, rrd.Filename, "101.png")
+}
+
+func TestVirtualMachine_MigratePreconditions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	pre, err := vm.MigratePreconditions(ctx, "")
+	assert.Nil(t, err)
+	require.NotNil(t, pre)
+	assert.True(t, pre.Running)
+	assert.True(t, pre.HasDBusVMState)
+	assert.Equal(t, []string{"node2", "node3"}, pre.AllowedNodes)
+	require.Contains(t, pre.NotAllowedNodes, "node4")
+	assert.Equal(t, []string{"local-lvm"}, pre.NotAllowedNodes["node4"].UnavailableStorages)
+	require.Len(t, pre.NotAllowedNodes["node4"].BlockingHAResources, 1)
+	assert.Equal(t, "vm:101", pre.NotAllowedNodes["node4"].BlockingHAResources[0].SID)
+	assert.Equal(t, "node-affinity", pre.NotAllowedNodes["node4"].BlockingHAResources[0].Cause)
+	require.Len(t, pre.LocalDisks, 1)
+	assert.Equal(t, "local-lvm:vm-101-disk-0", pre.LocalDisks[0].VolID)
+	assert.Equal(t, uint64(34359738368), pre.LocalDisks[0].Size)
+}
+
+func TestVirtualMachine_RemoteMigrate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   101,
+		Node:   "node1",
+	}
+
+	task, err := vm.RemoteMigrate(ctx, &VirtualMachineRemoteMigrateOptions{
+		TargetEndpoint: "apitoken=PVEAPIToken=user@pam!tok=secret host=target.example.com fingerprint=AA:BB",
+		TargetBridge:   "vmbr0=vmbr0",
+		TargetStorage:  "local=local",
+		TargetVMID:     201,
+		Online:         IntOrBool(true),
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "qmremote-migrate")
+}
+
 func TestVirtualMachineClone(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
