@@ -86,8 +86,8 @@ func TestCluster_SDNZones(t *testing.T) {
 	zones, err := cluster.SDNZones(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(zones))
-	assert.Equal(t, []string{"host1", "host2"}, zones[0].Nodes)
-	assert.Equal(t, []string{"203.0.113.184", "203.0.113.185"}, zones[0].Peers)
+	assert.Equal(t, CSV{"host1", "host2"}, zones[0].Nodes)
+	assert.Equal(t, CSV{"203.0.113.184", "203.0.113.185"}, zones[0].Peers)
 
 	// type param test
 	zones, err = cluster.SDNZones(ctx, "vxlan")
@@ -111,8 +111,8 @@ func TestCluster_SDNZone(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "test1", zone.Name)
 	assert.Equal(t, "vxlan", zone.Type)
-	assert.Equal(t, []string{"host1", "host2"}, zone.Nodes)
-	assert.Equal(t, []string{"203.0.113.184", "203.0.113.185"}, zone.Peers)
+	assert.Equal(t, CSV{"host1", "host2"}, zone.Nodes)
+	assert.Equal(t, CSV{"203.0.113.184", "203.0.113.185"}, zone.Peers)
 }
 
 func TestCluster_Backups(t *testing.T) {

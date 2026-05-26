@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -68,6 +69,44 @@ func TestEncodeSSHKeys(t *testing.T) {
 				"EncodeSSHKeys output must never contain '+'; PVE rejects it")
 		})
 	}
+}
+
+func TestCSV_UnmarshalJSON(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want CSV
+	}{
+		{
+			name: "comma separated string",
+			body: `"node1,node2, node3"`,
+			want: CSV{"node1", "node2", "node3"},
+		},
+		{
+			name: "array compatibility",
+			body: `["node1","node2"]`,
+			want: CSV{"node1", "node2"},
+		},
+		{
+			name: "empty string",
+			body: `""`,
+			want: nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got CSV
+			assert.NoError(t, json.Unmarshal([]byte(tc.body), &got))
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestCSV_MarshalJSON(t *testing.T) {
+	body, err := json.Marshal(CSV{"node1", "node2"})
+	assert.NoError(t, err)
+	assert.Equal(t, `"node1,node2"`, string(body))
 }
 
 // options tested in options_test.go

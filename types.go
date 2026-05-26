@@ -1837,6 +1837,44 @@ func (b *IntOrBool) MarshalJSON() ([]byte, error) {
 	return []byte("0"), nil
 }
 
+type CSV []string
+
+func (c *CSV) UnmarshalJSON(b []byte) error {
+	var list []string
+	if err := json.Unmarshal(b, &list); err == nil {
+		*c = CSV(list)
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	if s == "" {
+		*c = nil
+		return nil
+	}
+
+	parts := strings.Split(s, ",")
+	list = make([]string, 0, len(parts))
+	for _, part := range parts {
+		if v := strings.TrimSpace(part); v != "" {
+			list = append(list, v)
+		}
+	}
+
+	*c = CSV(list)
+	return nil
+}
+
+func (c CSV) MarshalJSON() ([]byte, error) {
+	if c == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(strings.Join([]string(c), ","))
+}
+
 type NodeNetworks []*NodeNetwork
 type NodeNetwork struct {
 	client  *Client
@@ -2179,7 +2217,7 @@ type User struct {
 	Expire         int              `json:"expire,omitempty"`
 	Firstname      string           `json:"firstname,omitempty"`
 	Lastname       string           `json:"lastname,omitempty"`
-	Groups         []string         `json:"groups,omitempty"`
+	Groups         CSV              `json:"groups,omitempty"`
 	Keys           string           `json:"keys,omitempty"`
 	Tokens         map[string]Token `json:"tokens,omitempty"`
 	RealmType      string           `json:"realm-type,omitempty"`
@@ -2194,7 +2232,7 @@ type UserOptions struct {
 	Enable    IntOrBool `json:"enable"` // FIXME(issue-199): PVE default 1, schema "boolean"; type already correct — use *IntOrBool so unset doesn't disable accounts.
 	Expire    int       `json:"expire,omitempty"`
 	Firstname string    `json:"firstname,omitempty"`
-	Groups    []string  `json:"groups,omitempty"`
+	Groups    CSV       `json:"groups,omitempty"`
 	Keys      string    `json:"keys,omitempty"`
 	Lastname  string    `json:"lastname,omitempty"`
 }
@@ -2343,7 +2381,7 @@ type NewUser struct {
 	Enable    bool     `json:"enable"`
 	Expire    int      `json:"expire,omitempty"`
 	Firstname string   `json:"firstname,omitempty"`
-	Groups    []string `json:"groups,omitempty"`
+	Groups    CSV      `json:"groups,omitempty"`
 	Keys      []string `json:"keys,omitempty"`
 	Lastname  string   `json:"lastname,omitempty"`
 	Password  string   `json:"password,omitempty"`
@@ -2705,81 +2743,18 @@ type IPAM struct {
 }
 
 type SDNZone struct {
-	Name       string   `json:"zone"`
-	Type       string   `json:"type"`
-	DHCP       string   `json:"dhcp,omitempty"`
-	DNS        string   `json:"dns,omitempty"`
-	DNSZone    string   `json:"dnszone,omitempty"`
-	IPAM       string   `json:"ipam,omitempty"`
-	MTU        int      `json:"mtu,omitempty"`
-	Nodes      []string `json:"nodes,omitempty"`
-	Peers      []string `json:"peers,omitempty"`
-	Pending    bool     `json:"pending,omitempty"`
-	ReverseDNS string   `json:"reversedns,omitempty"`
-	State      string   `json:"state,omitempty"`
-}
-
-func (z *SDNZone) UnmarshalJSON(b []byte) error {
-	type sdnZone SDNZone
-	var raw struct {
-		sdnZone
-		Nodes json.RawMessage `json:"nodes,omitempty"`
-		Peers json.RawMessage `json:"peers,omitempty"`
-	}
-
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	*z = SDNZone(raw.sdnZone)
-
-	nodes, err := unmarshalCommaSeparatedOrSlice(raw.Nodes)
-	if err != nil {
-		return err
-	}
-	z.Nodes = nodes
-
-	peers, err := unmarshalCommaSeparatedOrSlice(raw.Peers)
-	if err != nil {
-		return err
-	}
-	z.Peers = peers
-
-	return nil
-}
-
-func unmarshalCommaSeparatedOrSlice(raw json.RawMessage) ([]string, error) {
-	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
-		return nil, nil
-	}
-
-	var list []string
-	if err := json.Unmarshal(raw, &list); err == nil {
-		return list, nil
-	}
-
-	var s string
-	if err := json.Unmarshal(raw, &s); err != nil {
-		return nil, err
-	}
-
-	return splitCommaSeparatedList(s), nil
-}
-
-func splitCommaSeparatedList(s string) []string {
-	if s == "" {
-		return nil
-	}
-
-	parts := strings.Split(s, ",")
-	list := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if v := strings.TrimSpace(part); v != "" {
-			list = append(list, v)
-		}
-	}
-
-	return list
+	Name       string `json:"zone"`
+	Type       string `json:"type"`
+	DHCP       string `json:"dhcp,omitempty"`
+	DNS        string `json:"dns,omitempty"`
+	DNSZone    string `json:"dnszone,omitempty"`
+	IPAM       string `json:"ipam,omitempty"`
+	MTU        int    `json:"mtu,omitempty"`
+	Nodes      CSV    `json:"nodes,omitempty"`
+	Peers      CSV    `json:"peers,omitempty"`
+	Pending    bool   `json:"pending,omitempty"`
+	ReverseDNS string `json:"reversedns,omitempty"`
+	State      string `json:"state,omitempty"`
 }
 
 type SDNZoneOptions struct {
