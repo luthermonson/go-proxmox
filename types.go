@@ -97,11 +97,16 @@ type LogEntry struct {
 	T string `json:"t"`
 }
 
-// NodeReplicationStatus is runtime state for a replication job on a node:
-// what was last synced, fail count, next-sync time. The cluster-wide
-// configuration of the job lives at /cluster/replication; this is the
-// per-node view of how that job is *running*.
-type NodeReplicationStatus struct {
+// NodeReplicationJob is a handle to a replication job on a node and the
+// runtime state for that job: what was last synced, fail count, next-sync
+// time. The cluster-wide configuration of the job lives at
+// /cluster/replication; this is the per-node view of how that job is
+// *running*. Methods on this type wrap /nodes/{node}/replication/{id}/*.
+type NodeReplicationJob struct {
+	client *Client
+
+	Node string `json:"-"`
+
 	ID        string  `json:"id"`
 	Type      string  `json:"type,omitempty"`
 	Source    string  `json:"source,omitempty"`

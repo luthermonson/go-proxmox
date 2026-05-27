@@ -818,9 +818,10 @@ func TestNode_Replications(t *testing.T) {
 	assert.NotEmpty(t, reps)
 	assert.Equal(t, "100-0", reps[0].ID)
 	assert.Equal(t, 100, reps[0].Guest)
+	assert.Equal(t, "node1", reps[0].Node)
 }
 
-func TestNode_ReplicationStatusAndLog(t *testing.T) {
+func TestNodeReplicationJob_StatusAndLog(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -829,17 +830,21 @@ func TestNode_ReplicationStatusAndLog(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
-	st, err := node.ReplicationStatus(ctx, "100-0")
-	assert.Nil(t, err)
-	assert.Equal(t, "100-0", st.ID)
+	job := node.Replication("100-0")
+	assert.Equal(t, "100-0", job.ID)
+	assert.Equal(t, "node1", job.Node)
 
-	log, err := node.ReplicationLog(ctx, "100-0", 0, 0)
+	err = job.Status(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "100-0", job.ID)
+
+	log, err := job.Log(ctx, 0, 0)
 	assert.Nil(t, err)
 	assert.Len(t, log, 2)
 	assert.Equal(t, 1, log[0].N)
 }
 
-func TestNode_ReplicationScheduleNow(t *testing.T) {
+func TestNodeReplicationJob_ScheduleNow(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -848,7 +853,7 @@ func TestNode_ReplicationScheduleNow(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
-	task, err := node.ReplicationScheduleNow(ctx, "100-0")
+	task, err := node.Replication("100-0").ScheduleNow(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, task)
 }
