@@ -1004,6 +1004,18 @@ func access() {
 
 	gock.New(config.C.URI).
 		Persist().
+		Get("^/access/openid$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"auth-url"},{"subdir":"login"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/access/vncticket$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	gock.New(config.C.URI).
+		Persist().
 		Post("^/access/openid/auth-url$").
 		Reply(200).
 		JSON(`{"data": "https://idp.example.com/authorize?response_type=code&client_id=pve&state=xyz"}`)
