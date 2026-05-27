@@ -3925,3 +3925,72 @@ type CephMDS struct {
 type CephMDSOptions struct {
 	HotStandby IntOrBool `json:"hotstandby,omitempty"`
 }
+
+// --- /nodes/{node}/sdn runtime types ---------------------------------------
+
+// SDNZoneStatus is one entry of the per-node SDN zone status index — distinct
+// from the cluster-level SDNZone config object.
+type SDNZoneStatus struct {
+	Zone   string `json:"zone"`
+	Status string `json:"status,omitempty"` // available | pending | error
+}
+
+// SDNZoneContent is one VNet's status within a zone, per node.
+type SDNZoneContent struct {
+	VNet      string `json:"vnet"`
+	Status    string `json:"status,omitempty"`
+	StatusMsg string `json:"statusmsg,omitempty"`
+}
+
+// SDNZoneBridge is one bridge (vnet) deployed in the zone, with its member
+// ports. VLAN-aware bridges carry primary_vlan + vlans on each port.
+type SDNZoneBridge struct {
+	Name          string              `json:"name"`
+	Ports         []*SDNBridgePort    `json:"ports,omitempty"`
+	VLANFiltering string              `json:"vlan_filtering,omitempty"`
+}
+
+// SDNBridgePort is one port attached to a SDN bridge — guest-owned ports
+// carry vmid + index (the guest's net{N} slot).
+type SDNBridgePort struct {
+	Name        string   `json:"name"`
+	Index       string   `json:"index,omitempty"`
+	PrimaryVLAN float64  `json:"primary_vlan,omitempty"`
+	VLANs       []string `json:"vlans,omitempty"`
+	VMID        float64  `json:"vmid,omitempty"`
+}
+
+// SDNIPVRFEntry is one route in an EVPN zone's IP VRF table.
+type SDNIPVRFEntry struct {
+	IP       string   `json:"ip"`
+	Metric   int      `json:"metric,omitempty"`
+	Nexthops []string `json:"nexthops,omitempty"`
+	Protocol string   `json:"protocol,omitempty"`
+}
+
+// SDNMACVRFEntry is one entry in an EVPN VNet's MAC VRF.
+type SDNMACVRFEntry struct {
+	IP      string `json:"ip,omitempty"`
+	MAC     string `json:"mac,omitempty"`
+	NextHop string `json:"nexthop,omitempty"`
+}
+
+// SDNFabricInterface is one interface participating in a fabric.
+type SDNFabricInterface struct {
+	Name  string `json:"name"`
+	State string `json:"state,omitempty"`
+	Type  string `json:"type,omitempty"`
+}
+
+// SDNFabricNeighbor is one FRR neighbor entry for a fabric.
+type SDNFabricNeighbor struct {
+	Neighbor string `json:"neighbor"`
+	Status   string `json:"status,omitempty"`
+	Uptime   string `json:"uptime,omitempty"` // FRR duration string (e.g. "8h24m12s")
+}
+
+// SDNFabricRoute is one route entry for a fabric.
+type SDNFabricRoute struct {
+	Route string   `json:"route"`
+	Via   []string `json:"via,omitempty"`
+}
