@@ -615,10 +615,14 @@ func TestNode_Services(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, services)
 	assert.Equal(t, "pveproxy", services[0].Service)
-	assert.Equal(t, "running", services[0].State)
+	assert.Equal(t, "running", services[0].Status)
+	// Services should pre-populate the chaining fields so callers can invoke
+	// instance methods on returned items without re-wiring.
+	assert.Equal(t, "node1", services[0].Node)
+	assert.Equal(t, "pveproxy", services[0].Name)
 }
 
-func TestNode_ServiceState(t *testing.T) {
+func TestNode_Service_State(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -627,13 +631,20 @@ func TestNode_ServiceState(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
-	state, err := node.ServiceState(ctx, "pveproxy")
+	svc := node.Service("pveproxy")
+	assert.Equal(t, "node1", svc.Node)
+	assert.Equal(t, "pveproxy", svc.Name)
+
+	err = svc.State(ctx)
 	assert.Nil(t, err)
-	assert.Equal(t, "pveproxy", state.Service)
-	assert.Equal(t, "active", state.ActiveState)
+	assert.Equal(t, "pveproxy", svc.Service)
+	assert.Equal(t, "active", svc.ActiveState)
+	// Chaining fields must survive the unmarshal.
+	assert.Equal(t, "node1", svc.Node)
+	assert.Equal(t, "pveproxy", svc.Name)
 }
 
-func TestNode_ServiceActions(t *testing.T) {
+func TestNode_Service_Actions(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	client := mockClient()
@@ -642,12 +653,13 @@ func TestNode_ServiceActions(t *testing.T) {
 	node, err := client.Node(ctx, "node1")
 	assert.Nil(t, err)
 
+	svc := node.Service("pveproxy")
 	// All four actions hit the same mock regex; just verify each method
 	// constructs the right URL by exercising it.
-	for _, fn := range []func(context.Context, string) (*Task, error){
-		node.ServiceStart, node.ServiceStop, node.ServiceRestart, node.ServiceReload,
+	for _, fn := range []func(context.Context) (*Task, error){
+		svc.Start, svc.Stop, svc.Restart, svc.Reload,
 	} {
-		task, err := fn(ctx, "pveproxy")
+		task, err := fn(ctx)
 		assert.Nil(t, err)
 		assert.NotNil(t, task)
 	}

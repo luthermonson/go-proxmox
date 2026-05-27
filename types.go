@@ -53,11 +53,23 @@ type Version struct {
 // NodeService is one row of the services list and the response shape of
 // /nodes/{node}/services/{service}/state. The same struct fits both because
 // the list returns the same per-service info, just batched.
+//
+// client and Node are populated by Node.Services and Node.Service so callers
+// can chain instance methods (Start/Stop/Restart/Reload/State) without
+// re-threading the client. Name holds the service identifier
+// (e.g. "pveproxy") — it doubles as the JSON-decoded "name" field returned by
+// PVE and as the path segment used by the instance methods.
 type NodeService struct {
-	Service     string `json:"service"`
-	Name        string `json:"name,omitempty"`
-	Desc        string `json:"desc,omitempty"`
-	State       string `json:"state,omitempty"`        // running / stopped / unknown
+	client *Client
+	Node   string `json:"-"`
+
+	Service string `json:"service"`
+	Name    string `json:"name,omitempty"`
+	Desc    string `json:"desc,omitempty"`
+	// Status is PVE's "state" field — running / stopped / unknown. Renamed
+	// from State so the instance method State(ctx) can populate the handle
+	// without colliding with a field of the same name.
+	Status      string `json:"state,omitempty"`
 	ActiveState string `json:"active-state,omitempty"` // active / inactive / failed
 	UnitState   string `json:"unit-state,omitempty"`   // enabled / disabled / masked
 }

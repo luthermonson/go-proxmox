@@ -453,51 +453,95 @@ func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, e
 // ---- /nodes/{node}/services --------------------------------------------------
 
 // Services returns the list of services on the node (pveproxy, pvedaemon,
-// corosync, ssh, etc.). GET /nodes/{node}/services.
+// corosync, ssh, etc.). GET /nodes/{node}/services. Each returned
+// *NodeService is pre-populated with client and Node so callers can chain
+// instance methods (Start, Stop, Restart, Reload, State) directly.
 func (n *Node) Services(ctx context.Context) (services []*NodeService, err error) {
 	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/services", n.Name), &services)
+	if err != nil {
+		return
+	}
+	for _, s := range services {
+		s.client = n.client
+		s.Node = n.Name
+		// PVE returns "service" as the canonical id and usually mirrors it in
+		// "name"; make sure Name is populated either way so instance methods
+		// always have a path segment.
+		if s.Name == "" {
+			s.Name = s.Service
+		}
+	}
 	return
 }
 
-// ServiceState returns the current state of a single service.
-// GET /nodes/{node}/services/{service}/state. The /services/{service} root is
-// just a directory index and is intentionally not wrapped — state is the only
+// Service returns a handle for a single service without making an API call.
+// Use State to populate the handle from /nodes/{node}/services/{name}/state,
+// or just call Start/Stop/Restart/Reload directly.
+func (n *Node) Service(name string) *NodeService {
+	return &NodeService{
+		client: n.client,
+		Node:   n.Name,
+		Name:   name,
+	}
+}
+
+// State refreshes the service handle from
+// GET /nodes/{node}/services/{name}/state. The /services/{name} root is just
+// a directory index and is intentionally not wrapped — state is the only
 // useful read on a specific service.
-func (n *Node) ServiceState(ctx context.Context, service string) (state *NodeService, err error) {
-	state = &NodeService{}
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/services/%s/state", n.Name, service), state)
-	return
+func (s *NodeService) State(ctx context.Context) error {
+	// Preserve the caller's identifying fields — the API response will
+	// repopulate Service/Name but we want our cached Node and client to
+	// survive the round-trip.
+	client, node, name := s.client, s.Node, s.Name
+	if err := client.Get(ctx, fmt.Sprintf("/nodes/%s/services/%s/state", node, name), s); err != nil {
+		return err
+	}
+	s.client = client
+	s.Node = node
+	if s.Name == "" {
+		s.Name = name
+	}
+	return nil
 }
 
-// ServiceStart issues POST /nodes/{node}/services/{service}/start. Returns a
-// Task because PVE does service control asynchronously.
-func (n *Node) ServiceStart(ctx context.Context, service string) (*Task, error) {
-	return n.serviceAction(ctx, service, "start")
-}
-
-// ServiceStop issues POST /nodes/{node}/services/{service}/stop.
-func (n *Node) ServiceStop(ctx context.Context, service string) (*Task, error) {
-	return n.serviceAction(ctx, service, "stop")
-}
-
-// ServiceRestart issues POST /nodes/{node}/services/{service}/restart — a
-// hard restart. Use Reload for graceful restart of services that support it.
-func (n *Node) ServiceRestart(ctx context.Context, service string) (*Task, error) {
-	return n.serviceAction(ctx, service, "restart")
-}
-
-// ServiceReload issues POST /nodes/{node}/services/{service}/reload, which
-// PVE documents as "falls back to restart if reload isn't supported".
-func (n *Node) ServiceReload(ctx context.Context, service string) (*Task, error) {
-	return n.serviceAction(ctx, service, "reload")
-}
-
-func (n *Node) serviceAction(ctx context.Context, service, action string) (*Task, error) {
+// Start issues POST /nodes/{node}/services/{name}/start. Returns a Task
+// because PVE does service control asynchronously.
+func (s *NodeService) Start(ctx context.Context) (*Task, error) {
 	var upid UPID
-	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/%s", n.Name, service, action), nil, &upid); err != nil {
+	if err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/start", s.Node, s.Name), nil, &upid); err != nil {
 		return nil, err
 	}
-	return NewTask(upid, n.client), nil
+	return NewTask(upid, s.client), nil
+}
+
+// Stop issues POST /nodes/{node}/services/{name}/stop.
+func (s *NodeService) Stop(ctx context.Context) (*Task, error) {
+	var upid UPID
+	if err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/stop", s.Node, s.Name), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
+// Restart issues POST /nodes/{node}/services/{name}/restart — a hard
+// restart. Use Reload for graceful restart of services that support it.
+func (s *NodeService) Restart(ctx context.Context) (*Task, error) {
+	var upid UPID
+	if err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/restart", s.Node, s.Name), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
+// Reload issues POST /nodes/{node}/services/{name}/reload, which PVE
+// documents as "falls back to restart if reload isn't supported".
+func (s *NodeService) Reload(ctx context.Context) (*Task, error) {
+	var upid UPID
+	if err := s.client.Post(ctx, fmt.Sprintf("/nodes/%s/services/%s/reload", s.Node, s.Name), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
 }
 
 // Time returns the node's current time and timezone configuration.
