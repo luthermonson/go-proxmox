@@ -428,14 +428,17 @@ type CephMonMap struct {
 	MinMonRelease     int             `json:"min_mon_release"`
 	MinMonReleaseName string          `json:"min_mon_release_name"`
 	Modified          time.Time       `json:"modified"`
-	Mons              []CephMon       `json:"mons"`
+	Mons              []ClusterCephMon `json:"mons"`
 	Quorum            []int           `json:"quorum"`
 	RemovedRanks      string          `json:"removed_ranks: "`
 	StretchMode       bool            `json:"stretch_mode"`
 	TiebreakerMon     string          `json:"tiebreaker_mon"`
 }
 
-type CephMon struct {
+// ClusterCephMon is the cluster-status snapshot of a monitor (used inside
+// ClusterCephStatus.Monmap.Mons). It's distinct from *CephMon, the per-node
+// monitor handle returned by Node.CephMon(name) that carries operations.
+type ClusterCephMon struct {
 	Addr          string `json:"addr"`
 	CrushLocation string `json:"crush_location"`
 	Name          string `json:"name"`
@@ -564,6 +567,219 @@ type CephMgrAlwaysOnModules struct {
 	Quincy  []string `json:"quincy"`
 	Reef    []string `json:"reef"`
 	Squid   []string `json:"squid"`
+}
+
+// CephFS is a single entry from the list at GET /nodes/{node}/ceph/fs AND the
+// operations handle returned by Node.CephFS(name). A CephFS may have multiple
+// data pools — DataPool/MetadataPool are the legacy scalar fields (kept for
+// backwards compatibility) and DataPools/DataPoolIDs expose the full set.
+type CephFS struct {
+	client         *Client
+	Node           string   `json:"-"`
+	Name           string   `json:"name"`
+	MetadataPool   string   `json:"metadata_pool"`
+	MetadataPoolID int      `json:"metadata_pool_id,omitempty"`
+	DataPool       string   `json:"data_pool"`
+	DataPools      []string `json:"data_pools,omitempty"`
+	DataPoolIDs    []int    `json:"data_pool_ids,omitempty"`
+}
+
+// CephFSOptions is the body for POST /nodes/{node}/ceph/fs/{name}. All
+// fields are optional: PVE defaults Name to "cephfs", PgNum to 128, and
+// AddStorage to false.
+type CephFSOptions struct {
+	PgNum      int       `json:"pg_num,omitempty"`
+	AddStorage IntOrBool `json:"add-storage,omitempty"`
+}
+
+// CephCfgDBEntry is a single row from the Ceph mon config DB
+// (GET /nodes/{node}/ceph/cfg/db). Value is always a string — Ceph stores
+// every option as a string regardless of its underlying type.
+type CephCfgDBEntry struct {
+	Section            string    `json:"section"`
+	Name               string    `json:"name"`
+	Value              string    `json:"value"`
+	Level              string    `json:"level,omitempty"`
+	Mask               string    `json:"mask,omitempty"`
+	CanUpdateAtRuntime IntOrBool `json:"can_update_at_runtime,omitempty"`
+}
+
+// CephCfgValue is the response to GET /nodes/{node}/ceph/cfg/value: a
+// two-level map of section → key → value. Underscores in both section and
+// key names are normalised to hyphens by PVE.
+type CephCfgValue map[string]map[string]string
+
+// CephIndexEntry is one row of the /nodes/{node}/ceph directory index — each
+// entry names a child resource (osd, mon, mgr, pool, fs, status, log, …).
+type CephIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// CephInitOptions are the parameters for POST /nodes/{node}/ceph/init — the
+// one-time bootstrap that seeds /etc/ceph/ceph.conf with cluster fsid,
+// default pool sizing, and network settings. All fields are optional; PVE
+// applies sensible defaults (size=3, min_size=2, etc.). Re-calling init on
+// a node that already has a [global] section is a no-op for most fields.
+type CephInitOptions struct {
+	// Network restricts all Ceph traffic to the given CIDR. Required when
+	// you want to pin Ceph to a non-default subnet.
+	Network string `json:"network,omitempty"`
+	// ClusterNetwork is the optional separate CIDR for OSD heartbeat /
+	// replication / recovery traffic. PVE rejects this without Network.
+	ClusterNetwork string `json:"cluster-network,omitempty"`
+	// Size is the target number of replicas per object (1-7). PVE default 3.
+	Size int `json:"size,omitempty"`
+	// MinSize is the minimum replicas required to accept I/O (1-7). PVE
+	// default 2. Must be <= Size.
+	MinSize int `json:"min_size,omitempty"`
+	// PGBits is the legacy default placement-group bit count (6-14, default
+	// 6). Deprecated upstream in recent Ceph releases; usually leave unset.
+	PGBits int `json:"pg_bits,omitempty"`
+	// DisableCephx turns off cephx authentication. Dangerous on untrusted
+	// networks — only set true when the cluster network is fully private.
+	DisableCephx bool `json:"disable_cephx,omitempty"`
+}
+
+// CephLogEntry is one line of the cluster log as returned by
+// /nodes/{node}/ceph/log. PVE uses single-letter field names ("n", "t") for
+// the line-number and text — matching the dump_logfile wire format.
+type CephLogEntry struct {
+	N int    `json:"n"` // 1-based log-file line number
+	T string `json:"t"` // log line text
+}
+
+// CephRule is one entry of the CRUSH rules list. PVE returns only the rule
+// name here; the rule body lives in the CRUSH map dumped by CephCrush.
+type CephRule struct {
+	Name string `json:"name"`
+}
+
+// CephCmdSafety is the response from the cmd-safety probe — true means Ceph
+// considers the requested action (stop/destroy of a service) safe to perform
+// right now without losing data redundancy. Status carries the
+// human-readable reason when Safe is false.
+type CephCmdSafety struct {
+	Safe   bool   `json:"safe"`
+	Status string `json:"status,omitempty"`
+}
+
+// --- Ceph pool (per-node /nodes/{node}/ceph/pool/*) ------------------------
+
+// CephPool is one row returned by GET /nodes/{node}/ceph/pool AND the
+// operations handle returned by Node.CephPool(name). Optional fields
+// (statistics-bearing, autoscaler-derived) may be absent depending on Ceph
+// release and whether the pool reports usage.
+type CephPool struct {
+	client              *Client
+	Node                string         `json:"-"`
+	ApplicationMetadata map[string]any `json:"application_metadata,omitempty"`
+	AutoscaleStatus     map[string]any `json:"autoscale_status,omitempty"`
+	BytesUsed           uint64         `json:"bytes_used,omitempty"`
+	CrushRule           int            `json:"crush_rule"`
+	CrushRuleName       string         `json:"crush_rule_name,omitempty"`
+	MinSize             int            `json:"min_size"`
+	PercentUsed         float64        `json:"percent_used,omitempty"`
+	PgAutoscaleMode     string         `json:"pg_autoscale_mode,omitempty"`
+	PgNum               int            `json:"pg_num"`
+	PgNumFinal          int            `json:"pg_num_final,omitempty"`
+	PgNumMin            int            `json:"pg_num_min,omitempty"`
+	Pool                int            `json:"pool"`
+	PoolName            string         `json:"pool_name"`
+	Size                int            `json:"size"`
+	TargetSize          uint64         `json:"target_size,omitempty"`
+	TargetSizeRatio     float64        `json:"target_size_ratio,omitempty"`
+	Type                string         `json:"type"`
+}
+
+// CephPoolSubdir is one row from GET /nodes/{node}/ceph/pool/{name} — the
+// sub-resource directory index. Currently the only entry is "status".
+type CephPoolSubdir struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// CephPoolStatus is the response body of GET /nodes/{node}/ceph/pool/{name}/status.
+// Statistics is only populated when the request was made with verbose=1.
+type CephPoolStatus struct {
+	Application          string         `json:"application,omitempty"`
+	ApplicationList      []string       `json:"application_list,omitempty"`
+	AutoscaleStatus      map[string]any `json:"autoscale_status,omitempty"`
+	CrushRule            string         `json:"crush_rule,omitempty"`
+	FastRead             bool           `json:"fast_read"`
+	HashPSPool           bool           `json:"hashpspool"`
+	ID                   int            `json:"id"`
+	MinSize              int            `json:"min_size,omitempty"`
+	Name                 string         `json:"name"`
+	NoDeepScrub          bool           `json:"nodeep-scrub"`
+	NoDelete             bool           `json:"nodelete"`
+	NoPGChange           bool           `json:"nopgchange"`
+	NoScrub              bool           `json:"noscrub"`
+	NoSizeChange         bool           `json:"nosizechange"`
+	PgAutoscaleMode      string         `json:"pg_autoscale_mode,omitempty"`
+	PgNum                int            `json:"pg_num,omitempty"`
+	PgNumMin             int            `json:"pg_num_min,omitempty"`
+	PgpNum               int            `json:"pgp_num"`
+	Size                 int            `json:"size,omitempty"`
+	Statistics           map[string]any `json:"statistics,omitempty"`
+	TargetSize           string         `json:"target_size,omitempty"`
+	TargetSizeRatio      float64        `json:"target_size_ratio,omitempty"`
+	UseGMTHitset         bool           `json:"use_gmt_hitset"`
+	WriteFadviseDontneed bool           `json:"write_fadvise_dontneed"`
+}
+
+// CephPoolErasureCoding is the inline "erasure-coding" parameter accepted by
+// POST /nodes/{node}/ceph/pool. PVE serializes it as a single comma-separated
+// string of key=value pairs (e.g. "k=4,m=2,failure-domain=host"). K and M are
+// required; the rest are optional. Build the string with String().
+type CephPoolErasureCoding struct {
+	K             int    // required: number of data chunks
+	M             int    // required: number of coding chunks
+	DeviceClass   string // optional: CRUSH device class
+	FailureDomain string // optional: CRUSH failure domain (default "host")
+	Profile       string // optional: override EC profile name
+}
+
+// String serializes the EC config to the PVE wire format
+// "k=<int>,m=<int>[,device-class=<class>][,failure-domain=<domain>][,profile=<name>]".
+func (ec *CephPoolErasureCoding) String() string {
+	if ec == nil {
+		return ""
+	}
+	parts := []string{
+		fmt.Sprintf("k=%d", ec.K),
+		fmt.Sprintf("m=%d", ec.M),
+	}
+	if ec.DeviceClass != "" {
+		parts = append(parts, "device-class="+ec.DeviceClass)
+	}
+	if ec.FailureDomain != "" {
+		parts = append(parts, "failure-domain="+ec.FailureDomain)
+	}
+	if ec.Profile != "" {
+		parts = append(parts, "profile="+ec.Profile)
+	}
+	return strings.Join(parts, ",")
+}
+
+// CephPoolOptions is the POST body for /nodes/{node}/ceph/pool (create) and
+// the PUT body for /nodes/{node}/ceph/pool/{name} (update). Name is required
+// on create and immutable on update — the URL path supplies it for PUT.
+//
+// Pointer fields (*int, *bool) are used wherever PVE has a server-side default
+// that should be preserved when the caller leaves the field unset; this avoids
+// silently clobbering Ceph defaults (size=3, min_size=2, pg_num=128, etc.).
+type CephPoolOptions struct {
+	Name             string                 `json:"name,omitempty"`
+	AddStorages      *bool                  `json:"add_storages,omitempty"`
+	Application      string                 `json:"application,omitempty"`
+	CrushRule        string                 `json:"crush_rule,omitempty"`
+	ErasureCoding    *CephPoolErasureCoding `json:"-"` // serialized by helper, see CreateCephPool
+	MinSize          *int                   `json:"min_size,omitempty"`
+	PgAutoscaleMode  string                 `json:"pg_autoscale_mode,omitempty"`
+	PgNum            *int                   `json:"pg_num,omitempty"`
+	PgNumMin         *int                   `json:"pg_num_min,omitempty"`
+	Size             *int                   `json:"size,omitempty"`
+	TargetSize       string                 `json:"target_size,omitempty"`
+	TargetSizeRatio  *float64               `json:"target_size_ratio,omitempty"`
 }
 
 type NodeStatuses []*NodeStatus
@@ -3095,6 +3311,84 @@ type NodeZFSPoolOptions struct {
 	AddStorage  IntOrBool `json:"add_storage,omitempty"`
 }
 
+// --- Ceph OSD (Object Storage Daemons) -------------------------------------
+
+// CephOSD is the operations handle for a single OSD on a node, returned by
+// Node.CephOSD(id). It carries no data fields — instance methods (In/Out/
+// Scrub/Delete/LVInfo/Metadata) call back into the API when invoked.
+type CephOSD struct {
+	client *Client
+	Node   string `json:"-"`
+	ID     int    `json:"-"`
+}
+
+// CephOSDTree is the response from GET /nodes/{node}/ceph/osd — the CRUSH
+// tree top-level plus any cluster-wide OSD flags. The CRUSH bucket structure
+// is recursive and per-node properties (status, weight, in, usage, latencies,
+// etc.) vary by bucket type, so Root is kept as a raw map.
+type CephOSDTree struct {
+	Flags string                 `json:"flags,omitempty"`
+	Root  map[string]interface{} `json:"root,omitempty"`
+}
+
+// CephOSDDetails is the response from GET /nodes/{node}/ceph/osd/{osdid}/metadata
+// — daemon-level info plus the list of backing devices.
+type CephOSDDetails struct {
+	OSD     CephOSDMetadata `json:"osd"`
+	Devices []CephOSDDevice `json:"devices,omitempty"`
+}
+
+// CephOSDMetadata is the "osd" sub-object inside CephOSDDetails.
+type CephOSDMetadata struct {
+	BackAddr       string `json:"back_addr,omitempty"`
+	Encrypted      bool   `json:"encrypted,omitempty"`
+	FrontAddr      string `json:"front_addr,omitempty"`
+	HBBackAddr     string `json:"hb_back_addr,omitempty"`
+	HBFrontAddr    string `json:"hb_front_addr,omitempty"`
+	Hostname       string `json:"hostname,omitempty"`
+	ID             int    `json:"id"`
+	MemUsage       int64  `json:"mem_usage,omitempty"`
+	OSDData        string `json:"osd_data,omitempty"`
+	OSDObjectStore string `json:"osd_objectstore,omitempty"`
+	PID            int    `json:"pid,omitempty"`
+	Version        string `json:"version,omitempty"`
+}
+
+// CephOSDDevice is one row in CephOSDDetails.Devices.
+type CephOSDDevice struct {
+	DevNode        string `json:"dev_node,omitempty"`
+	Device         string `json:"device,omitempty"` // block|db|wal
+	PhysicalDevice string `json:"physical_device,omitempty"`
+	Size           uint64 `json:"size,omitempty"`
+	SupportDiscard bool   `json:"support_discard,omitempty"`
+	Type           string `json:"type,omitempty"` // hdd|ssd
+}
+
+// CephOSDLVInfo is the response from GET /nodes/{node}/ceph/osd/{osdid}/lv-info
+// — LVM details for the OSD's block / db / wal logical volume.
+type CephOSDLVInfo struct {
+	CreationTime string `json:"creation_time,omitempty"`
+	LVName       string `json:"lv_name,omitempty"`
+	LVPath       string `json:"lv_path,omitempty"`
+	LVSize       uint64 `json:"lv_size,omitempty"`
+	LVUUID       string `json:"lv_uuid,omitempty"`
+	VGName       string `json:"vg_name,omitempty"`
+}
+
+// CephOSDCreateOptions is the POST body for /nodes/{node}/ceph/osd.
+// Dev is required. DBDevSize requires DBDev; WALDevSize requires WALDev.
+// OSDsPerDevice is mutually exclusive with DBDev/WALDev.
+type CephOSDCreateOptions struct {
+	Dev              string    `json:"dev"`
+	CrushDeviceClass string    `json:"crush-device-class,omitempty"`
+	DBDev            string    `json:"db_dev,omitempty"`
+	DBDevSize        float64   `json:"db_dev_size,omitempty"`
+	Encrypted        IntOrBool `json:"encrypted,omitempty"`
+	OSDsPerDevice    int       `json:"osds-per-device,omitempty"`
+	WALDev           string    `json:"wal_dev,omitempty"`
+	WALDevSize       float64   `json:"wal_dev_size,omitempty"`
+}
+
 // --- ACME (Let's Encrypt-style automated certificate issuance) -------------
 
 // ACMEDirectory is one row in GET /cluster/acme/directories — a friendly name
@@ -3485,4 +3779,84 @@ type VirtualMachineMigrationTunnelOptions struct {
 	// Storages is a comma-separated list of storages to check permission
 	// and availability for. Optional.
 	Storages string `json:"storages,omitempty"`
+}
+
+// --- /nodes/{node}/ceph/{mon,mgr,mds} daemon registries -------------------
+//
+// These types are the per-node daemon-registry entries returned by the
+// "list" GETs under /nodes/{node}/ceph/{mon,mgr,mds}. They are distinct
+// from the cluster-wide ClusterCephMon (used inside ClusterCephStatus.Monmap.Mons)
+// and CephMgrMap (the active manager map in cluster status) — those describe
+// what the Ceph cluster sees, while these describe what PVE has configured
+// on this node (including stopped/unknown daemons).
+//
+// Each carries unexported `client` and exported `Node` fields that the
+// Node.CephMons / Node.CephMon (and Mgr/MDS equivalents) accessors populate so
+// instance methods (`.Delete()`) can call back into the API without the caller
+// re-supplying Node + client.
+
+// CephMon is one row from GET /nodes/{node}/ceph/mon AND the operations handle
+// returned by Node.CephMon(name). "Name" is the monid; "State" mixes cluster
+// reality (running) with PVE config state (stopped/unknown).
+type CephMon struct {
+	client           *Client
+	Node             string    `json:"-"`
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Quorum           IntOrBool `json:"quorum,omitempty"`
+	Rank             int       `json:"rank,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMonOptions is the POST body for /nodes/{node}/ceph/mon/{monid}. monid
+// is set via the URL path; MonAddress overrides the autodetected monitor IP
+// address(es), must be on Ceph's public network.
+type CephMonOptions struct {
+	MonAddress string `json:"mon-address,omitempty"`
+}
+
+// CephMgr is one row from GET /nodes/{node}/ceph/mgr AND the operations handle
+// returned by Node.CephMgr(id). Distinct from CephMgrMap (the active manager
+// map in cluster-status snapshots).
+type CephMgr struct {
+	client           *Client
+	Node             string    `json:"-"`
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMDS is one row from GET /nodes/{node}/ceph/mds AND the operations handle
+// returned by Node.CephMDS(name).
+type CephMDS struct {
+	client           *Client
+	Node             string    `json:"-"`
+	Addr             string    `json:"addr,omitempty"`
+	CephVersion      string    `json:"ceph_version,omitempty"`
+	CephVersionShort string    `json:"ceph_version_short,omitempty"`
+	DirExists        IntOrBool `json:"direxists,omitempty"`
+	FSName           string    `json:"fs_name,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Rank             int       `json:"rank,omitempty"`
+	Service          IntOrBool `json:"service,omitempty"`
+	StandbyReplay    IntOrBool `json:"standby_replay,omitempty"`
+	State            string    `json:"state,omitempty"`
+}
+
+// CephMDSOptions is the POST body for /nodes/{node}/ceph/mds/{name}. Hot
+// standby has the daemon poll and replay an active MDS' log for faster
+// failover at the cost of always-on idle resources.
+type CephMDSOptions struct {
+	HotStandby IntOrBool `json:"hotstandby,omitempty"`
 }
