@@ -460,3 +460,68 @@ func (c *Container) FirewallRefs(ctx context.Context) (refs []*FirewallRef, err 
 	return refs, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/refs", c.Node, c.VMID), &refs)
 }
 
+// DirIndex returns the per-container directory index
+// (GET /nodes/{node}/lxc/{vmid}) — one entry per sub-resource (config, status,
+// snapshot, firewall, …). The sub-resources themselves are wrapped as their
+// own methods on *Container; this is mostly useful for discovery.
+func (c *Container) DirIndex(ctx context.Context) (entries []*ContainerDirIndexEntry, err error) {
+	err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d", c.Node, c.VMID), &entries)
+	return
+}
+
+// StatusIndex returns the container status directory index
+// (GET /nodes/{node}/lxc/{vmid}/status) — one entry per status sub-command
+// (current, start, stop, …). The operations are wrapped as Start/Stop/etc.
+// on *Container.
+func (c *Container) StatusIndex(ctx context.Context) (entries []*ContainerStatusIndexEntry, err error) {
+	err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status", c.Node, c.VMID), &entries)
+	return
+}
+
+// MigratePreconditions returns the precondition check for migrating this
+// container (GET /nodes/{node}/lxc/{vmid}/migrate). If target is non-empty,
+// PVE evaluates the check against that specific target node; otherwise it
+// reports which nodes are allowed/not-allowed and any local-disk constraints.
+func (c *Container) MigratePreconditions(ctx context.Context, target string) (preconditions *ContainerMigratePreconditions, err error) {
+	u := url.URL{Path: fmt.Sprintf("/nodes/%s/lxc/%d/migrate", c.Node, c.VMID)}
+	if target != "" {
+		params := url.Values{}
+		params.Add("target", target)
+		u.RawQuery = params.Encode()
+	}
+	err = c.client.Get(ctx, u.String(), &preconditions)
+	return
+}
+
+// MigrationTunnel opens a migration tunnel for this container
+// (POST /nodes/{node}/lxc/{vmid}/mtunnel) and returns the Unix socket path,
+// authentication ticket, and worker UPID.
+//
+// PVE marks this endpoint as "for internal use by VM migration" — callers
+// should generally use Migrate or the higher-level migration flow rather
+// than wiring this up directly. Wrapped here for full API surface coverage.
+func (c *Container) MigrationTunnel(ctx context.Context, options *ContainerMigrationTunnelOptions) (tunnel *ContainerMigrationTunnel, err error) {
+	if options == nil {
+		options = &ContainerMigrationTunnelOptions{}
+	}
+	err = c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/mtunnel", c.Node, c.VMID), options, &tunnel)
+	return
+}
+
+// MigrationTunnelWebSocketPath returns the path callers can pass to a
+// websocket dialer to upgrade the migration tunnel returned by
+// MigrationTunnel (GET /nodes/{node}/lxc/{vmid}/mtunnelwebsocket).
+//
+// PVE marks this endpoint as "for internal use by VM migration"; this helper
+// just builds the path with the correct query string. There is no generic
+// Client helper for migration-tunnel websockets — dial it directly with the
+// authenticated cookies/headers if you need to consume it.
+func (c *Container) MigrationTunnelWebSocketPath(tunnel *ContainerMigrationTunnel) string {
+	q := url.Values{}
+	if tunnel != nil {
+		q.Set("socket", tunnel.Socket)
+		q.Set("ticket", tunnel.Ticket)
+	}
+	return fmt.Sprintf("/nodes/%s/lxc/%d/mtunnelwebsocket?%s", c.Node, c.VMID, q.Encode())
+}
+

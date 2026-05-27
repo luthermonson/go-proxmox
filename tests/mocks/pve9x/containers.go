@@ -366,4 +366,78 @@ func containers() {
         {"type": "ipset", "name": "blocked", "comment": "Blocked sources"}
     ]
 }`)
+
+	// GET /nodes/{node}/lxc/{vmid} — directory index (ct100 for lxc-100 sweep)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/100$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "config"},
+        {"subdir": "status"},
+        {"subdir": "snapshot"},
+        {"subdir": "firewall"},
+        {"subdir": "rrd"},
+        {"subdir": "rrddata"},
+        {"subdir": "vncproxy"},
+        {"subdir": "vncwebsocket"},
+        {"subdir": "spiceproxy"},
+        {"subdir": "termproxy"},
+        {"subdir": "migrate"},
+        {"subdir": "feature"},
+        {"subdir": "template"},
+        {"subdir": "clone"},
+        {"subdir": "resize"},
+        {"subdir": "move_volume"},
+        {"subdir": "pending"},
+        {"subdir": "mtunnel"},
+        {"subdir": "mtunnelwebsocket"}
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/status — status directory index
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/100/status$").
+		Reply(200).
+		JSON(`{
+    "data": [
+        {"subdir": "current"},
+        {"subdir": "start"},
+        {"subdir": "stop"},
+        {"subdir": "shutdown"},
+        {"subdir": "suspend"},
+        {"subdir": "resume"},
+        {"subdir": "reboot"}
+    ]
+}`)
+
+	// GET /nodes/{node}/lxc/{vmid}/migrate — migration preconditions
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/100/migrate").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "running": true,
+        "allowed_nodes": ["node2", "node3"],
+        "not_allowed_nodes": {},
+        "local_disks": [],
+        "local_resources": []
+    }
+}`)
+
+	// POST /nodes/{node}/lxc/{vmid}/mtunnel — open migration tunnel
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/lxc/100/mtunnel$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "socket": "/run/pve/100.mtunnel",
+        "ticket": "PVEMTUNNELTICKET:lxc-abc123",
+        "upid": "UPID:node1:00001234:00005678:12345678:vzmtunnel:100:root@pam:"
+    }
+}`)
 }

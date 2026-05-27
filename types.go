@@ -1384,6 +1384,54 @@ type ContainerRRD struct {
 	Filename string `json:"filename"`
 }
 
+// ContainerDirIndexEntry is one row of the /nodes/{node}/lxc/{vmid} directory
+// index — each entry names a child resource (config, status, snapshot,
+// firewall, …).
+type ContainerDirIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// ContainerStatusIndexEntry is one row of the
+// /nodes/{node}/lxc/{vmid}/status directory index — each entry names a
+// status sub-command (current, start, stop, …).
+type ContainerStatusIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// ContainerMigratePreconditions is the response from
+// GET /nodes/{node}/lxc/{vmid}/migrate — the migration precondition check.
+// Re-uses the VM-side sub-types (NotAllowedNodes, LocalDisk) because PVE
+// shares the same migration-constraint shapes between qemu and lxc.
+type ContainerMigratePreconditions struct {
+	Running         bool                                                          `json:"running"`
+	AllowedNodes    []string                                                      `json:"allowed_nodes,omitempty"`
+	NotAllowedNodes map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
+	LocalDisks      []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
+	LocalResources  []string                                                      `json:"local_resources,omitempty"`
+}
+
+// ContainerMigrationTunnel is the response from
+// POST /nodes/{node}/lxc/{vmid}/mtunnel — the migration tunnel handle that
+// MigrationTunnelWebSocketPath consumes.
+type ContainerMigrationTunnel struct {
+	Socket string `json:"socket,omitempty"`
+	Ticket string `json:"ticket,omitempty"`
+	UPID   string `json:"upid,omitempty"`
+}
+
+// ContainerMigrationTunnelOptions are the parameters for
+// POST /nodes/{node}/lxc/{vmid}/mtunnel. PVE marks this endpoint internal —
+// most callers go through Migrate or RemoteMigrate, which manage the tunnel
+// lifecycle themselves.
+type ContainerMigrationTunnelOptions struct {
+	// Bridges is a comma-separated list of network bridges to check
+	// availability for. Optional.
+	Bridges string `json:"bridges,omitempty"`
+	// Storages is a comma-separated list of storages to check permission
+	// and availability for. Optional.
+	Storages string `json:"storages,omitempty"`
+}
+
 // VirtualMachineRRD is the response from GET /nodes/{node}/qemu/{vmid}/rrd.
 // PVE renders a single PNG on the server (one datasource per call) and
 // returns its on-disk filename; callers typically want RRDData instead for

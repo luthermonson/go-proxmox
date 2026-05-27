@@ -615,3 +615,91 @@ func TestContainerUpdateSnapshot(t *testing.T) {
 		Description: "updated by tests",
 	}))
 }
+
+func ct100() *Container {
+	return &Container{client: mockClient(), Node: "node1", VMID: 100}
+}
+
+func TestContainer_DirIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := ct100().DirIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["config"])
+	assert.True(t, names["status"])
+	assert.True(t, names["snapshot"])
+	assert.True(t, names["firewall"])
+	assert.True(t, names["mtunnel"])
+}
+
+func TestContainer_StatusIndex(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	entries, err := ct100().StatusIndex(context.Background())
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		names[e.Subdir] = true
+	}
+	assert.True(t, names["current"])
+	assert.True(t, names["start"])
+	assert.True(t, names["stop"])
+}
+
+func TestContainer_MigratePreconditions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	pre, err := ct100().MigratePreconditions(context.Background(), "")
+	assert.Nil(t, err)
+	require.NotNil(t, pre)
+	assert.True(t, pre.Running)
+	assert.Contains(t, pre.AllowedNodes, "node2")
+
+	// with target — same mock fields, just verify the call shape
+	pre2, err := ct100().MigratePreconditions(context.Background(), "node2")
+	assert.Nil(t, err)
+	require.NotNil(t, pre2)
+}
+
+func TestContainer_MigrationTunnel(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	tunnel, err := ct100().MigrationTunnel(context.Background(), nil)
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel)
+	assert.Equal(t, "/run/pve/100.mtunnel", tunnel.Socket)
+	assert.Equal(t, "PVEMTUNNELTICKET:lxc-abc123", tunnel.Ticket)
+	assert.Contains(t, tunnel.UPID, "vzmtunnel")
+
+	// with explicit options
+	tunnel2, err := ct100().MigrationTunnel(context.Background(), &ContainerMigrationTunnelOptions{
+		Bridges:  "vmbr0",
+		Storages: "local-lvm",
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, tunnel2)
+}
+
+func TestContainer_MigrationTunnelWebSocketPath(t *testing.T) {
+	c := ct100()
+	tunnel := &ContainerMigrationTunnel{
+		Socket: "/run/pve/100.mtunnel",
+		Ticket: "PVEMTUNNELTICKET:lxc-abc123",
+	}
+	path := c.MigrationTunnelWebSocketPath(tunnel)
+	assert.Contains(t, path, "/nodes/node1/lxc/100/mtunnelwebsocket")
+	assert.Contains(t, path, "socket=")
+	assert.Contains(t, path, "ticket=")
+	// ticket should be URL-encoded (':' becomes %3A)
+	assert.Contains(t, path, "PVEMTUNNELTICKET%3Alxc-abc123")
+
+	// nil tunnel still returns a valid path skeleton
+	emptyPath := c.MigrationTunnelWebSocketPath(nil)
+	assert.Contains(t, emptyPath, "/nodes/node1/lxc/100/mtunnelwebsocket")
+}
