@@ -94,6 +94,71 @@ parsing happens in `NewTask` (`tasks.go`).
 are name/value pairs flattened into the request body — this is how the
 package handles Proxmox's free-form, version-dependent config keys.
 
+### Required: pick the right shape for new endpoints (singleton vs. instance type)
+
+Every new endpoint wrapper must decide where to hang. The rule is mechanical:
+**look at the upstream PVE path** and apply one of two shapes.
+
+**Singleton sub-resource (no identifier in the path).** Path looks like
+`/parent/<sub>` or `/parent/<sub>/<fixed-action>` with no `/{id}/` segment.
+Wrap as a **method on the parent** type. Examples: `/nodes/{node}/apt/update`,
+`/nodes/{node}/dns`, `/nodes/{node}/ceph/status`. There's exactly one of these
+per parent — no identifier to hold.
+
+```go
+func (n *Node) APTUpdate(ctx context.Context, notify, quiet bool) (*Task, error) { … }
+func (n *Node) DNS(ctx context.Context) (*NodeDNS, error) { … }
+```
+
+**Multi-instance sub-resource (identifier in the path).** Path has
+`/{name}/` or `/{id}/` selecting one of many. Wrap as a **getter on the parent
+that returns an instance handle**, with operations as methods on the handle.
+Examples: `/nodes/{node}/storage/{storage}/...`, `/nodes/{node}/ceph/osd/{id}/...`,
+`/nodes/{node}/services/{service}/...`. The handle carries identity in its
+receiver so callers don't re-thread it on every call.
+
+```go
+// Getter: no API call, just constructs the handle.
+func (n *Node) CephOSD(id int) *CephOSD {
+    return &CephOSD{client: n.client, Node: n.Name, ID: id}
+}
+
+// Instance type: unexported client + exported identifying fields.
+type CephOSD struct {
+    client *Client
+    Node   string `json:"-"`
+    ID     int    `json:"-"`
+    // ...plus any data fields the list endpoint populates...
+}
+
+// Operations live on the instance, not the parent.
+func (o *CephOSD) Scrub(ctx context.Context, deep bool) error { … }
+func (o *CephOSD) Delete(ctx context.Context, cleanup bool) (*Task, error) { … }
+```
+
+**Anti-pattern to avoid:** `node.CephOSDScrub(ctx, id, ...)` or
+`node.DeleteCephOSD(ctx, id, ...)`. Threading the id through every call when
+the schema clearly identifies the resource in the path duplicates the
+identity argument across N methods and makes the godoc surface of the parent
+explode. `*Storage`, `*VirtualMachine`, `*Container`, `*NodeNetwork`,
+`*NodeService`, `*NodeReplicationJob`, `*CephOSD`, `*CephPool`,
+`*CephMon`/`Mgr`/`MDS`, `*CephFS`, `*FirewallRule`, `*VirtualMachineSnapshot`,
+and `*ContainerSnapshot` are all instance types — mirror their shape.
+
+**Construction:** the getter never makes an API call; it just builds the
+handle. The corresponding `List`/`Plural` accessor on the parent (e.g.
+`node.CephOSDs(ctx)`) populates `client` + identifying fields on each
+returned `*CephOSD` so list results are immediately chainable.
+
+**Creation stays on the parent.** `node.CreateCephOSD(ctx, opts)` — there's
+no instance yet, so the parent owns the constructor call. Same for `New*`
+patterns.
+
+**Singleton subsystems with many endpoints (e.g. ceph itself, disks,
+firewall-options) stay on the parent.** Don't introduce a top-level handle
+just because the area is big. Threshold: does the schema path namespace by
+identifier? If yes → handle; if no → parent method.
+
 ### Required: don't clobber PVE-side defaults on config structs
 
 Background: see issue #199. Several config structs (e.g. `ContainerConfig`,
