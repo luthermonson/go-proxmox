@@ -12,5 +12,6 @@ func Load() {
 	storage()
 	sdn()
 	hardware()
+	nodeLoose()
 	tasks()
 }
