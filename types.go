@@ -3994,3 +3994,127 @@ type SDNFabricRoute struct {
 	Route string   `json:"route"`
 	Via   []string `json:"via,omitempty"`
 }
+
+// --- /nodes/{node}/scan types ----------------------------------------------
+
+// ScanZFSPool is one entry from the local ZFS pool probe.
+type ScanZFSPool struct {
+	Pool string `json:"pool"`
+}
+
+// ScanLVMVG is one entry from the local LVM volume-group probe.
+type ScanLVMVG struct {
+	VG string `json:"vg"`
+}
+
+// ScanLVMThinPool is one thin pool inside an LVM volume group.
+type ScanLVMThinPool struct {
+	LV string `json:"lv"`
+}
+
+// ScanNFSExport is one export advertised by a remote NFS server.
+type ScanNFSExport struct {
+	Path    string `json:"path"`
+	Options string `json:"options,omitempty"`
+}
+
+// ScanCIFSShare is one share advertised by a remote SMB/CIFS server.
+type ScanCIFSShare struct {
+	Share       string `json:"share"`
+	Description string `json:"description,omitempty"`
+}
+
+// ScanPBSStore is one datastore on a remote Proxmox Backup Server.
+type ScanPBSStore struct {
+	Store   string `json:"store"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// ScanISCSITarget is one iSCSI target advertised by a portal.
+type ScanISCSITarget struct {
+	Target string `json:"target"`
+	Portal string `json:"portal,omitempty"`
+}
+
+// --- /nodes/{node}/capabilities/qemu types ---------------------------------
+
+// QEMUCPUModel is one row of /capabilities/qemu/cpu — both QEMU built-ins
+// and custom CPU models defined on the cluster. Custom models are prefixed
+// "custom-" in Name. Abstract is true for PVE-internal profiles like
+// x86-64-v2/v3/v4 — those don't correspond to a real QEMU CPU type and
+// can't be used as a custom model's reported-model.
+type QEMUCPUModel struct {
+	Name     string `json:"name"`
+	Vendor   string `json:"vendor"`
+	Custom   bool   `json:"custom"`
+	Abstract bool   `json:"abstract,omitempty"`
+}
+
+// QEMUCPUFlag is one VM-visible CPU flag and which cluster nodes support it
+// under the queried acceleration mode.
+type QEMUCPUFlag struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	SupportedOn []string `json:"supported-on,omitempty"`
+}
+
+// QEMUMachineType is one row of /capabilities/qemu/machines — a q35 or
+// i440fx variant available on this host. Changes is set for +pveX versions.
+type QEMUMachineType struct {
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Version string `json:"version"`
+	Changes string `json:"changes,omitempty"`
+}
+
+// QEMUMigrationCapabilities reports node-specific live-migration support.
+type QEMUMigrationCapabilities struct {
+	HasDbusVMState bool `json:"has-dbus-vmstate"`
+}
+
+// --- /nodes/{node}/hardware types ------------------------------------------
+
+// PCIDevice is one local PCI device, also serves as the handle for the
+// /hardware/pci/{id}/* multi-instance subresources (per AGENTS.md). client
+// and Node are populated by ListPCIDevices and Node.PCIDevice().
+type PCIDevice struct {
+	client *Client
+	Node   string `json:"-"`
+
+	ID                  string `json:"id"`
+	Class               string `json:"class,omitempty"`
+	Vendor              string `json:"vendor,omitempty"`
+	VendorName          string `json:"vendor_name,omitempty"`
+	Device              string `json:"device,omitempty"`
+	DeviceName          string `json:"device_name,omitempty"`
+	SubsystemVendor     string `json:"subsystem_vendor,omitempty"`
+	SubsystemVendorName string `json:"subsystem_vendor_name,omitempty"`
+	SubsystemDevice     string `json:"subsystem_device,omitempty"`
+	SubsystemDeviceName string `json:"subsystem_device_name,omitempty"`
+	IOMMUGroup          int    `json:"iommugroup,omitempty"`
+	MdevCapable         bool   `json:"mdev,omitempty"`
+}
+
+// PCIMdevType is one mediated-device type advertised by a PCI device.
+type PCIMdevType struct {
+	Type        string `json:"type"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Available   int    `json:"available"`
+}
+
+// USBDevice is one local USB device.
+type USBDevice struct {
+	BusNum       int    `json:"busnum"`
+	DevNum       int    `json:"devnum"`
+	Port         int    `json:"port"`
+	Level        int    `json:"level"`
+	Class        int    `json:"class"`
+	VendID       string `json:"vendid"`
+	ProdID       string `json:"prodid"`
+	Speed        string `json:"speed"`
+	Manufacturer string `json:"manufacturer,omitempty"`
+	Product      string `json:"product,omitempty"`
+	Serial       string `json:"serial,omitempty"`
+	USBPath      string `json:"usbpath,omitempty"`
+}

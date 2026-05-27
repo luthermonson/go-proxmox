@@ -11,5 +11,6 @@ func Load() {
 	virtualMachines()
 	storage()
 	sdn()
+	hardware()
 	tasks()
 }
