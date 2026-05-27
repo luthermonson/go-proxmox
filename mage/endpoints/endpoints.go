@@ -372,7 +372,12 @@ type extractedCall struct {
 }
 
 var (
-	callRE      = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)\s*\(\s*ctx\s*,\s*(.*?)$`)
+	// Captures `<recv>.Get|Post|Put|Delete(WithParams)?(ctx, ...)`. The
+	// WithParams variants on *Client (GetWithParams, DeleteWithParams) take an
+	// extra body/query interface but the path is still the first non-ctx arg,
+	// so the same extractor handles both. The `(?:WithParams)?` is
+	// non-capturing — group 1 always returns the bare HTTP verb.
+	callRE      = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)(?:WithParams)?\s*\(\s*ctx\s*,\s*(.*?)$`)
 	wsCallRE    = regexp.MustCompile(`\b\w+\.(VNCWebSocket|TermWebSocket)\s*\(\s*(.*?)$`)
 	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
