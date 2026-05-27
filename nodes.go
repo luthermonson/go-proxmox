@@ -313,6 +313,47 @@ func (n *Node) FirewallRulesDelete(ctx context.Context, rulePos int) error {
 	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
 }
 
+// FirewallGetRule fetches one rule by position. Companion to
+// FirewallGetRules, mirroring the per-rule getter on Container/VirtualMachine.
+func (n *Node) FirewallGetRule(ctx context.Context, rulePos int) (rule *FirewallRule, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), &rule)
+	return
+}
+
+// NodeFirewallLogOptions filters the host-firewall log read. All optional.
+type NodeFirewallLogOptions struct {
+	Start int
+	Limit int
+	Since int64 // unix epoch
+	Until int64 // unix epoch
+}
+
+// FirewallLog returns the host firewall's iptables/nftables log entries.
+// Each LogEntry is {n: line-number, t: text}.
+func (n *Node) FirewallLog(ctx context.Context, opts *NodeFirewallLogOptions) (entries []*LogEntry, err error) {
+	path := fmt.Sprintf("/nodes/%s/firewall/log", n.Name)
+	if opts != nil {
+		q := url.Values{}
+		if opts.Start > 0 {
+			q.Set("start", fmt.Sprintf("%d", opts.Start))
+		}
+		if opts.Limit > 0 {
+			q.Set("limit", fmt.Sprintf("%d", opts.Limit))
+		}
+		if opts.Since > 0 {
+			q.Set("since", fmt.Sprintf("%d", opts.Since))
+		}
+		if opts.Until > 0 {
+			q.Set("until", fmt.Sprintf("%d", opts.Until))
+		}
+		if len(q) > 0 {
+			path = path + "?" + q.Encode()
+		}
+	}
+	err = n.client.Get(ctx, path, &entries)
+	return
+}
+
 func (n *Node) UploadCustomCertificate(ctx context.Context, cert *CustomCertificate) error {
 	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/certificates/custom", n.Name), cert, nil)
 }

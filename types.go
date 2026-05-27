@@ -4118,3 +4118,75 @@ type USBDevice struct {
 	Serial       string `json:"serial,omitempty"`
 	USBPath      string `json:"usbpath,omitempty"`
 }
+
+// --- /nodes/{node}/config types -------------------------------------------
+
+// NodeConfig is the read shape of GET /nodes/{node}/config. Substructure
+// fields (Acme, AcmeDomain[N], Location, WakeOnLAN) come back as PVE
+// property strings ("key=val,..."); parsing them is left to callers since
+// the schema may grow.
+type NodeConfig struct {
+	Acme                string `json:"acme,omitempty"`
+	AcmeDomain0         string `json:"acmedomain0,omitempty"`
+	AcmeDomain1         string `json:"acmedomain1,omitempty"`
+	AcmeDomain2         string `json:"acmedomain2,omitempty"`
+	AcmeDomain3         string `json:"acmedomain3,omitempty"`
+	AcmeDomain4         string `json:"acmedomain4,omitempty"`
+	AcmeDomain5         string `json:"acmedomain5,omitempty"`
+	BallooningTarget    int    `json:"ballooning-target,omitempty"`
+	Description         string `json:"description,omitempty"`
+	Digest              string `json:"digest,omitempty"`
+	Location            string `json:"location,omitempty"`
+	StartAllOnBootDelay int    `json:"startall-onboot-delay,omitempty"`
+	WakeOnLAN           string `json:"wakeonlan,omitempty"`
+}
+
+// NodeConfigOptions is the write shape for PUT /nodes/{node}/config. Set
+// Delete to a comma-separated list of keys to unset them; pass Digest from
+// a prior GetConfig for optimistic concurrency.
+type NodeConfigOptions struct {
+	Acme                string `json:"acme,omitempty"`
+	AcmeDomain0         string `json:"acmedomain0,omitempty"`
+	AcmeDomain1         string `json:"acmedomain1,omitempty"`
+	AcmeDomain2         string `json:"acmedomain2,omitempty"`
+	AcmeDomain3         string `json:"acmedomain3,omitempty"`
+	AcmeDomain4         string `json:"acmedomain4,omitempty"`
+	AcmeDomain5         string `json:"acmedomain5,omitempty"`
+	BallooningTarget    *int   `json:"ballooning-target,omitempty"` // FIXME(issue-199): PVE default 80; pointer so unset doesn't override.
+	Delete              string `json:"delete,omitempty"`
+	Description         string `json:"description,omitempty"`
+	Digest              string `json:"digest,omitempty"`
+	Location            string `json:"location,omitempty"`
+	StartAllOnBootDelay *int   `json:"startall-onboot-delay,omitempty"`
+	WakeOnLAN           string `json:"wakeonlan,omitempty"`
+}
+
+// NodeHosts is the read shape of GET /nodes/{node}/hosts. Pass Digest back
+// to UpdateHosts for concurrency-safe writes.
+type NodeHosts struct {
+	Data   string `json:"data"`
+	Digest string `json:"digest,omitempty"`
+}
+
+// NodeRRDImage is the response shape of GET /nodes/{node}/rrd — and the
+// matching storage variant. The filename lives in PVE's rrdcached directory.
+type NodeRRDImage struct {
+	Filename string `json:"filename"`
+}
+
+// NodeURLMetadata is the response shape of GET /nodes/{node}/query-url-metadata.
+// All fields are optional; PVE leaves them blank when the upstream HEAD
+// response omits the corresponding header.
+type NodeURLMetadata struct {
+	Filename string `json:"filename,omitempty"`
+	MimeType string `json:"mimetype,omitempty"`
+	Size     int64  `json:"size,omitempty"`
+}
+
+// StorageIdentity is the response shape of GET /nodes/{node}/storage/{storage}/identity.
+// ID is content-addressed for plugins that support it (e.g. PBS datastore
+// fingerprint), else the storage name. Type is the plugin kind.
+type StorageIdentity struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}

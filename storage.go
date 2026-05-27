@@ -361,6 +361,31 @@ func (s *Storage) ImportMetadata(ctx context.Context, volume string) (*ImportMet
 	return &meta, nil
 }
 
+// Identity returns the storage's stable id + plugin type. PBS storages
+// surface a content-addressed datastore id here for namespace tracking;
+// other plugins typically return the storage name as the id.
+func (s *Storage) Identity(ctx context.Context) (id *StorageIdentity, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/identity", s.Node, s.Name), &id)
+	return
+}
+
+// RRD asks PVE to render a storage-utilization PNG and returns its on-disk
+// filename. ds is a comma-separated list of datasources ("total,used");
+// timeframe is hour/day/week/month/year (no decade for storage).
+func (s *Storage) RRD(ctx context.Context, ds string, timeframe Timeframe, cf ConsolidationFunction) (rrd *NodeRRDImage, err error) {
+	if ds == "" {
+		return nil, fmt.Errorf("ds is required")
+	}
+	q := url.Values{}
+	q.Set("ds", ds)
+	q.Set("timeframe", string(timeframe))
+	if cf != "" {
+		q.Set("cf", string(cf))
+	}
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/rrd?%s", s.Node, s.Name, q.Encode()), &rrd)
+	return
+}
+
 func deleteVolume(ctx context.Context, c *Client, n, s, v, p, t string) (*Task, error) {
 	var upid UPID
 	if v == "" && p == "" {
