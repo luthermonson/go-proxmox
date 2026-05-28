@@ -4916,3 +4916,345 @@ type StorageIdentity struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
 }
+
+// --- /cluster/config -------------------------------------------------------
+
+// ClusterJoinInfo is the response shape of GET /cluster/config/join — the
+// payload a new node needs (or that pvecm consumes) to join the cluster.
+type ClusterJoinInfo struct {
+	ConfigDigest  string                 `json:"config_digest,omitempty"`
+	PreferredNode string                 `json:"preferred_node,omitempty"`
+	NodeList      []*ClusterJoinNodeInfo `json:"nodelist,omitempty"`
+	// Totem is the corosync totem subtree as returned by PVE — open shape
+	// because the config can carry arbitrary corosync-format keys.
+	Totem map[string]any `json:"totem,omitempty"`
+}
+
+// ClusterJoinNodeInfo is one entry in the join-info nodelist.
+type ClusterJoinNodeInfo struct {
+	Name        string `json:"name,omitempty"`
+	NodeID      int    `json:"nodeid,omitempty"`
+	PVEAddr     string `json:"pve_addr,omitempty"`
+	PVEFP       string `json:"pve_fp,omitempty"` // SHA-256 certificate fingerprint
+	QuorumVotes int    `json:"quorum_votes,omitempty"`
+	Ring0Addr   string `json:"ring0_addr,omitempty"`
+}
+
+// ClusterJoinOptions is the body of POST /cluster/config/join.
+type ClusterJoinOptions struct {
+	Hostname    string `json:"hostname,omitempty"`    // required: existing cluster member
+	Password    string `json:"password,omitempty"`    // required: root password of peer
+	Fingerprint string `json:"fingerprint,omitempty"` // required: peer SHA-256 cert FP
+	// Force, when true, suppresses the "node already exists" error.
+	// PVE schema is boolean; pointer keeps an unset field out of the body.
+	Force  *bool  `json:"force,omitempty"`
+	NodeID int    `json:"nodeid,omitempty"`
+	Votes  int    `json:"votes,omitempty"`
+	Link0  string `json:"link0,omitempty"` // [address=]<IP>[,priority=<int>]
+	Link1  string `json:"link1,omitempty"`
+	Link2  string `json:"link2,omitempty"`
+	Link3  string `json:"link3,omitempty"`
+	Link4  string `json:"link4,omitempty"`
+	Link5  string `json:"link5,omitempty"`
+	Link6  string `json:"link6,omitempty"`
+	Link7  string `json:"link7,omitempty"`
+}
+
+// ClusterConfigNodeEntry is one row from GET /cluster/config/nodes — the bare
+// corosync node list (just names). Use the typed cluster status for richer
+// per-node state.
+type ClusterConfigNodeEntry struct {
+	Node string `json:"node,omitempty"`
+}
+
+// ClusterCreateOptions is the body of POST /cluster/config — "create cluster".
+type ClusterCreateOptions struct {
+	ClusterName      string `json:"clustername,omitempty"` // required, max 15 chars
+	NodeID           int    `json:"nodeid,omitempty"`
+	Votes            int    `json:"votes,omitempty"`
+	TokenCoefficient int    `json:"token-coefficient,omitempty"` // PVE default 125
+	Link0            string `json:"link0,omitempty"`
+	Link1            string `json:"link1,omitempty"`
+	Link2            string `json:"link2,omitempty"`
+	Link3            string `json:"link3,omitempty"`
+	Link4            string `json:"link4,omitempty"`
+	Link5            string `json:"link5,omitempty"`
+	Link6            string `json:"link6,omitempty"`
+	Link7            string `json:"link7,omitempty"`
+}
+
+// ClusterAddNodeOptions is the body of POST /cluster/config/nodes/{node}.
+type ClusterAddNodeOptions struct {
+	APIVersion int    `json:"apiversion,omitempty"`
+	NewNodeIP  string `json:"new_node_ip,omitempty"`
+	NodeID     int    `json:"nodeid,omitempty"`
+	Votes      int    `json:"votes,omitempty"`
+	// Force, when true, suppresses the "node already exists" error.
+	// PVE schema is boolean; pointer keeps an unset field out of the body.
+	Force *bool  `json:"force,omitempty"`
+	Link0 string `json:"link0,omitempty"`
+	Link1 string `json:"link1,omitempty"`
+	Link2 string `json:"link2,omitempty"`
+	Link3 string `json:"link3,omitempty"`
+	Link4 string `json:"link4,omitempty"`
+	Link5 string `json:"link5,omitempty"`
+	Link6 string `json:"link6,omitempty"`
+	Link7 string `json:"link7,omitempty"`
+}
+
+// ClusterAddNodeResult is the response of POST /cluster/config/nodes/{node} —
+// the corosync authkey + conf bytes that pvecm normally writes locally on the
+// joining node.
+type ClusterAddNodeResult struct {
+	CorosyncAuthkey string   `json:"corosync_authkey,omitempty"`
+	CorosyncConf    string   `json:"corosync_conf,omitempty"`
+	Warnings        []string `json:"warnings,omitempty"`
+}
+
+// --- /cluster/qemu ---------------------------------------------------------
+
+// QEMUCPUFlag is reused for both the per-host /nodes/{node}/capabilities/qemu/cpu
+// surface and the cluster-wide /cluster/qemu/cpu-flags catalog (defined above).
+
+// CustomCPUModel is a single custom CPU model definition (the inverse of the
+// `cpu: custom-<name>` field in a VM config). client is populated by the
+// list/getter on the parent; identifying fields drive instance methods.
+type CustomCPUModel struct {
+	client *Client `json:"-"`
+
+	CPUType        string `json:"cputype,omitempty"`
+	Flags          string `json:"flags,omitempty"`
+	GuestPhysBits  int    `json:"guest-phys-bits,omitempty"`
+	Hidden         int    `json:"hidden,omitempty"`
+	HVVendorID     string `json:"hv-vendor-id,omitempty"`
+	Level          int    `json:"level,omitempty"`
+	PhysBits       string `json:"phys-bits,omitempty"`
+	ReportedModel  string `json:"reported-model,omitempty"`
+	Digest         string `json:"digest,omitempty"`
+}
+
+// --- /cluster/log ----------------------------------------------------------
+
+// ClusterLogEntry is one row from /cluster/log — a single task-log line.
+// PVE's response shape is open (it varies per task kind); we expose the
+// common fields and Extra for the rest.
+type ClusterLogEntry struct {
+	Node    string `json:"node,omitempty"`
+	Time    int64  `json:"time,omitempty"`
+	UID     int    `json:"uid,omitempty"`
+	User    string `json:"user,omitempty"`
+	Pri     int    `json:"pri,omitempty"`
+	Tag     string `json:"tag,omitempty"`
+	Pid     int    `json:"pid,omitempty"`
+	Msg     string `json:"msg,omitempty"`
+	UPID    string `json:"upid,omitempty"`
+}
+
+// --- /cluster/options ------------------------------------------------------
+
+// ClusterOptionsResponse is the response of GET /cluster/options — the
+// datacenter.cfg surface. Common scalars are typed; the long tail (HA, CRS,
+// replication, notify, location, tag-style, u2f, webauthn, next-id, etc.)
+// lives in Extra so callers can read every key PVE returned without us
+// having to enumerate the entire wide config space.
+type ClusterOptionsResponse struct {
+	BWLimit         string `json:"bwlimit,omitempty"`
+	ConsentText     string `json:"consent-text,omitempty"`
+	Console         string `json:"console,omitempty"` // applet | vv | html5 | xtermjs
+	Description     string `json:"description,omitempty"`
+	EmailFrom       string `json:"email_from,omitempty"`
+	Fencing         string `json:"fencing,omitempty"` // watchdog (default) | hardware | both
+	HTTPProxy       string `json:"http_proxy,omitempty"`
+	Keyboard        string `json:"keyboard,omitempty"`
+	Language        string `json:"language,omitempty"`
+	MACPrefix       string `json:"mac_prefix,omitempty"`
+	MaxWorkers      int    `json:"max_workers,omitempty"`
+	Migration       string `json:"migration,omitempty"`
+	// MigrationUnsecure: deprecated in favor of migration=insecure. PVE
+	// schema is boolean (no documented default beyond "off"); pointer keeps
+	// the field out of the body when callers leave it unset.
+	MigrationUnsecure *bool `json:"migration_unsecure,omitempty"`
+	RegisteredTags    string `json:"registered-tags,omitempty"`
+
+	// Extra captures every other top-level key PVE returned (HA, CRS,
+	// replication, notify, location, tag-style, u2f, webauthn, next-id, etc.).
+	// It is populated by a custom UnmarshalJSON; on the way back through
+	// ClusterOptionsUpdate.Extra it is sent verbatim.
+	Extra map[string]any `json:"-"`
+}
+
+// ClusterOptionsUpdate is the body of PUT /cluster/options.
+type ClusterOptionsUpdate struct {
+	BWLimit         string `json:"bwlimit,omitempty"`
+	ConsentText     string `json:"consent-text,omitempty"`
+	Console         string `json:"console,omitempty"`
+	Description     string `json:"description,omitempty"`
+	EmailFrom       string `json:"email_from,omitempty"`
+	Fencing         string `json:"fencing,omitempty"`
+	HTTPProxy       string `json:"http_proxy,omitempty"`
+	Keyboard        string `json:"keyboard,omitempty"`
+	Language        string `json:"language,omitempty"`
+	MACPrefix       string `json:"mac_prefix,omitempty"`
+	MaxWorkers      int    `json:"max_workers,omitempty"`
+	Migration       string `json:"migration,omitempty"`
+	MigrationUnsecure *bool  `json:"migration_unsecure,omitempty"` // deprecated; see ClusterOptionsResponse
+	RegisteredTags    string `json:"registered-tags,omitempty"`
+	// Delete is a comma-separated list of keys to reset to PVE defaults.
+	Delete string `json:"delete,omitempty"`
+	// Extra is merged into the request body alongside the typed fields,
+	// covering the long tail of datacenter.cfg keys (HA, CRS, replication,
+	// notify, location, tag-style, u2f, webauthn, next-id, …). Marshaling is
+	// handled by a custom MarshalJSON.
+	Extra map[string]any `json:"-"`
+}
+
+// --- /cluster/metrics/export -----------------------------------------------
+
+// MetricsExportResponse is the response of GET /cluster/metrics/export.
+type MetricsExportResponse struct {
+	Data []*MetricsExportEntry `json:"data,omitempty"`
+}
+
+// MetricsExportEntry is one observation in the export series.
+type MetricsExportEntry struct {
+	ID        string  `json:"id"`        // e.g. "node/node1", "qemu/100"
+	Metric    string  `json:"metric"`    // metric name
+	Timestamp int64   `json:"timestamp"` // unix seconds
+	Type      string  `json:"type"`      // "gauge" | "counter" | "derive"
+	Value     float64 `json:"value"`
+}
+
+// --- /cluster/backup-info --------------------------------------------------
+
+// BackupGuestEntry is one row in GET /cluster/backup-info/not-backed-up.
+type BackupGuestEntry struct {
+	VMID int    `json:"vmid"`
+	Type string `json:"type,omitempty"` // "qemu" | "lxc"
+	Name string `json:"name,omitempty"`
+}
+
+// BackupIncludedVolumesRoot is the response of
+// GET /cluster/backup/{id}/included_volumes — a 2-level tree (guests ->
+// volumes) shaped for ExtJS tree views.
+type BackupIncludedVolumesRoot struct {
+	Children []*BackupIncludedVolumesGuest `json:"children,omitempty"`
+}
+
+// BackupIncludedVolumesGuest is one guest entry under IncludedVolumes.
+type BackupIncludedVolumesGuest struct {
+	ID       int                            `json:"id"`
+	Name     string                         `json:"name,omitempty"`
+	Type     string                         `json:"type,omitempty"` // "qemu" | "lxc" | "unknown"
+	Children []*BackupIncludedVolumesVolume `json:"children,omitempty"`
+}
+
+// BackupIncludedVolumesVolume is one volume entry under a guest.
+type BackupIncludedVolumesVolume struct {
+	ID       string `json:"id"`
+	Name     string `json:"name,omitempty"`
+	Included bool   `json:"included"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// --- /cluster/ceph/flags + /cluster/ceph/metadata --------------------------
+
+// CephFlag is one row of /cluster/ceph/flags.
+type CephFlag struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Value       bool   `json:"value"`
+}
+
+// CephFlagsUpdateOptions is the body of PUT /cluster/ceph/flags. Each pointer
+// field maps to a Ceph OSDMap flag: true sets, false unsets, nil leaves the
+// current state untouched (PVE schema has no defaults — they're per-cluster
+// runtime state — so pointer is mandatory to distinguish "not specified").
+type CephFlagsUpdateOptions struct {
+	NoBackfill   *bool `json:"nobackfill,omitempty"`
+	NoDeepScrub  *bool `json:"nodeep-scrub,omitempty"`
+	NoDown       *bool `json:"nodown,omitempty"`
+	NoIn         *bool `json:"noin,omitempty"`
+	NoOut        *bool `json:"noout,omitempty"`
+	NoRebalance  *bool `json:"norebalance,omitempty"`
+	NoRecover    *bool `json:"norecover,omitempty"`
+	NoScrub      *bool `json:"noscrub,omitempty"`
+	NoTierAgent  *bool `json:"notieragent,omitempty"`
+	NoUp         *bool `json:"noup,omitempty"`
+	Pause        *bool `json:"pause,omitempty"`
+}
+
+// CephMetadata is the response of /cluster/ceph/metadata. PVE returns per-OSD
+// (and per-MON/MGR/MDS) version+device info; we expose the common service
+// buckets and a Version block when present.
+type CephMetadata struct {
+	Version *CephMetadataVersion        `json:"version,omitempty"`
+	OSD     []map[string]any            `json:"osd,omitempty"`
+	MON     []map[string]any            `json:"mon,omitempty"`
+	MGR     []map[string]any            `json:"mgr,omitempty"`
+	MDS     []map[string]any            `json:"mds,omitempty"`
+	Node    map[string]map[string]any   `json:"node,omitempty"`
+}
+
+// CephMetadataVersion captures the cluster-wide ceph version string PVE
+// derives across all running daemons.
+type CephMetadataVersion struct {
+	Version string `json:"version,omitempty"`
+	Buildcommit string `json:"buildcommit,omitempty"`
+}
+
+// BulkStartOptions is the body of POST /cluster/bulk-action/guest/start.
+type BulkStartOptions struct {
+	VMIDs      []int `json:"vms,omitempty"`
+	MaxWorkers int   `json:"max-workers,omitempty"` // PVE default 4
+	Timeout    int   `json:"timeout,omitempty"`     // seconds, VM-only
+}
+
+// BulkShutdownOptions is the body of POST /cluster/bulk-action/guest/shutdown.
+type BulkShutdownOptions struct {
+	VMIDs      []int `json:"vms,omitempty"`
+	MaxWorkers int   `json:"max-workers,omitempty"` // PVE default 4
+	Timeout    int   `json:"timeout,omitempty"`     // PVE default 180
+	// ForceStop: stop the guest hard after timeout. PVE default 1 (true);
+	// pointer so leaving the field unset does NOT flip the server default to
+	// false. See AGENTS.md "don't clobber PVE-side defaults".
+	ForceStop *bool `json:"force-stop,omitempty"`
+}
+
+// BulkSuspendOptions is the body of POST /cluster/bulk-action/guest/suspend.
+type BulkSuspendOptions struct {
+	VMIDs      []int `json:"vms,omitempty"`
+	MaxWorkers int   `json:"max-workers,omitempty"` // PVE default 4
+	// ToDisk suspends to disk (resumed on next start). PVE default 0 (false);
+	// matches Go zero — plain bool with omitempty drops the field on unset.
+	ToDisk       bool   `json:"to-disk,omitempty"`
+	StateStorage string `json:"statestorage,omitempty"` // requires ToDisk
+}
+
+// BulkMigrateOptions is the body of POST /cluster/bulk-action/guest/migrate.
+type BulkMigrateOptions struct {
+	Target         string `json:"target,omitempty"` // required by PVE
+	VMIDs          []int  `json:"vms,omitempty"`
+	MaxWorkers     int    `json:"max-workers,omitempty"` // PVE default 1
+	Online         *bool  `json:"online,omitempty"`      // live migration for VMs / restart for CTs
+	WithLocalDisks *bool  `json:"with-local-disks,omitempty"`
+}
+
+// CustomCPUModelOptions is the body of POST /cluster/qemu/custom-cpu-models
+// (create) and PUT /cluster/qemu/custom-cpu-models/{cputype} (update).
+type CustomCPUModelOptions struct {
+	CPUType        string `json:"cputype,omitempty"` // required
+	Flags          string `json:"flags,omitempty"`
+	GuestPhysBits  int    `json:"guest-phys-bits,omitempty"`
+	// Hidden: do not identify as a KVM virtual machine. PVE default 0,
+	// matches Go zero — plain bool with omitempty would still flip it when
+	// the caller omits the field, so we keep an int matching the wire shape
+	// and rely on omitempty.
+	Hidden        int    `json:"hidden,omitempty"`
+	HVVendorID    string `json:"hv-vendor-id,omitempty"`
+	Level         int    `json:"level,omitempty"`
+	PhysBits      string `json:"phys-bits,omitempty"`
+	// ReportedModel is required on POST (PVE schema marks it optional=0).
+	ReportedModel string `json:"reported-model,omitempty"`
+	Digest        string `json:"digest,omitempty"` // PUT only — optimistic concurrency
+	Delete        string `json:"delete,omitempty"` // PUT only — comma list of keys to reset
+}

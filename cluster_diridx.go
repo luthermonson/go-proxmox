@@ -99,3 +99,19 @@ func (cl *Cluster) haDiridx(ctx context.Context, path string) ([]string, error) 
 func (cl *Cluster) qemuDiridx(ctx context.Context, path string) ([]string, error) {
 	return decodeSubdirList(ctx, cl.client, path)
 }
+
+func (cl *Cluster) bulkActionDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, cl.client, path)
+}
+
+func (cl *Cluster) backupInfoDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, cl.client, path)
+}
+
+func (cl *Cluster) metricsDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, cl.client, path)
+}
+
+func (cl *Cluster) notificationsDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, cl.client, path)
+}

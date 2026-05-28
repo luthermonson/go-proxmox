@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -135,4 +136,24 @@ func (cl *Cluster) HAManagerStatus(ctx context.Context) (status *HAManagerStatus
 	status = &HAManagerStatus{}
 	err = cl.client.Get(ctx, "/cluster/ha/status/manager_status", status)
 	return
+}
+
+// HAArm re-arms the HA stack after it was previously disarmed. Manual
+// quorum-override action — requires Sys.Console on /.
+//
+// POST /cluster/ha/status/arm-ha
+func (cl *Cluster) HAArm(ctx context.Context) error {
+	return cl.client.Post(ctx, "/cluster/ha/status/arm-ha", nil, nil)
+}
+
+// HADisarm requests disarming the HA stack and releases watchdogs cluster-wide.
+// resourceMode is required by PVE: "freeze" preserves HA-tracking state but
+// holds commands, "ignore" removes resources from HA tracking entirely.
+//
+// POST /cluster/ha/status/disarm-ha
+func (cl *Cluster) HADisarm(ctx context.Context, resourceMode string) error {
+	if resourceMode == "" {
+		return errors.New("ha disarm: resource-mode is required (\"freeze\" or \"ignore\")")
+	}
+	return cl.client.Post(ctx, "/cluster/ha/status/disarm-ha", map[string]string{"resource-mode": resourceMode}, nil)
 }
