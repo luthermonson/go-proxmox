@@ -250,3 +250,20 @@ func TestCluster_HAManagerStatus(t *testing.T) {
 	assert.NotNil(t, mgr.NodeStatus)
 	assert.Equal(t, "online", mgr.NodeStatus["node1"])
 }
+
+func TestCluster_HAArm(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	assert.Nil(t, cluster.HAArm(context.Background()))
+}
+
+func TestCluster_HADisarm(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	assert.Nil(t, cluster.HADisarm(context.Background(), "freeze"))
+	assert.Error(t, cluster.HADisarm(context.Background(), ""))
+}

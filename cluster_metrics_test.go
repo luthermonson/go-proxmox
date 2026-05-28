@@ -109,6 +109,45 @@ func TestCluster_UpdateMetricServer(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestCluster_MetricsSubdirs(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	subs, err := cluster.MetricsSubdirs(context.Background())
+	assert.Nil(t, err)
+	assert.Contains(t, subs, "server")
+	assert.Contains(t, subs, "export")
+}
+
+func TestCluster_MetricsExport(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	export, err := cluster.MetricsExport(context.Background(), nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, export)
+	assert.Len(t, export.Data, 2)
+	assert.Equal(t, "node/node1", export.Data[0].ID)
+	assert.Equal(t, "gauge", export.Data[0].Type)
+}
+
+func TestCluster_MetricsExport_WithOptions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	export, err := cluster.MetricsExport(context.Background(), &MetricsExportOptions{
+		History:   true,
+		LocalOnly: true,
+		StartTime: 1700000000,
+		NodeList:  "node1,node2",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, export)
+}
+
 func TestCluster_DeleteMetricServer(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
