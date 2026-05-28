@@ -351,8 +351,35 @@ func scanCallSites(root string) ([]extractedCall, error) {
 		// `<var> := "/…"` bindings, used by call sites that pass the path as a
 		// pre-built variable rather than inline (e.g. the websocket helpers).
 		pathVars := map[string]string{}
+		// pendingMethod/Line are set when an Upload (or similar) call lands its
+		// `(` at end of line and the path literal is on the following line(s).
+		// Empty pendingMethod means no continuation is in flight.
+		var pendingMethod string
+		var pendingLine int
 		for line := 1; s.Scan(); line++ {
 			text := s.Text()
+
+			// Continuation from a previous line: try to pull the path off this
+			// line. Skip blank-only and pure-comment lines. Clear state once a
+			// non-empty line is processed regardless of whether we extracted a
+			// path, so we don't accidentally grab a path many lines downstream.
+			if pendingMethod != "" {
+				trimmed := strings.TrimSpace(text)
+				if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+					continue
+				}
+				if pathLit := resolvePath(text, urlVars, pathVars); pathLit != "" {
+					out = append(out, extractedCall{
+						Method: pendingMethod,
+						Path:   normalizePath(pathLit),
+						File:   filepath.ToSlash(path),
+						Line:   pendingLine,
+					})
+				}
+				pendingMethod = ""
+				pendingLine = 0
+				// fall through — this line might also start a new call
+			}
 
 			if am := urlAssignRE.FindStringSubmatch(text); am != nil {
 				if p := extractPathExpr(am[2]); p != "" {
@@ -411,16 +438,22 @@ func scanCallSites(root string) ([]extractedCall, error) {
 			}
 
 			if um := uploadRE.FindStringSubmatch(text); um != nil {
-				pathLit := resolvePath(um[1], urlVars, pathVars)
-				if pathLit == "" {
+				if pathLit := resolvePath(um[1], urlVars, pathVars); pathLit != "" {
+					out = append(out, extractedCall{
+						Method: "POST",
+						Path:   normalizePath(pathLit),
+						File:   filepath.ToSlash(path),
+						Line:   line,
+					})
 					continue
 				}
-				out = append(out, extractedCall{
-					Method: "POST",
-					Path:   normalizePath(pathLit),
-					File:   filepath.ToSlash(path),
-					Line:   line,
-				})
+				// `(` at end of line; the path is on a subsequent line. Mark
+				// state so the next non-blank, non-comment line is treated as
+				// the path expression. The path is always the first arg to
+				// `client.Upload[Reader](path, …)`, so the very next code line
+				// is the right place to look.
+				pendingMethod = "POST"
+				pendingLine = line
 			}
 		}
 		return s.Err()
@@ -483,13 +516,14 @@ var (
 	// verb is always GET; scanner treats every diridx-helper call site as a GET
 	// against the first non-ctx argument path.
 	diridxRE = regexp.MustCompile(`\b\w+\.\w*[Dd]iridx\s*\(\s*ctx\s*,\s*(.*?)$`)
-	// Upload — the `*Client.Upload` helper wraps multipart POST. Its signature
-	// is `Upload(path, ...)` (no ctx; the helper builds its own request). The
-	// `client.` qualifier is required to avoid matching the unrelated method
-	// `(*Storage).Upload(content, filename string)` whose first arg is a
-	// content-type, not a path. Scanner treats every `<x>.client.Upload`
-	// call site as a POST against the first argument path.
-	uploadRE = regexp.MustCompile(`\bclient\.Upload\s*\(\s*(.*?)$`)
+	// Upload — `*Client.Upload` and `*Client.UploadReader` both wrap the same
+	// multipart POST endpoint. Signatures are `Upload(path, ...)` /
+	// `UploadReader(path, ...)` (no ctx; the helper builds its own request).
+	// The `client.` qualifier is required to avoid matching the unrelated
+	// method `(*Storage).Upload(content, filename string)` whose first arg
+	// is a content-type, not a path. The `\w*` suffix catches both variants
+	// (and any future Upload* the library adds) without re-listing each.
+	uploadRE = regexp.MustCompile(`\bclient\.Upload\w*\s*\(\s*(.*?)$`)
 	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
 	// `<var> := fmt.Sprintf("/…", …)` or `<var> := "/…"` — bindings that later
