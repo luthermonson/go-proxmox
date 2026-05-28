@@ -55,8 +55,8 @@ func TestPoolUpdate(t *testing.T) {
 	if pool != nil {
 		err = pool.Update(ctx, &PoolUpdateOption{
 			Comment:         "Test pool updated",
-			Delete:          true,
-			AllowMove:       true,
+			Delete:          IntOrBool(true),
+			AllowMove:       IntOrBool(true),
 			Storage:         "local-zfs",
 			VirtualMachines: "100",
 		})

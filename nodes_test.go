@@ -282,7 +282,7 @@ func TestNode_FirewallOptionSet(t *testing.T) {
 	assert.Nil(t, err)
 
 	options := &FirewallNodeOption{
-		Enable: true,
+		Enable: Ptr(IntOrBool(true)),
 	}
 
 	err = node.FirewallOptionSet(ctx, options)
@@ -485,8 +485,8 @@ func TestNode_Vzdump(t *testing.T) {
 		Storage:       "local",
 		Mode:          "snapshot",
 		Compress:      "zstd",
-		Remove:        false,
-		All:           false,
+		Remove:        Ptr(IntOrBool(false)),
+		All:           IntOrBool(false),
 		NotesTemplate: "",
 	}
 
