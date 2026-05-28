@@ -2294,7 +2294,21 @@ type FirewallVirtualMachineOption struct {
 	Radv        bool   `json:"radv,omitempty"` // FIXME(issue-178): schema "boolean"; use IntOrBool (defaults match — no pointer needed).
 }
 
-type Snapshot struct {
+// VirtualMachineSnapshot is one entry from
+// GET /nodes/{node}/qemu/{vmid}/snapshot. The unexported client and the
+// parent-identifying Node/VMID fields are populated by
+// (*VirtualMachine).Snapshots and (*VirtualMachine).Snapshot so callers can
+// invoke instance methods (Rollback, Delete, Config, UpdateConfig,
+// SubResources) without re-threading those identifiers.
+type VirtualMachineSnapshot struct {
+	client *Client `json:"-"`
+	// Node is the cluster node that hosts the parent VM. Populated by the
+	// getter and not part of the upstream JSON payload.
+	Node string `json:"-"`
+	// VMID is the parent VM's numeric id. Populated by the getter and not
+	// part of the upstream JSON payload.
+	VMID int `json:"-"`
+
 	Name        string
 	Vmstate     int
 	Description string
@@ -2594,9 +2608,23 @@ type VNCProxyOptions struct {
 	Width     int    `json:"width,omitempty"`
 }
 
+// ContainerSnapshot is one entry from
+// GET /nodes/{node}/lxc/{vmid}/snapshot. The unexported client and the
+// parent-identifying Node/VMID fields are populated by
+// (*Container).Snapshots and (*Container).Snapshot so callers can invoke
+// instance methods (Rollback, Delete, Config, UpdateConfig, SubResources)
+// without re-threading those identifiers.
 type ContainerSnapshot struct {
+	client *Client `json:"-"`
+	// Node is the cluster node that hosts the parent container. Populated
+	// by the getter and not part of the upstream JSON payload.
+	Node string `json:"-"`
+	// VMID is the parent container's numeric id. Populated by the getter
+	// and not part of the upstream JSON payload.
+	VMID int `json:"-"`
+
 	Description          string `json:"description,omitempty"`
-	Name                 string `json:"snapname,omitempty"`
+	Name                 string `json:"name,omitempty"`
 	Parent               string `json:"parent,omitempty"`
 	SnapshotCreationTime int64  `json:"snaptime,omitempty"`
 }
@@ -3680,6 +3708,13 @@ type VirtualMachineStatusIndexEntry struct {
 // index (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — each entry
 // names a sub-resource on the snapshot (config, rollback).
 type VirtualMachineSnapshotIndexEntry struct {
+	Subdir string `json:"subdir,omitempty"`
+}
+
+// ContainerSnapshotIndexEntry is one row in the per-snapshot directory index
+// (GET /nodes/{node}/lxc/{vmid}/snapshot/{snapname}) — each entry names a
+// sub-resource on the snapshot (config, rollback).
+type ContainerSnapshotIndexEntry struct {
 	Subdir string `json:"subdir,omitempty"`
 }
 

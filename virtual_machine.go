@@ -832,6 +832,9 @@ func (v *VirtualMachine) FirewallRulesDelete(ctx context.Context, rulePos int) e
 	return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", v.Node, v.VMID, rulePos), nil)
 }
 
+// NewSnapshot creates a snapshot of the VM and returns the worker task. The
+// returned snapshot's metadata is reachable via v.Snapshot(name) once the
+// task completes.
 func (v *VirtualMachine) NewSnapshot(ctx context.Context, name string) (task *Task, err error) {
 	var upid UPID
 	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), map[string]string{"snapname": name}, &upid); err != nil {
@@ -841,33 +844,32 @@ func (v *VirtualMachine) NewSnapshot(ctx context.Context, name string) (task *Ta
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) Snapshots(ctx context.Context) (snapshots []*Snapshot, err error) {
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), &snapshots)
-	return
-}
-
-func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (task *Task, err error) {
-	var upid UPID
-	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/rollback", v.Node, v.VMID, name), nil, &upid); err != nil {
+// Snapshots lists every snapshot of the VM. Each returned
+// *VirtualMachineSnapshot has its client/Node/VMID pre-populated so callers
+// can invoke instance methods (Rollback, Delete, Config, …) directly.
+func (v *VirtualMachine) Snapshots(ctx context.Context) (snapshots []*VirtualMachineSnapshot, err error) {
+	if err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot", v.Node, v.VMID), &snapshots); err != nil {
 		return nil, err
 	}
-
-	return NewTask(upid, v.client), nil
-}
-
-func (v *VirtualMachine) DeleteSnapshot(ctx context.Context, snapshot string) (task *Task, err error) {
-	var upid UPID
-	if err := v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", v.Node, v.VMID, snapshot), &upid); err != nil {
-		return nil, err
+	for _, s := range snapshots {
+		s.client = v.client
+		s.Node = v.Node
+		s.VMID = int(v.VMID)
 	}
-	return NewTask(upid, v.client), nil
+	return snapshots, nil
 }
 
-// GetSnapshotConfig reads a snapshot's metadata (description, parent, etc.).
-// PVE returns a free-form map since snapshot configs include arbitrary
-// device keys snapshotted at the time of creation.
-func (v *VirtualMachine) GetSnapshotConfig(ctx context.Context, snapshot string) (config map[string]interface{}, err error) {
-	return config, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), &config)
+// Snapshot constructs a handle to a single snapshot by name. It performs no
+// API call; the returned *VirtualMachineSnapshot is wired to the VM's client
+// and node/vmid so its instance methods (Rollback, Delete, Config,
+// UpdateConfig, SubResources) target the correct snapshot path.
+func (v *VirtualMachine) Snapshot(name string) *VirtualMachineSnapshot {
+	return &VirtualMachineSnapshot{
+		client: v.client,
+		Node:   v.Node,
+		VMID:   int(v.VMID),
+		Name:   name,
+	}
 }
 
 // VirtualMachineSnapshotUpdateOptions is the body for PUT
@@ -877,13 +879,46 @@ type VirtualMachineSnapshotUpdateOptions struct {
 	Description string `json:"description,omitempty"`
 }
 
-// UpdateSnapshot updates a VM snapshot's metadata. PVE only allows changing
+// Rollback rolls the VM back to this snapshot. Returns the worker task.
+func (s *VirtualMachineSnapshot) Rollback(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err = s.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/rollback", s.Node, s.VMID, s.Name), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
+// Delete removes this snapshot from the VM. Returns the worker task.
+func (s *VirtualMachineSnapshot) Delete(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err := s.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", s.Node, s.VMID, s.Name), &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, s.client), nil
+}
+
+// Config reads this snapshot's metadata (description, parent, etc.). PVE
+// returns a free-form map since snapshot configs include arbitrary device
+// keys snapshotted at the time of creation.
+func (s *VirtualMachineSnapshot) Config(ctx context.Context) (config map[string]interface{}, err error) {
+	return config, s.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", s.Node, s.VMID, s.Name), &config)
+}
+
+// UpdateConfig updates this snapshot's metadata. PVE only allows changing
 // the description on this endpoint; pass nil options to clear it.
-func (v *VirtualMachine) UpdateSnapshot(ctx context.Context, snapshot string, options *VirtualMachineSnapshotUpdateOptions) error {
+func (s *VirtualMachineSnapshot) UpdateConfig(ctx context.Context, options *VirtualMachineSnapshotUpdateOptions) error {
 	if options == nil {
 		options = &VirtualMachineSnapshotUpdateOptions{}
 	}
-	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", v.Node, v.VMID, snapshot), options, nil)
+	return s.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s/config", s.Node, s.VMID, s.Name), options, nil)
+}
+
+// SubResources returns the per-snapshot directory index
+// (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — one entry per
+// sub-resource (config, rollback) on this snapshot.
+func (s *VirtualMachineSnapshot) SubResources(ctx context.Context) (entries []*VirtualMachineSnapshotIndexEntry, err error) {
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", s.Node, s.VMID, s.Name), &entries)
+	return
 }
 
 // RRD asks PVE to render a single-datasource PNG on the server and returns
@@ -975,14 +1010,6 @@ func (v *VirtualMachine) DirIndex(ctx context.Context) (entries []*VirtualMachin
 // Start/Stop/Reboot/etc. on *VirtualMachine.
 func (v *VirtualMachine) StatusIndex(ctx context.Context) (entries []*VirtualMachineStatusIndexEntry, err error) {
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/status", v.Node, v.VMID), &entries)
-	return
-}
-
-// SnapshotIndex returns the per-snapshot directory index
-// (GET /nodes/{node}/qemu/{vmid}/snapshot/{snapname}) — one entry per
-// sub-resource (config, rollback) on the named snapshot.
-func (v *VirtualMachine) SnapshotIndex(ctx context.Context, snapshot string) (entries []*VirtualMachineSnapshotIndexEntry, err error) {
-	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/snapshot/%s", v.Node, v.VMID, snapshot), &entries)
 	return
 }
 
