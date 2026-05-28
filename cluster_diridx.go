@@ -8,61 +8,61 @@ import (
 // header comment in nodes_diridx.go for the rationale — same shape, same
 // shared subdir-list decoder.
 
-// ClusterIndex enumerates the children of /cluster (typically "replication",
+// Subdirs enumerates the children of /cluster (typically "replication",
 // "metrics", "config", "firewall", "backup", "backupinfo", "ha",
 // "acme", "ceph", "jobs", "sdn", "log", "resources", "tasks", "options",
 // "status", "nextid", "qemu"). ACL-filtered.
-func (cl *Cluster) ClusterIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) Subdirs(ctx context.Context) ([]string, error) {
 	return cl.clusterDiridx(ctx, "/cluster")
 }
 
-// ACMEIndex enumerates the children of /cluster/acme ("plugins",
+// ACMESubdirs enumerates the children of /cluster/acme ("plugins",
 // "account", "tos", "meta", "directories", "challenge-schema").
-func (cl *Cluster) ACMEIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) ACMESubdirs(ctx context.Context) ([]string, error) {
 	return cl.acmeDiridx(ctx, "/cluster/acme")
 }
 
-// FirewallIndex enumerates the children of /cluster/firewall ("groups",
+// FirewallSubdirs enumerates the children of /cluster/firewall ("groups",
 // "rules", "ipset", "aliases", "options", "macros", "refs").
-func (cl *Cluster) FirewallIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) FirewallSubdirs(ctx context.Context) ([]string, error) {
 	return cl.firewallDiridx(ctx, "/cluster/firewall")
 }
 
-// SDNIndex enumerates the children of /cluster/sdn ("vnets", "zones",
+// SDNSubdirs enumerates the children of /cluster/sdn ("vnets", "zones",
 // "controllers", "ipams", "dns", "fabrics", "subnets").
-func (cl *Cluster) SDNIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) SDNSubdirs(ctx context.Context) ([]string, error) {
 	return cl.sdnDiridx(ctx, "/cluster/sdn")
 }
 
-// CephIndex enumerates the children of /cluster/ceph ("metadata", "status",
+// CephSubdirs enumerates the children of /cluster/ceph ("metadata", "status",
 // "flags").
-func (cl *Cluster) CephIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) CephSubdirs(ctx context.Context) ([]string, error) {
 	return cl.cephDiridx(ctx, "/cluster/ceph")
 }
 
-// ConfigIndex enumerates the children of /cluster/config ("nodes", "join",
+// ConfigSubdirs enumerates the children of /cluster/config ("nodes", "join",
 // "totem", "qdevice", "apiversion").
-func (cl *Cluster) ConfigIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) ConfigSubdirs(ctx context.Context) ([]string, error) {
 	return cl.configDiridx(ctx, "/cluster/config")
 }
 
-// HAIndex enumerates the children of /cluster/ha ("groups", "resources",
+// HASubdirs enumerates the children of /cluster/ha ("groups", "resources",
 // "status", "rules").
-func (cl *Cluster) HAIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) HASubdirs(ctx context.Context) ([]string, error) {
 	return cl.haDiridx(ctx, "/cluster/ha")
 }
 
-// HAStatusIndex enumerates the children of /cluster/ha/status ("current",
+// HAStatusSubdirs enumerates the children of /cluster/ha/status ("current",
 // "manager_status").
-func (cl *Cluster) HAStatusIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) HAStatusSubdirs(ctx context.Context) ([]string, error) {
 	return cl.haDiridx(ctx, "/cluster/ha/status")
 }
 
-// QEMUIndex enumerates the children of /cluster/qemu. Each entry's "subdir"
+// QEMUSubdirs enumerates the children of /cluster/qemu. Each entry's "subdir"
 // is a numeric VMID — these are the QEMU guests visible to the caller
 // cluster-wide. Distinct from (*Node).VirtualMachines, which scopes to one
 // node and returns rich VM records.
-func (cl *Cluster) QEMUIndex(ctx context.Context) ([]string, error) {
+func (cl *Cluster) QEMUSubdirs(ctx context.Context) ([]string, error) {
 	return cl.qemuDiridx(ctx, "/cluster/qemu")
 }
 

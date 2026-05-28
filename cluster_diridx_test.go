@@ -12,10 +12,10 @@ func diridxCluster() *Cluster {
 	return &Cluster{client: mockClient()}
 }
 
-func TestCluster_ClusterIndex(t *testing.T) {
+func TestCluster_Subdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().ClusterIndex(context.Background())
+	subdirs, err := diridxCluster().Subdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "replication")
 	assert.Contains(t, subdirs, "ha")
@@ -23,74 +23,74 @@ func TestCluster_ClusterIndex(t *testing.T) {
 	assert.Contains(t, subdirs, "ceph")
 }
 
-func TestCluster_ACMEIndex(t *testing.T) {
+func TestCluster_ACMESubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().ACMEIndex(context.Background())
+	subdirs, err := diridxCluster().ACMESubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "plugins")
 	assert.Contains(t, subdirs, "account")
 	assert.Contains(t, subdirs, "directories")
 }
 
-func TestCluster_FirewallIndex(t *testing.T) {
+func TestCluster_FirewallSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().FirewallIndex(context.Background())
+	subdirs, err := diridxCluster().FirewallSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "groups")
 	assert.Contains(t, subdirs, "rules")
 	assert.Contains(t, subdirs, "options")
 }
 
-func TestCluster_SDNIndex(t *testing.T) {
+func TestCluster_SDNSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().SDNIndex(context.Background())
+	subdirs, err := diridxCluster().SDNSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "vnets")
 	assert.Contains(t, subdirs, "zones")
 	assert.Contains(t, subdirs, "controllers")
 }
 
-func TestCluster_CephIndex(t *testing.T) {
+func TestCluster_CephSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().CephIndex(context.Background())
+	subdirs, err := diridxCluster().CephSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"metadata", "status", "flags"}, subdirs)
 }
 
-func TestCluster_ConfigIndex(t *testing.T) {
+func TestCluster_ConfigSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().ConfigIndex(context.Background())
+	subdirs, err := diridxCluster().ConfigSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "nodes")
 	assert.Contains(t, subdirs, "join")
 	assert.Contains(t, subdirs, "totem")
 }
 
-func TestCluster_HAIndex(t *testing.T) {
+func TestCluster_HASubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().HAIndex(context.Background())
+	subdirs, err := diridxCluster().HASubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"groups", "resources", "status", "rules"}, subdirs)
 }
 
-func TestCluster_HAStatusIndex(t *testing.T) {
+func TestCluster_HAStatusSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().HAStatusIndex(context.Background())
+	subdirs, err := diridxCluster().HAStatusSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"current", "manager_status"}, subdirs)
 }
 
-func TestCluster_QEMUIndex(t *testing.T) {
+func TestCluster_QEMUSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxCluster().QEMUIndex(context.Background())
+	subdirs, err := diridxCluster().QEMUSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"100", "101", "200"}, subdirs)
 }

@@ -18,50 +18,50 @@ import (
 // mage/endpoints) treats the call site as a GET against the helper's path
 // argument.
 
-// NodeIndex enumerates the children of /nodes/{node} (typically "qemu",
+// Subdirs enumerates the children of /nodes/{node} (typically "qemu",
 // "lxc", "storage", "network", "tasks", "scan", "services", "subscription",
 // etc.). Useful as a permission probe: PVE filters the list by the caller's
 // ACLs, so the result tells you which sub-APIs the credential can read.
-func (n *Node) NodeIndex(ctx context.Context) ([]string, error) {
+func (n *Node) Subdirs(ctx context.Context) ([]string, error) {
 	return n.nodeDiridx(ctx, fmt.Sprintf("/nodes/%s", n.Name))
 }
 
-// FirewallIndex enumerates the children of /nodes/{node}/firewall
+// FirewallSubdirs enumerates the children of /nodes/{node}/firewall
 // ("rules", "options", "log").
-func (n *Node) FirewallIndex(ctx context.Context) ([]string, error) {
+func (n *Node) FirewallSubdirs(ctx context.Context) ([]string, error) {
 	return n.firewallDiridx(ctx, fmt.Sprintf("/nodes/%s/firewall", n.Name))
 }
 
-// DisksIndex enumerates the children of /nodes/{node}/disks ("list",
+// DisksSubdirs enumerates the children of /nodes/{node}/disks ("list",
 // "smart", "initgpt", "wipedisk", "directory", "lvm", "lvmthin", "zfs").
-func (n *Node) DisksIndex(ctx context.Context) ([]string, error) {
+func (n *Node) DisksSubdirs(ctx context.Context) ([]string, error) {
 	return n.disksDiridx(ctx, fmt.Sprintf("/nodes/%s/disks", n.Name))
 }
 
-// ReplicationIndex enumerates the children of
-// /nodes/{node}/replication/{id} ("status", "log", "schedule_now").
-// /nodes/{node}/replication (without {id}) is a true list endpoint, not a
-// diridx; use (*Node).Replications for that.
-func (r *NodeReplicationJob) ReplicationIndex(ctx context.Context) ([]string, error) {
+// Subdirs enumerates the children of /nodes/{node}/replication/{id}
+// ("status", "log", "schedule_now"). /nodes/{node}/replication (without
+// {id}) is a true list endpoint, not a diridx; use (*Node).Replications for
+// that.
+func (r *NodeReplicationJob) Subdirs(ctx context.Context) ([]string, error) {
 	if r.ID == "" {
 		return nil, fmt.Errorf("replication id is required")
 	}
 	return r.replicationDiridx(ctx, fmt.Sprintf("/nodes/%s/replication/%s", r.Node, r.ID))
 }
 
-// ServiceIndex enumerates the children of /nodes/{node}/services/{service}
+// Subdirs enumerates the children of /nodes/{node}/services/{service}
 // ("state", "start", "stop", "restart", "reload"). /nodes/{node}/services
 // (without {service}) is a true list endpoint — use (*Node).Services.
-func (s *NodeService) ServiceIndex(ctx context.Context) ([]string, error) {
+func (s *NodeService) Subdirs(ctx context.Context) ([]string, error) {
 	if s.Name == "" {
 		return nil, fmt.Errorf("service name is required")
 	}
 	return s.serviceDiridx(ctx, fmt.Sprintf("/nodes/%s/services/%s", s.Node, s.Name))
 }
 
-// TaskIndex enumerates the children of /nodes/{node}/tasks/{upid}
+// Subdirs enumerates the children of /nodes/{node}/tasks/{upid}
 // ("log", "status"). Use as a permission probe before calling Log/Ping.
-func (t *Task) TaskIndex(ctx context.Context) ([]string, error) {
+func (t *Task) Subdirs(ctx context.Context) ([]string, error) {
 	if t.UPID == "" {
 		return nil, fmt.Errorf("task upid is required")
 	}
@@ -100,12 +100,12 @@ type StorageStatus struct {
 	UsedFraction float64 `json:"used_fraction,omitempty"`
 }
 
-// StorageIndex returns the status / capability object PVE publishes at
-// /nodes/{node}/storage/{storage}. Despite living at the directory-index
-// path, the schema is the storage's status payload (Active, Content types,
-// Type, Enabled, capacity counters), not the usual `[{"subdir":...}]`
+// Status returns the storage's status / capability object from
+// GET /nodes/{node}/storage/{storage}. Despite living at the directory-index
+// path, PVE publishes the storage's status payload here (Active, Content
+// types, Type, Enabled, capacity counters), not the usual `[{"subdir":...}]`
 // envelope — see StorageStatus.
-func (s *Storage) StorageIndex(ctx context.Context) (status *StorageStatus, err error) {
+func (s *Storage) Status(ctx context.Context) (status *StorageStatus, err error) {
 	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s", s.Node, s.Name), &status)
 	return
 }

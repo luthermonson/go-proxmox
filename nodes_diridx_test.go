@@ -12,78 +12,78 @@ func diridxNode() *Node {
 	return &Node{client: mockClient(), Name: "node1"}
 }
 
-func TestNode_NodeIndex(t *testing.T) {
+func TestNode_Subdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxNode().NodeIndex(context.Background())
+	subdirs, err := diridxNode().Subdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "qemu")
 	assert.Contains(t, subdirs, "lxc")
 	assert.Contains(t, subdirs, "storage")
 }
 
-func TestNode_FirewallIndex(t *testing.T) {
+func TestNode_FirewallSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxNode().FirewallIndex(context.Background())
+	subdirs, err := diridxNode().FirewallSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"rules", "options", "log"}, subdirs)
 }
 
-func TestNode_DisksIndex(t *testing.T) {
+func TestNode_DisksSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	subdirs, err := diridxNode().DisksIndex(context.Background())
+	subdirs, err := diridxNode().DisksSubdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Contains(t, subdirs, "list")
 	assert.Contains(t, subdirs, "smart")
 	assert.Contains(t, subdirs, "zfs")
 }
 
-func TestNodeReplicationJob_ReplicationIndex(t *testing.T) {
+func TestNodeReplicationJob_Subdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	job := &NodeReplicationJob{client: mockClient(), Node: "node1", ID: "101-0"}
-	subdirs, err := job.ReplicationIndex(context.Background())
+	subdirs, err := job.Subdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"status", "log", "schedule_now"}, subdirs)
 
 	empty := &NodeReplicationJob{client: mockClient(), Node: "node1"}
-	_, err = empty.ReplicationIndex(context.Background())
+	_, err = empty.Subdirs(context.Background())
 	assert.NotNil(t, err)
 }
 
-func TestNodeService_ServiceIndex(t *testing.T) {
+func TestNodeService_Subdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	svc := &NodeService{client: mockClient(), Node: "node1", Name: "pveproxy"}
-	subdirs, err := svc.ServiceIndex(context.Background())
+	subdirs, err := svc.Subdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"state", "start", "stop", "restart", "reload"}, subdirs)
 
 	empty := &NodeService{client: mockClient(), Node: "node1"}
-	_, err = empty.ServiceIndex(context.Background())
+	_, err = empty.Subdirs(context.Background())
 	assert.NotNil(t, err)
 }
 
-func TestTask_TaskIndex(t *testing.T) {
+func TestTask_Subdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	task := NewTask("UPID:node1:00000002:00000002:00000002:test:completed:root@pam:", mockClient())
-	subdirs, err := task.TaskIndex(context.Background())
+	subdirs, err := task.Subdirs(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"log", "status"}, subdirs)
 
 	empty := &Task{client: mockClient(), Node: "node1"}
-	_, err = empty.TaskIndex(context.Background())
+	_, err = empty.Subdirs(context.Background())
 	assert.NotNil(t, err)
 }
 
-func TestStorage_StorageIndex(t *testing.T) {
+func TestStorage_Status(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
 	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
-	status, err := storage.StorageIndex(context.Background())
+	status, err := storage.Status(context.Background())
 	assert.Nil(t, err)
 	assert.NotNil(t, status)
 	assert.Equal(t, "dir", status.Type)
