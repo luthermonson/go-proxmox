@@ -1769,4 +1769,468 @@ func clusterReplication() {
 			{"subdir":"101"},
 			{"subdir":"200"}
 		]}`)
+
+	// --- /cluster/sdn lock/rollback/dry-run -----------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/lock$").
+		Reply(200).
+		JSON(`{"data":"tok-abc123"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/lock").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/rollback$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/dry-run").
+		Reply(200).
+		JSON(`{"data":{
+			"frr-diff":"+router bgp 65000\n+ network 10.0.0.0/24\n",
+			"interfaces-diff":"+auto vnet1\n+iface vnet1 inet manual\n"
+		}}`)
+
+	// --- /cluster/sdn/controllers ---------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/controllers$").
+		Reply(200).
+		JSON(`{"data":[
+			{"controller":"ctrl1","type":"evpn","asn":65000,"peers":"10.0.0.1,10.0.0.2"},
+			{"controller":"ctrl2","type":"bgp","asn":65001}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/controllers/ctrl1$").
+		Reply(200).
+		JSON(`{"data":{"controller":"ctrl1","type":"evpn","asn":65000,"peers":"10.0.0.1,10.0.0.2","peer-group-name":"VTEP"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/controllers$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/controllers/ctrl1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/controllers/ctrl1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/dns -----------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/dns$").
+		Reply(200).
+		JSON(`{"data":[
+			{"dns":"pdns1","type":"powerdns"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/dns/pdns1$").
+		Reply(200).
+		JSON(`{"data":{"dns":"pdns1","type":"powerdns","url":"https://pdns.example.com/api/v1","ttl":3600}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/dns$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/dns/pdns1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/dns/pdns1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/ipams ---------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams$").
+		Reply(200).
+		JSON(`{"data":[
+			{"ipam":"pve","type":"pve"},
+			{"ipam":"netbox1","type":"netbox"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams/pve$").
+		Reply(200).
+		JSON(`{"data":{"ipam":"pve","type":"pve"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams/pve/status$").
+		Reply(200).
+		JSON(`{"data":[
+			{"hostname":"vm100","ip":"10.0.0.10","mac":"aa:bb:cc:dd:ee:01","subnet":"10.0.0.0-24","vmid":"100","vnet":"vnet1","zone":"zone1"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/ipams$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/ipams/pve$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/ipams/pve$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/fabrics -------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"fabric"},
+			{"subdir":"node"},
+			{"subdir":"all"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/all$").
+		Reply(200).
+		JSON(`{"data":{
+			"fabrics":[{"id":"fab1","protocol":"openfabric","ip_prefix":"10.0.0.0/24"}],
+			"nodes":[{"fabric_id":"fab1","node_id":"node1","ip":"10.0.0.1"}]
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/fabric$").
+		Reply(200).
+		JSON(`{"data":[
+			{"id":"fab1","protocol":"openfabric","ip_prefix":"10.0.0.0/24"},
+			{"id":"fab2","protocol":"ospf","area":"0.0.0.0"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/fabric/fab1$").
+		Reply(200).
+		JSON(`{"data":{"id":"fab1","protocol":"openfabric","ip_prefix":"10.0.0.0/24","hello_interval":3,"csnp_interval":10}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/fabrics/fabric$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/fabrics/fabric/fab1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/fabrics/fabric/fab1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/node$").
+		Reply(200).
+		JSON(`{"data":[
+			{"fabric_id":"fab1","node_id":"node1","ip":"10.0.0.1"},
+			{"fabric_id":"fab1","node_id":"node2","ip":"10.0.0.2"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/node/fab1$").
+		Reply(200).
+		JSON(`{"data":[
+			{"fabric_id":"fab1","node_id":"node1","ip":"10.0.0.1"},
+			{"fabric_id":"fab1","node_id":"node2","ip":"10.0.0.2"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/node/fab1/node1$").
+		Reply(200).
+		JSON(`{"data":{"fabric_id":"fab1","node_id":"node1","ip":"10.0.0.1","interfaces":["name=eth0,ip=10.0.0.1/24"]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/fabrics/node/fab1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/fabrics/node/fab1/node1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/fabrics/node/fab1/node1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/prefix-lists --------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists$").
+		Reply(200).
+		JSON(`{"data":[
+			{"id":"pl1"},
+			{"id":"pl2"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists/pl1$").
+		Reply(200).
+		JSON(`{"data":{"id":"pl1","entries":[{"seq":10,"action":"permit","prefix":"10.0.0.0/24"}]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/prefix-lists$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/prefix-lists/pl1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/prefix-lists/pl1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists/pl1/entries$").
+		Reply(200).
+		JSON(`{"data":[
+			{"seq":10,"action":"permit","prefix":"10.0.0.0/24"},
+			{"seq":20,"action":"deny","prefix":"10.0.1.0/24"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists/pl1/entries/10$").
+		Reply(200).
+		JSON(`{"data":{"seq":10,"action":"permit","prefix":"10.0.0.0/24"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/prefix-lists/pl1/entries$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/prefix-lists/pl1/entries/10$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/prefix-lists/pl1/entries/10$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/route-maps ----------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps$").
+		Reply(200).
+		JSON(`{"data":[
+			{"id":"rm1"},
+			{"id":"rm2"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries$").
+		Reply(200).
+		JSON(`{"data":[
+			{"route-map-id":"rm1","order":10,"action":"permit"},
+			{"route-map-id":"rm1","order":20,"action":"deny"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries/rm1$").
+		Reply(200).
+		JSON(`{"data":[
+			{"route-map-id":"rm1","order":10,"action":"permit","match":["key=metric,value=100"]}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries/rm1/entry/10$").
+		Reply(200).
+		JSON(`{"data":{"route-map-id":"rm1","order":10,"action":"permit","match":["key=metric,value=100"],"set":["key=local-preference,value=200"]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/route-maps/entries$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/route-maps/entries/rm1/entry/10$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/route-maps/entries/rm1/entry/10$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/vnets/{vnet}/firewall -----------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/firewall$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"options"},{"subdir":"rules"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/firewall/options$").
+		Reply(200).
+		JSON(`{"data":{"enable":1,"policy_forward":"ACCEPT","log_level_forward":"info"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/vnets/user1/firewall/options$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/firewall/rules$").
+		Reply(200).
+		JSON(`{"data":[
+			{"pos":0,"type":"in","action":"ACCEPT","enable":1,"source":"10.0.0.0/24"},
+			{"pos":1,"type":"out","action":"DROP","enable":1}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/firewall/rules/0$").
+		Reply(200).
+		JSON(`{"data":{"pos":0,"type":"in","action":"ACCEPT","enable":1,"source":"10.0.0.0/24"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/vnets/user1/firewall/rules$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/vnets/user1/firewall/rules/0$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/vnets/user1/firewall/rules/0$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/vnets/{vnet}/ips ----------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/vnets/user1/ips$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/vnets/user1/ips$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/vnets/user1/ips").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/sdn/vnets/{vnet}/subnets ------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/subnets$").
+		Reply(200).
+		JSON(`{"data":[
+			{"id":"zone1-10.0.0.0-24","cidr":"10.0.0.0/24","gateway":"10.0.0.1","type":"subnet","vnet":"user1","zone":"zone1"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/user1/subnets/zone1-10.0.0.0-24$").
+		Reply(200).
+		JSON(`{"data":{"id":"zone1-10.0.0.0-24","cidr":"10.0.0.0/24","gateway":"10.0.0.1","type":"subnet","vnet":"user1","zone":"zone1"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/vnets/user1/subnets$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/vnets/user1/subnets/zone1-10.0.0.0-24$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/vnets/user1/subnets/zone1-10.0.0.0-24$").
+		Reply(200).
+		JSON(`{"data":null}`)
 }

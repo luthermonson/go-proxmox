@@ -3347,6 +3347,8 @@ type PendingConfigItem struct {
 }
 
 type VNet struct {
+	client *Client `json:"-"`
+
 	Name      string `json:"vnet,omitempty"`
 	Type      string `json:"type,omitempty"`
 	Zone      string `json:"zone,omitempty"`
@@ -3369,6 +3371,8 @@ type NetRange struct {
 	EndAddress   string `json:"end-address,omitempty"`
 }
 type VNetSubnet struct {
+	client *Client `json:"-"`
+
 	CIDR      string     `json:"cidr,omitempty"`
 	Gateway   string     `json:"gateway,omitempty"`
 	Netmask   string     `json:"mask,omitempty"`
@@ -3438,6 +3442,390 @@ type SDNZoneOptions struct {
 	// uint16 zero would attempt to bind port 0; pointer keeps the default
 	// when nil. See #199.
 	VXLANPort *uint16 `json:"vxlan-port,omitempty"`
+}
+
+// --- /cluster/sdn/controllers ----------------------------------------------
+
+// SDNController represents a configured SDN controller (BGP/EVPN/IS-IS/Faucet).
+// PVE returns a union of plugin-type-specific fields; only the keys relevant to
+// Type will be populated.
+type SDNController struct {
+	client *Client `json:"-"`
+
+	Controller             string `json:"controller,omitempty"`
+	Type                   string `json:"type,omitempty"`
+	ASN                    uint32 `json:"asn,omitempty"`
+	BGPMode                string `json:"bgp-mode,omitempty"`
+	BGPMultipathASRelax    bool   `json:"bgp-multipath-as-relax,omitempty"`
+	EBGP                   bool   `json:"ebgp,omitempty"`
+	EBGPMultihop           int    `json:"ebgp-multihop,omitempty"`
+	ISISDomain             string `json:"isis-domain,omitempty"`
+	ISISIfaces             string `json:"isis-ifaces,omitempty"`
+	ISISNet                string `json:"isis-net,omitempty"`
+	Loopback               string `json:"loopback,omitempty"`
+	Node                   string `json:"node,omitempty"`
+	Nodes                  string `json:"nodes,omitempty"`
+	PeerGroupName          string `json:"peer-group-name,omitempty"`
+	Peers                  string `json:"peers,omitempty"`
+	State                  string `json:"state,omitempty"` // new | changed | deleted
+	Digest                 string `json:"digest,omitempty"`
+}
+
+// SDNControllerOptions is the request body for creating/updating a controller.
+// Fields are documented per the PVE schema; only those relevant to Type are
+// accepted server-side.
+type SDNControllerOptions struct {
+	Controller              string `json:"controller,omitempty"`
+	Type                    string `json:"type,omitempty"`
+	ASN                     uint32 `json:"asn,omitempty"`
+	BGPMode                 string `json:"bgp-mode,omitempty"`
+	BGPMultipathASPathRelax bool   `json:"bgp-multipath-as-path-relax,omitempty"`
+	EBGP                    bool   `json:"ebgp,omitempty"`
+	EBGPMultihop            int    `json:"ebgp-multihop,omitempty"`
+	Fabric                  string `json:"fabric,omitempty"`
+	ISISDomain              string `json:"isis-domain,omitempty"`
+	ISISIfaces              string `json:"isis-ifaces,omitempty"`
+	ISISNet                 string `json:"isis-net,omitempty"`
+	Loopback                string `json:"loopback,omitempty"`
+	Node                    string `json:"node,omitempty"`
+	Nodes                   string `json:"nodes,omitempty"`
+	PeerGroupName           string `json:"peer-group-name,omitempty"`
+	Peers                   string `json:"peers,omitempty"`
+	RouteMapIn              string `json:"route-map-in,omitempty"`
+	RouteMapOut             string `json:"route-map-out,omitempty"`
+	LockToken               string `json:"lock-token,omitempty"`
+	Digest                  string `json:"digest,omitempty"`
+	Delete                  string `json:"delete,omitempty"` // PUT only — comma-list of keys to reset
+}
+
+// --- /cluster/sdn/dns ------------------------------------------------------
+
+// SDNDNS represents an SDN DNS plugin configuration (currently PowerDNS only).
+type SDNDNS struct {
+	client *Client `json:"-"`
+
+	DNS           string `json:"dns,omitempty"`
+	Type          string `json:"type,omitempty"`
+	URL           string `json:"url,omitempty"`
+	Key           string `json:"key,omitempty"`
+	TTL           int    `json:"ttl,omitempty"`
+	ReverseMaskV6 int    `json:"reversemaskv6,omitempty"`
+	ReverseV6Mask int    `json:"reversev6mask,omitempty"`
+	Fingerprint   string `json:"fingerprint,omitempty"`
+	Digest        string `json:"digest,omitempty"`
+}
+
+// SDNDNSOptions is the request body for creating/updating an SDN DNS object.
+type SDNDNSOptions struct {
+	DNS           string `json:"dns,omitempty"`
+	Type          string `json:"type,omitempty"` // "powerdns"
+	URL           string `json:"url,omitempty"`
+	Key           string `json:"key,omitempty"`
+	TTL           int    `json:"ttl,omitempty"`
+	ReverseMaskV6 int    `json:"reversemaskv6,omitempty"`
+	ReverseV6Mask int    `json:"reversev6mask,omitempty"`
+	Fingerprint   string `json:"fingerprint,omitempty"`
+	LockToken     string `json:"lock-token,omitempty"`
+	Digest        string `json:"digest,omitempty"`
+	Delete        string `json:"delete,omitempty"`
+}
+
+// --- /cluster/sdn/ipams ----------------------------------------------------
+
+// SDNIPAM represents an IPAM (IP Address Management) backend configuration.
+// PVE supports netbox, phpipam, and pve (built-in) backends.
+type SDNIPAM struct {
+	client *Client `json:"-"`
+
+	IPAM        string `json:"ipam,omitempty"`
+	Type        string `json:"type,omitempty"`
+	URL         string `json:"url,omitempty"`
+	Token       string `json:"token,omitempty"`
+	Section     int    `json:"section,omitempty"`
+	Fingerprint string `json:"fingerprint,omitempty"`
+	Digest      string `json:"digest,omitempty"`
+}
+
+// SDNIPAMOptions is the request body for creating/updating an SDN IPAM.
+type SDNIPAMOptions struct {
+	IPAM        string `json:"ipam,omitempty"`
+	Type        string `json:"type,omitempty"` // "netbox" | "phpipam" | "pve"
+	URL         string `json:"url,omitempty"`
+	Token       string `json:"token,omitempty"`
+	Section     int    `json:"section,omitempty"`
+	Fingerprint string `json:"fingerprint,omitempty"`
+	LockToken   string `json:"lock-token,omitempty"`
+	Digest      string `json:"digest,omitempty"`
+	Delete      string `json:"delete,omitempty"`
+}
+
+// --- /cluster/sdn/fabrics --------------------------------------------------
+
+// SDNFabric represents an SDN fabric (underlay routing protocol configuration).
+// The schema is plugin-type-tagged on Protocol; many fields are protocol-specific.
+type SDNFabric struct {
+	client *Client `json:"-"`
+
+	ID                  string   `json:"id,omitempty"`
+	Protocol            string   `json:"protocol,omitempty"` // openfabric | ospf | wireguard | bgp
+	IPPrefix            string   `json:"ip_prefix,omitempty"`
+	IP6Prefix           string   `json:"ip6_prefix,omitempty"`
+	Area                string   `json:"area,omitempty"`           // ospf
+	HelloInterval       float64  `json:"hello_interval,omitempty"` // openfabric
+	CSNPInterval        float64  `json:"csnp_interval,omitempty"`  // openfabric
+	PersistentKeepalive int      `json:"persistent_keepalive,omitempty"` // wireguard
+	Redistribute        []string `json:"redistribute,omitempty"`         // ospf | bgp
+	RouteFilter         string   `json:"route_filter,omitempty"`         // ospf | openfabric
+	Digest              string   `json:"digest,omitempty"`
+}
+
+// SDNFabricOptions is the request body for creating/updating a fabric.
+type SDNFabricOptions struct {
+	ID                  string   `json:"id,omitempty"`
+	Protocol            string   `json:"protocol,omitempty"`
+	IPPrefix            string   `json:"ip_prefix,omitempty"`
+	IP6Prefix           string   `json:"ip6_prefix,omitempty"`
+	Area                string   `json:"area,omitempty"`
+	HelloInterval       float64  `json:"hello_interval,omitempty"`
+	CSNPInterval        float64  `json:"csnp_interval,omitempty"`
+	PersistentKeepalive int      `json:"persistent_keepalive,omitempty"`
+	Redistribute        []string `json:"redistribute,omitempty"`
+	RouteFilter         string   `json:"route_filter,omitempty"`
+	LockToken           string   `json:"lock-token,omitempty"`
+	Digest              string   `json:"digest,omitempty"`
+	Delete              []string `json:"delete,omitempty"`
+}
+
+// SDNFabricNode represents a node participating in an SDN fabric, including
+// its protocol-specific interfaces and (for WireGuard) peers.
+type SDNFabricNode struct {
+	client *Client `json:"-"`
+
+	FabricID   string   `json:"fabric_id,omitempty"`
+	NodeID     string   `json:"node_id,omitempty"`
+	IP         string   `json:"ip,omitempty"`
+	IP6        string   `json:"ip6,omitempty"`
+	Interfaces []string `json:"interfaces,omitempty"`
+	AllowedIPs []string `json:"allowed_ips,omitempty"` // wireguard
+	Endpoint   string   `json:"endpoint,omitempty"`    // wireguard
+	Peers      []string `json:"peers,omitempty"`       // wireguard
+	Digest     string   `json:"digest,omitempty"`
+}
+
+// SDNFabricNodeOptions is the request body for adding/updating a fabric node.
+type SDNFabricNodeOptions struct {
+	FabricID   string   `json:"fabric_id,omitempty"`
+	NodeID     string   `json:"node_id,omitempty"`
+	IP         string   `json:"ip,omitempty"`
+	IP6        string   `json:"ip6,omitempty"`
+	Interfaces []string `json:"interfaces,omitempty"`
+	AllowedIPs []string `json:"allowed_ips,omitempty"`
+	Endpoint   string   `json:"endpoint,omitempty"`
+	Peers      []string `json:"peers,omitempty"`
+	LockToken  string   `json:"lock-token,omitempty"`
+	Digest     string   `json:"digest,omitempty"`
+	Delete     []string `json:"delete,omitempty"`
+}
+
+// SDNFabricsAll is the combined fabric+node listing returned by
+// GET /cluster/sdn/fabrics/all.
+type SDNFabricsAll struct {
+	Fabrics []*SDNFabric     `json:"fabrics,omitempty"`
+	Nodes   []*SDNFabricNode `json:"nodes,omitempty"`
+}
+
+// --- /cluster/sdn/prefix-lists ---------------------------------------------
+
+// SDNPrefixList represents a named SDN prefix list. List GETs return only the
+// id; the detail GET returns the full entries array.
+type SDNPrefixList struct {
+	client *Client `json:"-"`
+
+	ID      string                `json:"id,omitempty"`
+	Entries []*SDNPrefixListEntry `json:"entries,omitempty"`
+	Digest  string                `json:"digest,omitempty"`
+}
+
+// SDNPrefixListEntry is one rule inside a prefix-list.
+type SDNPrefixListEntry struct {
+	client *Client `json:"-"`
+
+	ID     string `json:"-"` // parent prefix-list id (path-only)
+	Seq    uint32 `json:"seq,omitempty"`
+	Action string `json:"action,omitempty"` // permit | deny
+	Prefix string `json:"prefix,omitempty"`
+	GE     int    `json:"ge,omitempty"`
+	LE     int    `json:"le,omitempty"`
+	Digest string `json:"digest,omitempty"`
+}
+
+// SDNPrefixListOptions is the request body for creating/updating a prefix-list.
+type SDNPrefixListOptions struct {
+	ID        string                `json:"id,omitempty"`
+	Entries   []*SDNPrefixListEntry `json:"entries,omitempty"`
+	LockToken string                `json:"lock-token,omitempty"`
+	Digest    string                `json:"digest,omitempty"`
+	Delete    []string              `json:"delete,omitempty"`
+}
+
+// SDNPrefixListEntryOptions is the request body for creating/updating one entry
+// in a prefix-list.
+type SDNPrefixListEntryOptions struct {
+	Seq       uint32   `json:"seq,omitempty"`
+	Action    string   `json:"action,omitempty"`
+	Prefix    string   `json:"prefix,omitempty"`
+	GE        int      `json:"ge,omitempty"`
+	LE        int      `json:"le,omitempty"`
+	LockToken string   `json:"lock-token,omitempty"`
+	Digest    string   `json:"digest,omitempty"`
+	Delete    []string `json:"delete,omitempty"`
+}
+
+// --- /cluster/sdn/route-maps -----------------------------------------------
+
+// SDNRouteMapID is the listing entry under /cluster/sdn/route-maps.
+type SDNRouteMapID struct {
+	ID string `json:"id,omitempty"`
+}
+
+// SDNRouteMapEntry is one ordered entry in a named route-map. The PVE schema
+// encodes match/set as arrays of pve-property-string formatted "key=...,value=..."
+// so the wire form is `[]string`.
+type SDNRouteMapEntry struct {
+	client *Client `json:"-"`
+
+	RouteMapID string   `json:"route-map-id,omitempty"`
+	Order      uint16   `json:"order,omitempty"`
+	Action     string   `json:"action,omitempty"` // permit | deny
+	Match      []string `json:"match,omitempty"`
+	Set        []string `json:"set,omitempty"`
+	Call       string   `json:"call,omitempty"`
+	ExitAction string   `json:"exit-action,omitempty"`
+	Digest     string   `json:"digest,omitempty"`
+}
+
+// SDNRouteMapEntryOptions is the request body for creating/updating a route-map
+// entry.
+type SDNRouteMapEntryOptions struct {
+	RouteMapID string   `json:"route-map-id,omitempty"`
+	Order      uint16   `json:"order,omitempty"`
+	Action     string   `json:"action,omitempty"`
+	Match      []string `json:"match,omitempty"`
+	Set        []string `json:"set,omitempty"`
+	Call       string   `json:"call,omitempty"`
+	ExitAction string   `json:"exit-action,omitempty"`
+	LockToken  string   `json:"lock-token,omitempty"`
+	Digest     string   `json:"digest,omitempty"`
+	Delete     []string `json:"delete,omitempty"`
+}
+
+// --- /cluster/sdn/lock + rollback + dry-run --------------------------------
+
+// SDNLockToken is the opaque token returned by acquiring the SDN config lock
+// (POST /cluster/sdn/lock). Pass it to mutating endpoints via their LockToken
+// option and to Release/Rollback to surrender the lock.
+type SDNLockToken string
+
+// SDNDryRun is the diff returned by GET /cluster/sdn/dry-run?node=<node>: it
+// shows what changes a SDNApply would push to the node's FRR and ifupdown
+// configuration without actually applying them.
+type SDNDryRun struct {
+	FRRDiff        string `json:"frr-diff,omitempty"`
+	InterfacesDiff string `json:"interfaces-diff,omitempty"`
+}
+
+// --- /cluster/sdn/vnets/{vnet}/firewall ------------------------------------
+
+// SDNVNetFirewallOptions represents the per-VNet firewall toggles returned by
+// GET /cluster/sdn/vnets/{vnet}/firewall/options.
+//
+// Enable: PVE schema marks the type as boolean but the default is `0`. Go's
+// zero value (false) matches the default, so plain bool with omitempty is
+// safe and the wire form stays `0`/`1` thanks to IntOrBool.
+type SDNVNetFirewallOptions struct {
+	Enable          IntOrBool `json:"enable,omitempty"`
+	PolicyForward   string    `json:"policy_forward,omitempty"`   // ACCEPT | DROP
+	LogLevelForward string    `json:"log_level_forward,omitempty"`
+	Digest          string    `json:"digest,omitempty"`
+}
+
+// SDNVNetFirewallOptionsUpdate is the PUT body for vnet firewall options.
+type SDNVNetFirewallOptionsUpdate struct {
+	Enable          *IntOrBool `json:"enable,omitempty"`
+	PolicyForward   string     `json:"policy_forward,omitempty"`
+	LogLevelForward string     `json:"log_level_forward,omitempty"`
+	Digest          string     `json:"digest,omitempty"`
+	Delete          string     `json:"delete,omitempty"`
+}
+
+// SDNVNetFirewallRule is one firewall rule on a VNet. Mirrors the cluster
+// firewall rule shape but scoped to a single VNet.
+type SDNVNetFirewallRule struct {
+	Pos       int    `json:"pos,omitempty"`
+	Type      string `json:"type,omitempty"` // in | out | forward | group
+	Action    string `json:"action,omitempty"`
+	Enable    int    `json:"enable,omitempty"`
+	Comment   string `json:"comment,omitempty"`
+	Source    string `json:"source,omitempty"`
+	Dest      string `json:"dest,omitempty"`
+	Proto     string `json:"proto,omitempty"`
+	SPort     string `json:"sport,omitempty"`
+	DPort     string `json:"dport,omitempty"`
+	IFace     string `json:"iface,omitempty"`
+	Log       string `json:"log,omitempty"`
+	Macro     string `json:"macro,omitempty"`
+	IPVersion int    `json:"ipversion,omitempty"`
+	ICMPType  string `json:"icmp-type,omitempty"`
+}
+
+// SDNVNetFirewallRuleOptions is the create/update body for VNet firewall rules.
+type SDNVNetFirewallRuleOptions struct {
+	Pos      int    `json:"pos,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Action   string `json:"action,omitempty"`
+	Enable   int    `json:"enable,omitempty"`
+	Comment  string `json:"comment,omitempty"`
+	Source   string `json:"source,omitempty"`
+	Dest     string `json:"dest,omitempty"`
+	Proto    string `json:"proto,omitempty"`
+	SPort    string `json:"sport,omitempty"`
+	DPort    string `json:"dport,omitempty"`
+	IFace    string `json:"iface,omitempty"`
+	Log      string `json:"log,omitempty"`
+	Macro    string `json:"macro,omitempty"`
+	ICMPType string `json:"icmp-type,omitempty"`
+	MoveTo   int    `json:"moveto,omitempty"`
+	Digest   string `json:"digest,omitempty"`
+	Delete   string `json:"delete,omitempty"`
+}
+
+// --- /cluster/sdn/vnets/{vnet}/ips -----------------------------------------
+
+// SDNVNetIPOptions is the request body for POST/PUT/DELETE /cluster/sdn/vnets/
+// {vnet}/ips. The endpoint manages MAC/IP/VMID mappings inside the configured
+// IPAM for a VNet.
+type SDNVNetIPOptions struct {
+	Zone string `json:"zone,omitempty"`
+	IP   string `json:"ip,omitempty"`
+	MAC  string `json:"mac,omitempty"`
+	VMID int    `json:"vmid,omitempty"` // PUT only
+}
+
+// --- /cluster/sdn/vnets/{vnet}/subnets/{subnet} ----------------------------
+
+// SDNSubnetOptions is the create/update body for an SDN subnet under a VNet.
+type SDNSubnetOptions struct {
+	Subnet        string   `json:"subnet,omitempty"`
+	Type          string   `json:"type,omitempty"` // "subnet" — only valid value on POST
+	VNet          string   `json:"vnet,omitempty"`
+	Gateway       string   `json:"gateway,omitempty"`
+	DHCPDNSServer string   `json:"dhcp-dns-server,omitempty"`
+	DHCPRange     []string `json:"dhcp-range,omitempty"`
+	DNSZonePrefix string   `json:"dnszoneprefix,omitempty"`
+	SNAT          IntOrBool `json:"snat,omitempty"`
+	LockToken     string   `json:"lock-token,omitempty"`
+	Digest        string   `json:"digest,omitempty"`
+	Delete        string   `json:"delete,omitempty"`
 }
 
 // ClusterMetricServers is the list payload returned by GET /cluster/metrics/server.
