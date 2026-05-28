@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const fakeBulkUPID = "UPID:node1:0000ABCD:00ABCDEF:00000000:bulk_action:cluster:root@pam:"
-
 func TestCluster_BulkActionSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
