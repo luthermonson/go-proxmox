@@ -333,24 +333,47 @@ func (c *Container) UpdateFirewallIPSetEntry(ctx context.Context, name string, c
 	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr), entry, nil)
 }
 
+// FirewallRules lists firewall rules for the container. Returned rules carry
+// the parent context required to call (*FirewallRule).Get/Update/Delete.
 func (c *Container) FirewallRules(ctx context.Context) (rules []*FirewallRule, err error) {
-	return rules, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules", c.Node, c.VMID), &rules)
+	if err = c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules", c.Node, c.VMID), &rules); err != nil {
+		return nil, err
+	}
+	for _, r := range rules {
+		r.client = c.client
+		r.kind = fwRuleKindLXC
+		r.node = c.Node
+		r.vmid = uint64(c.VMID)
+	}
+	return rules, nil
 }
 
+// FirewallRule returns a *FirewallRule wired to the container's firewall
+// scope at the given position. The returned instance is a lazy handle — call
+// Get(ctx) to populate it from /firewall/rules/{pos}.
+func (c *Container) FirewallRule(pos int) *FirewallRule {
+	return &FirewallRule{
+		client: c.client,
+		kind:   fwRuleKindLXC,
+		node:   c.Node,
+		vmid:   uint64(c.VMID),
+		Pos:    pos,
+	}
+}
+
+// NewFirewallRule creates a firewall rule on the container. After a
+// successful POST the rule is wired with parent context so subsequent
+// Update/Delete/Get calls route correctly. Note: PVE's POST does not return
+// the assigned position; callers that need it should re-list via FirewallRules.
 func (c *Container) NewFirewallRule(ctx context.Context, rule *FirewallRule) error {
-	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules", c.Node, c.VMID), rule, nil)
-}
-
-func (c *Container) GetFirewallRule(ctx context.Context, rulePos int) (rule *FirewallRule, err error) {
-	return rule, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", c.Node, c.VMID, rulePos), &rule)
-}
-
-func (c *Container) UpdateFirewallRule(ctx context.Context, rulePos int, rule *FirewallRule) error {
-	return c.client.Put(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", c.Node, c.VMID, rulePos), rule, nil)
-}
-
-func (c *Container) DeleteFirewallRule(ctx context.Context, rulePos int) error {
-	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules/%d", c.Node, c.VMID, rulePos), nil)
+	if err := c.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/rules", c.Node, c.VMID), rule, nil); err != nil {
+		return err
+	}
+	rule.client = c.client
+	rule.kind = fwRuleKindLXC
+	rule.node = c.Node
+	rule.vmid = uint64(c.VMID)
+	return nil
 }
 
 func (c *Container) GetFirewallOptions(ctx context.Context) (options *FirewallVirtualMachineOption, err error) {

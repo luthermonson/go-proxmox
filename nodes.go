@@ -296,21 +296,44 @@ func (n *Node) FirewallOptionSet(ctx context.Context, firewallOption *FirewallNo
 	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/firewall/options", n.Name), firewallOption, nil)
 }
 
-func (n *Node) FirewallGetRules(ctx context.Context) (rules []*FirewallRule, err error) {
-	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), &rules)
-	return
+// FirewallRules lists firewall rules for the node. Returned rules carry the
+// parent context required to call (*FirewallRule).Get/Update/Delete.
+func (n *Node) FirewallRules(ctx context.Context) (rules []*FirewallRule, err error) {
+	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), &rules); err != nil {
+		return nil, err
+	}
+	for _, r := range rules {
+		r.client = n.client
+		r.kind = fwRuleKindNode
+		r.node = n.Name
+	}
+	return rules, nil
 }
 
-func (n *Node) FirewallRulesCreate(ctx context.Context, rule *FirewallRule) error {
-	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil)
+// FirewallRule returns a *FirewallRule wired to the node's firewall scope at
+// the given position. The returned instance is a lazy handle — call Get(ctx)
+// to populate it from /firewall/rules/{pos}.
+func (n *Node) FirewallRule(pos int) *FirewallRule {
+	return &FirewallRule{
+		client: n.client,
+		kind:   fwRuleKindNode,
+		node:   n.Name,
+		Pos:    pos,
+	}
 }
 
-func (n *Node) FirewallRulesUpdate(ctx context.Context, rule *FirewallRule) error {
-	return n.client.Put(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rule.Pos), rule, nil)
-}
-
-func (n *Node) FirewallRulesDelete(ctx context.Context, rulePos int) error {
-	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
+// NewFirewallRule creates a firewall rule on the node. After a successful
+// POST the rule is wired with parent context so subsequent
+// Update/Delete/Get calls route correctly. Note: PVE's POST does not return
+// the assigned position; callers that need it should re-list via FirewallRules.
+func (n *Node) NewFirewallRule(ctx context.Context, rule *FirewallRule) error {
+	if err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/firewall/rules", n.Name), rule, nil); err != nil {
+		return err
+	}
+	rule.client = n.client
+	rule.kind = fwRuleKindNode
+	rule.node = n.Name
+	return nil
 }
 
 // FirewallGetRule fetches one rule by position. Companion to
