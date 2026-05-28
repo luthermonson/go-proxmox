@@ -1641,4 +1641,132 @@ func clusterReplication() {
 		Delete("^/cluster/replication/100-0$").
 		Reply(200).
 		JSON(`{"data": null}`)
+
+	// --- diridx endpoints (see cluster_diridx.go) ---------------------------
+
+	// GET /cluster — cluster root diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"replication"},
+			{"subdir":"metrics"},
+			{"subdir":"config"},
+			{"subdir":"firewall"},
+			{"subdir":"backup"},
+			{"subdir":"backupinfo"},
+			{"subdir":"ha"},
+			{"subdir":"acme"},
+			{"subdir":"ceph"},
+			{"subdir":"jobs"},
+			{"subdir":"sdn"},
+			{"subdir":"log"},
+			{"subdir":"resources"},
+			{"subdir":"tasks"},
+			{"subdir":"options"},
+			{"subdir":"status"},
+			{"subdir":"nextid"}
+		]}`)
+
+	// GET /cluster/acme — acme diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/acme$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"plugins"},
+			{"subdir":"account"},
+			{"subdir":"tos"},
+			{"subdir":"meta"},
+			{"subdir":"directories"},
+			{"subdir":"challenge-schema"}
+		]}`)
+
+	// GET /cluster/firewall — cluster firewall diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"groups"},
+			{"subdir":"rules"},
+			{"subdir":"ipset"},
+			{"subdir":"aliases"},
+			{"subdir":"options"},
+			{"subdir":"macros"},
+			{"subdir":"refs"}
+		]}`)
+
+	// GET /cluster/sdn — cluster sdn diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"vnets"},
+			{"subdir":"zones"},
+			{"subdir":"controllers"},
+			{"subdir":"ipams"},
+			{"subdir":"dns"},
+			{"subdir":"fabrics"},
+			{"subdir":"subnets"}
+		]}`)
+
+	// GET /cluster/ceph — cluster ceph diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ceph$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"metadata"},
+			{"subdir":"status"},
+			{"subdir":"flags"}
+		]}`)
+
+	// GET /cluster/config — cluster config diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"nodes"},
+			{"subdir":"join"},
+			{"subdir":"totem"},
+			{"subdir":"qdevice"},
+			{"subdir":"apiversion"}
+		]}`)
+
+	// GET /cluster/ha — cluster ha diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"groups"},
+			{"subdir":"resources"},
+			{"subdir":"status"},
+			{"subdir":"rules"}
+		]}`)
+
+	// GET /cluster/ha/status — cluster ha status diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ha/status$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"current"},
+			{"subdir":"manager_status"}
+		]}`)
+
+	// GET /cluster/qemu — cluster qemu diridx (subdirs are VMIDs)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/qemu$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"100"},
+			{"subdir":"101"},
+			{"subdir":"200"}
+		]}`)
 }

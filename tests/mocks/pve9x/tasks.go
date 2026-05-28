@@ -114,4 +114,14 @@ func tasks() {
         {"n": 2, "t": "processing..."}
     ]
 }`)
+
+	// GET /nodes/{node}/tasks/{upid} — per-task diridx (see nodes_diridx.go).
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:00000002:00000002:00000002:test:completed:root@pam:$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"log"},
+			{"subdir":"status"}
+		]}`)
 }

@@ -1086,4 +1086,92 @@ func nodes() {
 		Delete("^/nodes/node1/disks/zfs/rpool").
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001234:00005678:12345678:rmzfs:rpool:root@pam:"}`)
+
+	// --- diridx endpoints (see nodes_diridx.go) ----------------------------
+
+	// GET /nodes/{node} — node root diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"qemu"},
+			{"subdir":"lxc"},
+			{"subdir":"storage"},
+			{"subdir":"network"},
+			{"subdir":"tasks"},
+			{"subdir":"services"},
+			{"subdir":"subscription"},
+			{"subdir":"firewall"},
+			{"subdir":"replication"}
+		]}`)
+
+	// GET /nodes/{node}/firewall — node firewall diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/firewall$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"rules"},
+			{"subdir":"options"},
+			{"subdir":"log"}
+		]}`)
+
+	// GET /nodes/{node}/disks — node disks diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/disks$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"list"},
+			{"subdir":"smart"},
+			{"subdir":"initgpt"},
+			{"subdir":"wipedisk"},
+			{"subdir":"directory"},
+			{"subdir":"lvm"},
+			{"subdir":"lvmthin"},
+			{"subdir":"zfs"}
+		]}`)
+
+	// GET /nodes/{node}/services/{service} — per-service diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/services/pveproxy$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"state"},
+			{"subdir":"start"},
+			{"subdir":"stop"},
+			{"subdir":"restart"},
+			{"subdir":"reload"}
+		]}`)
+
+	// GET /nodes/{node}/replication/{id} — per-replication-job diridx
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/replication/101-0$").
+		Reply(200).
+		JSON(`{"data":[
+			{"subdir":"status"},
+			{"subdir":"log"},
+			{"subdir":"schedule_now"}
+		]}`)
+
+	// GET /nodes/{node}/storage/{storage} — diridx path that returns the
+	// storage's status/capability object directly (not a subdir list).
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local$").
+		Reply(200).
+		JSON(`{"data":{
+			"type":"dir",
+			"content":"images,rootdir,vztmpl,backup,iso,snippets",
+			"active":1,
+			"enabled":1,
+			"shared":0,
+			"total":60000000000,
+			"used":10000000000,
+			"avail":50000000000,
+			"used_fraction":0.16667
+		}}`)
 }
