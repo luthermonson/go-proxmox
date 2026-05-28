@@ -2233,4 +2233,294 @@ func clusterReplication() {
 		Delete("^/cluster/sdn/vnets/user1/subnets/zone1-10.0.0.0-24$").
 		Reply(200).
 		JSON(`{"data":null}`)
+
+	// --- /cluster/config/* ----------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config/apiversion$").
+		Reply(200).
+		JSON(`{"data":1}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config/join$").
+		Reply(200).
+		JSON(`{"data":{
+			"config_digest":"abc123",
+			"preferred_node":"node1",
+			"nodelist":[
+				{"name":"node1","nodeid":1,"pve_addr":"10.0.0.1","pve_fp":"AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99","quorum_votes":1,"ring0_addr":"10.0.0.1"}
+			],
+			"totem":{"transport":"knet","token":10000}
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/config/join$").
+		Reply(200).
+		JSON(`{"data":"OK"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config/nodes$").
+		Reply(200).
+		JSON(`{"data":[{"node":"node1"},{"node":"node2"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config/qdevice$").
+		Reply(200).
+		JSON(`{"data":{"state":"running","mode":"sync"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/config/totem$").
+		Reply(200).
+		JSON(`{"data":{"transport":"knet","token":10000,"version":2}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/config$").
+		Reply(200).
+		JSON(`{"data":"OK"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/config/nodes/node2$").
+		Reply(200).
+		JSON(`{"data":{"corosync_authkey":"key-bytes","corosync_conf":"conf-bytes","warnings":[]}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/config/nodes/node2$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/qemu/cpu-flags + custom-cpu-models --------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/qemu/cpu-flags$").
+		Reply(200).
+		JSON(`{"data":[
+			{"name":"aes","description":"AES-NI","supported-on":["node1","node2"]},
+			{"name":"avx2","description":"AVX2","supported-on":["node1"]}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/qemu/custom-cpu-models$").
+		Reply(200).
+		JSON(`{"data":[
+			{"cputype":"custom-epyc","reported-model":"EPYC","flags":"+aes","hidden":0}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/qemu/custom-cpu-models/custom-epyc$").
+		Reply(200).
+		JSON(`{"data":{"cputype":"custom-epyc","reported-model":"EPYC","flags":"+aes","hidden":0,"phys-bits":"host"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/qemu/custom-cpu-models$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/qemu/custom-cpu-models/custom-epyc$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/qemu/custom-cpu-models/custom-epyc$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/bulk-action -------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/bulk-action$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"guest"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/bulk-action/guest$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"start"},{"subdir":"shutdown"},{"subdir":"suspend"},{"subdir":"migrate"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/bulk-action/guest/start$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:bulk_action:cluster:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/bulk-action/guest/shutdown$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:bulk_action:cluster:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/bulk-action/guest/suspend$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:bulk_action:cluster:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/bulk-action/guest/migrate$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:bulk_action:cluster:root@pam:"}`)
+
+	// --- /cluster/ceph/flags + /cluster/ceph/metadata -------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ceph/flags$").
+		Reply(200).
+		JSON(`{"data":[
+			{"name":"noout","description":"OSDs will not be marked out","value":true},
+			{"name":"noscrub","description":"Scrubbing disabled","value":false}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ceph/flags/noout$").
+		Reply(200).
+		JSON(`{"data":"set"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/ceph/metadata$").
+		Reply(200).
+		JSON(`{"data":{
+			"version":{"version":"18.2.0","buildcommit":"abc"},
+			"osd":[{"id":0,"ceph_version":"18.2.0","hostname":"node1"}],
+			"mon":[],
+			"mgr":[],
+			"mds":[]
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/ceph/flags$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:cephflags:cluster:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/ceph/flags/noout$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/backup-info -------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup-info$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"not-backed-up"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup-info/not-backed-up$").
+		Reply(200).
+		JSON(`{"data":[
+			{"vmid":100,"type":"qemu","name":"server1"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/backup/backup-1/included_volumes$").
+		Reply(200).
+		JSON(`{"data":{
+			"children":[
+				{"id":100,"type":"qemu","name":"server1","children":[
+					{"id":"scsi0","name":"local-lvm:vm-100-disk-0","included":true,"reason":"in-backup"}
+				]}
+			]
+		}}`)
+
+	// --- /cluster/ha/status/{arm,disarm}-ha -----------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/status/arm-ha$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/ha/status/disarm-ha$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/metrics (top-level) + /cluster/metrics/export ---------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/metrics$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"server"},{"subdir":"export"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/metrics/export").
+		Reply(200).
+		JSON(`{"data":{"data":[
+			{"id":"node/node1","metric":"cpu","timestamp":1700000000,"type":"gauge","value":0.42},
+			{"id":"qemu/100","metric":"mem","timestamp":1700000000,"type":"gauge","value":123456789}
+		]}}`)
+
+	// --- /cluster/options -----------------------------------------------------
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/options$").
+		Reply(200).
+		JSON(`{"data":{
+			"console":"html5",
+			"language":"en",
+			"max_workers":4,
+			"mac_prefix":"BC:24:11",
+			"migration":"secure",
+			"ha":"shutdown_policy=conditional",
+			"next-id":"lower=100,upper=1000000",
+			"crs":"ha=basic"
+		}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/options$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// --- /cluster/log + /cluster/notifications/endpoints + firewall group rule
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/log").
+		Reply(200).
+		JSON(`{"data":[
+			{"node":"node1","time":1700000000,"user":"root@pam","pri":6,"tag":"task","msg":"start"},
+			{"node":"node2","time":1700000050,"user":"root@pam","pri":6,"tag":"task","msg":"done"}
+		]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/notifications/endpoints$").
+		Reply(200).
+		JSON(`{"data":[{"subdir":"sendmail"},{"subdir":"gotify"},{"subdir":"smtp"},{"subdir":"webhook"}]}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/firewall/groups/test-group/0$").
+		Reply(200).
+		JSON(`{"data":{"pos":0,"type":"in","action":"ACCEPT","enable":1,"source":"10.0.0.0/24"}}`)
 }
