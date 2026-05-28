@@ -23,6 +23,44 @@ const (
 	cacheDir    = ".cache/pve-api"
 )
 
+// intentionallyExcluded enumerates PVE endpoints we deliberately do not wrap
+// in Go, with the rationale for each. Coverage stats subtract these from the
+// denominator so the % reflects design intent rather than a mechanical count
+// that would never reach 100.
+//
+// Keys are `key(method, normalizedPath)` form — lowercase verb + space + path
+// with `{var}`/`%s` segments collapsed to `{}`. See `normalizePath` + `key`.
+//
+// **What does NOT belong here:** directory-index ("diridx") GETs that simply
+// enumerate subresources (`[{"subdir":"x"}, ...]`). They look useless at first
+// glance, but PVE filters the response by the caller's ACLs, so they're a
+// supported permission-introspection / capability-discovery probe. We wrap
+// them; see (*Node).sdnDiridx and (*Node).capabilitiesDiridx for the helper
+// shape and the *Index family of methods that call into them.
+//
+// **What belongs here:** endpoints whose shape doesn't fit the generic
+// `Get/Post/Put/Delete(ctx, path, ...)` wrapper at all and that a caller would
+// need a custom code path for anyway. Two cases today:
+//
+//   - mtunnelwebsocket — the library exposes a URL-builder
+//     (`MigrationTunnelWebSocketPath`) that returns the signed URL with
+//     ticket; the caller plumbs that into their own websocket dialer. There
+//     is no in-library HTTP call to scan, and the canonical "wrapper" is the
+//     path helper, not a GET.
+//
+//   - file-restore/download — streams a tar of restored files. Doesn't fit
+//     the JSON-decoding `Get` helper; needs an `io.Reader` flow we haven't
+//     plumbed.
+//
+// Adding a new entry requires updating both the map AND the call site that
+// proves the wrapper exists in some non-scannable form. Removing an entry is
+// preferable when we add a real wrapper.
+var intentionallyExcluded = map[string]string{
+	"get /nodes/{}/qemu/{}/mtunnelwebsocket":           "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
+	"get /nodes/{}/lxc/{}/mtunnelwebsocket":            "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
+	"get /nodes/{}/storage/{}/file-restore/download":   "streaming binary download; needs custom io.Reader plumbing, not the JSON Get helper",
+}
+
 type methodInfo struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -131,6 +169,16 @@ func Coverage() error {
 		schemaByArea[a][k] = struct{}{}
 	}
 
+	// Reconcile the excluded list against the live schema. An entry that no
+	// longer exists upstream (PVE removed/renamed the endpoint) is a real bug
+	// in the exclusion table, not a silent no-op — fail loudly so the table
+	// stays accurate.
+	for k := range intentionallyExcluded {
+		if _, ok := schemaKey[k]; !ok {
+			return fmt.Errorf("intentionallyExcluded entry %q is not in the upstream schema — update or remove it", k)
+		}
+	}
+
 	calls, err := scanCallSites(".")
 	if err != nil {
 		return err
@@ -157,11 +205,17 @@ func Coverage() error {
 	})
 
 	var uncovered []string
+	excludedHits := 0
 	for _, e := range schema {
 		k := key(e.Method, normalizePath(e.Path))
-		if _, ok := covered[k]; !ok {
-			uncovered = append(uncovered, fmt.Sprintf("%-7s %s", e.Method, e.Path))
+		if _, ok := covered[k]; ok {
+			continue
 		}
+		if _, ok := intentionallyExcluded[k]; ok {
+			excludedHits++
+			continue
+		}
+		uncovered = append(uncovered, fmt.Sprintf("%-7s %s", e.Method, e.Path))
 	}
 	sort.Strings(uncovered)
 	if err := os.WriteFile(
@@ -173,8 +227,8 @@ func Coverage() error {
 	}
 
 	type areaRow struct {
-		area               string
-		total, cov, missed int
+		area                         string
+		total, cov, excluded, missed int
 	}
 	var rows []areaRow
 	for area, keys := range schemaByArea {
@@ -182,9 +236,13 @@ func Coverage() error {
 		for k := range keys {
 			if _, ok := covered[k]; ok {
 				row.cov++
+				continue
+			}
+			if _, ok := intentionallyExcluded[k]; ok {
+				row.excluded++
 			}
 		}
-		row.missed = row.total - row.cov
+		row.missed = row.total - row.cov - row.excluded
 		rows = append(rows, row)
 	}
 	sort.Slice(rows, func(i, j int) bool {
@@ -195,10 +253,15 @@ func Coverage() error {
 	})
 
 	var areaBuf bytes.Buffer
-	fmt.Fprintf(&areaBuf, "%-25s %8s %8s %8s %8s\n", "area", "covered", "total", "missing", "pct")
+	fmt.Fprintf(&areaBuf, "%-25s %8s %8s %8s %8s %8s\n", "area", "covered", "total", "excluded", "missing", "pct")
 	for _, r := range rows {
-		fmt.Fprintf(&areaBuf, "%-25s %8d %8d %8d %7.1f%%\n",
-			r.area, r.cov, r.total, r.missed, pct(r.cov, r.total))
+		// pct is covered / (total - excluded) so excluded endpoints don't
+		// drag the area's number down. covered/total without that adjustment
+		// would punish areas that have endpoints we've deliberately decided
+		// not to wrap (e.g. streaming downloads).
+		denom := r.total - r.excluded
+		fmt.Fprintf(&areaBuf, "%-25s %8d %8d %8d %8d %7.1f%%\n",
+			r.area, r.cov, r.total, r.excluded, r.missed, pct(r.cov, denom))
 	}
 	if err := os.WriteFile(
 		filepath.Join(cacheDir, "coverage_by_area.txt"),
@@ -212,8 +275,14 @@ func Coverage() error {
 	fmt.Printf("  schema endpoints   : %d\n", len(schema))
 	fmt.Printf("  call sites scanned : %d (matched=%d, no-match=%d → match rate %.1f%%)\n",
 		len(calls), matched, missed, pct(matched, len(calls)))
-	fmt.Printf("  unique covered     : %d / %d  →  %.1f%%\n",
-		len(covered), len(schema), pct(len(covered), len(schema)))
+	// "Considered" is total minus the deliberately-unwrappable endpoints
+	// (URL-builder helpers, streaming binary downloads, etc.). Reporting the
+	// covered % against this denominator answers "of the endpoints we set
+	// out to wrap, how many have we wrapped" rather than against a moving
+	// upstream target that includes things we never intended to cover.
+	considered := len(schema) - excludedHits
+	fmt.Printf("  unique covered     : %d / %d  →  %.1f%%  (excluded by design: %d)\n",
+		len(covered), considered, pct(len(covered), considered), excludedHits)
 	fmt.Println()
 	fmt.Print(areaBuf.String())
 	if len(unmatched) > 0 {
@@ -324,6 +393,34 @@ func scanCallSites(root string) ([]extractedCall, error) {
 					File:   filepath.ToSlash(path),
 					Line:   line,
 				})
+				continue
+			}
+
+			if dm := diridxRE.FindStringSubmatch(text); dm != nil {
+				pathLit := resolvePath(dm[1], urlVars, pathVars)
+				if pathLit == "" {
+					continue
+				}
+				out = append(out, extractedCall{
+					Method: "GET",
+					Path:   normalizePath(pathLit),
+					File:   filepath.ToSlash(path),
+					Line:   line,
+				})
+				continue
+			}
+
+			if um := uploadRE.FindStringSubmatch(text); um != nil {
+				pathLit := resolvePath(um[1], urlVars, pathVars)
+				if pathLit == "" {
+					continue
+				}
+				out = append(out, extractedCall{
+					Method: "POST",
+					Path:   normalizePath(pathLit),
+					File:   filepath.ToSlash(path),
+					Line:   line,
+				})
 			}
 		}
 		return s.Err()
@@ -377,8 +474,22 @@ var (
 	// extra body/query interface but the path is still the first non-ctx arg,
 	// so the same extractor handles both. The `(?:WithParams)?` is
 	// non-capturing — group 1 always returns the bare HTTP verb.
-	callRE      = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)(?:WithParams)?\s*\(\s*ctx\s*,\s*(.*?)$`)
-	wsCallRE    = regexp.MustCompile(`\b\w+\.(VNCWebSocket|TermWebSocket)\s*\(\s*(.*?)$`)
+	callRE   = regexp.MustCompile(`\b\w+\.(Get|Post|Put|Delete)(?:WithParams)?\s*\(\s*ctx\s*,\s*(.*?)$`)
+	wsCallRE = regexp.MustCompile(`\b\w+\.(VNCWebSocket|TermWebSocket)\s*\(\s*(.*?)$`)
+	// Diridx helpers — internal package methods named `<X>Diridx` or `<X>diridx`
+	// that wrap a GET against a directory-index endpoint. They exist so several
+	// sibling diridx wrappers (e.g. (*Node).SDNIndex, SDNZoneIndex, …) can share
+	// the same `[{"subdir":"x"}, ...] → []string` unmarshalling. The actual HTTP
+	// verb is always GET; scanner treats every diridx-helper call site as a GET
+	// against the first non-ctx argument path.
+	diridxRE = regexp.MustCompile(`\b\w+\.\w*[Dd]iridx\s*\(\s*ctx\s*,\s*(.*?)$`)
+	// Upload — the `*Client.Upload` helper wraps multipart POST. Its signature
+	// is `Upload(path, ...)` (no ctx; the helper builds its own request). The
+	// `client.` qualifier is required to avoid matching the unrelated method
+	// `(*Storage).Upload(content, filename string)` whose first arg is a
+	// content-type, not a path. Scanner treats every `<x>.client.Upload`
+	// call site as a POST against the first argument path.
+	uploadRE = regexp.MustCompile(`\bclient\.Upload\s*\(\s*(.*?)$`)
 	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
 	// `<var> := fmt.Sprintf("/…", …)` or `<var> := "/…"` — bindings that later
