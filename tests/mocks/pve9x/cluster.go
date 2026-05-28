@@ -404,10 +404,17 @@ func cluster() {
 		Reply(200).
 		JSON(`{
 		"data": [
-				{"zone":"test1","type":"vxlan","ipam":"pve"},
+				{"zone":"test1","type":"vxlan","ipam":"pve","nodes":"host1,host2","peers":"203.0.113.184,203.0.113.185"},
 				{"zone":"test2","type":"simple","ipam":"pve"}
 			]
 		}`)
+
+	gock.New(config.C.URI).
+		Get("^/cluster/sdn/zones/test1$").
+		Reply(200).
+		JSON(`{
+		"data": {"zone":"test1","type":"vxlan","ipam":"pve","nodes":"host1,host2","peers":"203.0.113.184,203.0.113.185"}
+	}`)
 
 	gock.New(config.C.URI).
 		Get("^/cluster/sdn/vnets$").
