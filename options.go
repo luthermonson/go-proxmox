@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -174,6 +175,36 @@ func WithOTP(otp string) Option {
 func WithDefaultRealm(realm string) Option {
 	return func(c *Client) {
 		c.defaultRealm = strings.TrimPrefix(realm, "@")
+	}
+}
+
+// WithProxy routes all client traffic through the given proxy URL. The proxy
+// function is applied to the underlying *http.Transport so every request goes
+// through u (use http://, https://, or socks5:// schemes).
+//
+// Composes with WithHTTPClient regardless of option order: the proxy is
+// applied to whatever client the constructor settles on after all options
+// have run, via the shared finalizeOptions step. If the resulting transport
+// is not an *http.Transport (custom RoundTripper), the option logs a debug
+// warning and no-ops — set .Proxy yourself on a transport you control before
+// passing it to WithHTTPClient.
+func WithProxy(u *url.URL) Option {
+	return func(c *Client) {
+		c.proxyFunc = func(*http.Request) (*url.URL, error) {
+			return u, nil
+		}
+	}
+}
+
+// WithProxyFromEnvironment uses Go's standard http.ProxyFromEnvironment
+// lookup (HTTP_PROXY, HTTPS_PROXY, NO_PROXY env vars). Env vars are read
+// per-request by http.ProxyFromEnvironment, not at option-eval time, so
+// later changes to the environment are picked up on the next request.
+//
+// Composes with WithHTTPClient the same way as WithProxy.
+func WithProxyFromEnvironment() Option {
+	return func(c *Client) {
+		c.proxyFunc = http.ProxyFromEnvironment
 	}
 }
 

@@ -5,13 +5,16 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWithClient(t *testing.T) {
@@ -299,4 +302,110 @@ func TestWithRetry_InstallsWrapper(t *testing.T) {
 	assert.Equal(t, 3, rt.policy.maxAttempts)
 	assert.Equal(t, 200*time.Millisecond, rt.policy.initialBackoff)
 	assert.Equal(t, 5*time.Second, rt.policy.maxBackoff)
+}
+
+// --- proxy options --------------------------------------------------------
+
+// transportFromClient extracts the underlying *http.Transport from a Client,
+// failing the test if the transport is missing or has been replaced with a
+// non-*http.Transport RoundTripper.
+func transportFromClient(t *testing.T, c *Client) *http.Transport {
+	t.Helper()
+	require.NotNil(t, c.httpClient, "client.httpClient should be set after NewClient")
+	require.NotNil(t, c.httpClient.Transport, "client.httpClient.Transport should be promoted by transport options")
+	tr, ok := c.httpClient.Transport.(*http.Transport)
+	require.True(t, ok, "client.httpClient.Transport should be *http.Transport")
+	return tr
+}
+
+func TestWithProxy(t *testing.T) {
+	proxyURL, err := url.Parse("http://proxy.example.com:3128")
+	require.NoError(t, err)
+
+	t.Run("default client gets proxy", func(t *testing.T) {
+		c := NewClient("", WithProxy(proxyURL))
+		tr := transportFromClient(t, c)
+		require.NotNil(t, tr.Proxy, "Proxy should be set")
+		got, err := tr.Proxy(&http.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, proxyURL, got)
+		// Ensure we did not mutate http.DefaultTransport.
+		if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+			assert.NotSame(t, dt, tr, "should not mutate http.DefaultTransport")
+		}
+	})
+
+	t.Run("WithHTTPClient then WithProxy mutates custom client's transport", func(t *testing.T) {
+		custom := &http.Client{Timeout: 7 * time.Second}
+		c := NewClient("", WithHTTPClient(custom), WithProxy(proxyURL))
+		assert.Same(t, custom, c.httpClient, "WithHTTPClient's client should be preserved")
+		tr := transportFromClient(t, c)
+		require.NotNil(t, tr.Proxy)
+		got, err := tr.Proxy(&http.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, proxyURL, got)
+	})
+
+	t.Run("WithProxy then WithHTTPClient still applies proxy to custom client", func(t *testing.T) {
+		custom := &http.Client{Timeout: 7 * time.Second}
+		c := NewClient("", WithProxy(proxyURL), WithHTTPClient(custom))
+		assert.Same(t, custom, c.httpClient, "WithHTTPClient's client should be preserved")
+		tr := transportFromClient(t, c)
+		require.NotNil(t, tr.Proxy)
+		got, err := tr.Proxy(&http.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, proxyURL, got)
+	})
+
+	t.Run("custom client with pre-set transport is reused, not replaced", func(t *testing.T) {
+		preTransport := &http.Transport{}
+		custom := &http.Client{Transport: preTransport}
+		c := NewClient("", WithHTTPClient(custom), WithProxy(proxyURL))
+		assert.Same(t, preTransport, c.httpClient.Transport, "existing *http.Transport should be reused")
+		require.NotNil(t, preTransport.Proxy)
+		got, err := preTransport.Proxy(&http.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, proxyURL, got)
+	})
+
+	t.Run("non-http.Transport RoundTripper logs and no-ops", func(t *testing.T) {
+		rt := roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			return nil, nil
+		})
+		custom := &http.Client{Transport: rt}
+		c := NewClient("", WithHTTPClient(custom), WithProxy(proxyURL))
+		// Transport untouched; still the original RoundTripperFunc.
+		assert.Equal(t, reflect.ValueOf(rt).Pointer(),
+			reflect.ValueOf(c.httpClient.Transport).Pointer(),
+			"custom RoundTripper should not be replaced")
+	})
+}
+
+func TestWithProxyFromEnvironment(t *testing.T) {
+	t.Setenv("HTTP_PROXY", "http://env-proxy.example.com:8080")
+	t.Setenv("HTTPS_PROXY", "")
+	t.Setenv("NO_PROXY", "")
+
+	c := NewClient("", WithProxyFromEnvironment())
+	tr := transportFromClient(t, c)
+	require.NotNil(t, tr.Proxy, "Proxy should be set")
+
+	// http.ProxyFromEnvironment caches its env lookup on first call across the
+	// process, so we can't reliably assert pointer identity with the package
+	// symbol — instead exercise it.
+	req, err := http.NewRequest(http.MethodGet, "http://target.example.com/", nil)
+	require.NoError(t, err)
+	got, err := tr.Proxy(req)
+	require.NoError(t, err)
+	require.NotNil(t, got, "ProxyFromEnvironment should resolve a proxy for HTTP_PROXY")
+	assert.Equal(t, "env-proxy.example.com:8080", got.Host)
+}
+
+// roundTripperFunc is a test helper that adapts a function into a
+// http.RoundTripper for verifying the non-*http.Transport branch of
+// ensureTransport.
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }
