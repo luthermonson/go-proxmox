@@ -23,6 +23,17 @@ A go client for [Proxmox VE](https://www.proxmox.com/). The client implements [/
   * Unattended XML Support via ISOs similar to cloud-init ideas
   * node/vm/container shell command support via KVM proxy already built into proxmox
 
+## API coverage
+
+`go-proxmox` wraps 100% of the upstream PVE `/api2/json` surface for PVE 8.x and 9.x — every endpoint in [the API viewer](https://pve.proxmox.com/pve-docs/api-viewer/index.html) has a typed Go wrapper, with three intentional exceptions documented in `mage/endpoints/endpoints.go`: the two `mtunnelwebsocket` URL builders (the library returns the signed URL via `MigrationTunnelWebSocketPath`; the caller plumbs into their own websocket dialer) and the `file-restore/download` streaming binary endpoint.
+
+Coverage is tracked in CI via `mage endpoints:coverage`, which diffs the live PVE schema against the package's call sites. Run it locally to confirm a fresh schema bump didn't add anything new:
+
+```shell
+mage endpoints:sync       # refresh .cache/pve-api/endpoints.json from upstream
+mage endpoints:coverage   # print per-area coverage; lists any missing endpoints
+```
+
 Core developers are home lab enthusiasts working in the virtualization and kubernetes space. The common use case we have for
 Proxmox is dev stress testing and validation of functionality in the products we work on, we plan to build the following tooling 
 around this library to make that easier.
@@ -127,6 +138,65 @@ client := proxmox.NewClient(url,
 `WithEagerAuth` is worth calling out. PVE's pveproxy enforces a **hardcoded 3-second delay on every 401 response** as a brute-force mitigation (see `PVE::APIServer::AnyEvent`'s `# always delay unauthorized calls by 3 seconds` block). With credential auth the library's first request goes out unauthenticated by design — the ticket isn't issued until `/access/ticket` succeeds — so the first user-facing call eats the full 3 seconds. `WithEagerAuth` runs `CreateSession` inside `NewClient` so that cost is paid once at startup and every subsequent request is a normal ticket-authenticated call. Token auth doesn't trigger the 401 path at all and doesn't need this.
 
 The OTP is consumed exactly once; subsequent `RefreshTicket` calls renew the session via the ticket itself and don't need a new code. If the session is fully lost later (PVE restart invalidates tickets), construct a fresh client with a fresh OTP — TOTP codes can't be cached.
+
+### Resource traversal: instance handles
+
+Most resources identified by an id/name follow a getter-returns-handle pattern. The handle carries the parent's client and identifying fields, so callers don't re-thread `(node, id)` on every call.
+
+```go
+cluster, _ := client.Cluster(ctx)
+
+// SDN controllers — getter on the parent, operations on the instance.
+ctrl := cluster.SDNController("evpn-1")
+if err := ctrl.Update(ctx, &proxmox.SDNControllerOptions{ASN: proxmox.IntOrBool(65000)}); err != nil {
+    panic(err)
+}
+_, _ = ctrl.Delete(ctx)
+
+// Same pattern for VM/container snapshots, firewall rules, ceph OSDs/pools/mons,
+// HA resources, ACME accounts, custom CPU models, fabrics, IPAMs, prefix-lists, etc.
+```
+
+See `AGENTS.md` (Required: pick the right shape for new endpoints) for the full inventory of instance types.
+
+### Permission / capability discovery via `Subdirs`
+
+PVE's directory-index GETs are ACL-filtered: the response only lists the sub-resources the calling token is permitted to read. Use them to probe what an API token can do without try-and-403 against every endpoint:
+
+```go
+node, _ := client.Node(ctx, "pve1")
+subdirs, _ := node.Subdirs(ctx)         // ["qemu", "lxc", "storage", ...] filtered by ACL
+fw, _ := node.FirewallSubdirs(ctx)      // ["rules", "options", "log"] if reachable
+
+cluster, _ := client.Cluster(ctx)
+sdnAreas, _ := cluster.SDNSubdirs(ctx)  // ["vnets", "zones", "controllers", ...]
+```
+
+### `CSV` type for comma-joined PVE fields
+
+A few PVE fields serialize as comma-joined strings on the wire (most notably `SDNZone.Nodes` and `.Peers`, plus various group/realm fields). `proxmox.CSV` is a typed `[]string` whose `UnmarshalJSON` accepts both `"a,b,c"` and `["a","b","c"]`, and whose `MarshalJSON` always emits the comma-joined form PVE expects:
+
+```go
+// Read side: PVE returns `"nodes": "pve1,pve2,pve3"`. CSV presents it as a slice.
+zone, _ := cluster.SDNZone(ctx, "vxlan-1")
+for _, n := range zone.Nodes {                  // proxmox.CSV — iterable like []string
+    fmt.Println(n)
+}
+allNodes := []string(zone.Nodes)                // explicit cast when you need []string
+
+// Write side: the matching *Options types take a plain comma-joined string,
+// because PVE only accepts that form on POST/PUT.
+_ = cluster.NewSDNZone(ctx, &proxmox.SDNZoneOptions{
+    Name:  "vxlan-1",
+    Type:  "vxlan",
+    Nodes: "pve1,pve2,pve3",
+})
+```
+
+### More examples
+
+- [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
+- [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 

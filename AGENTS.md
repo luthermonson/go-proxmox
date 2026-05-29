@@ -17,6 +17,12 @@ defined in `magefile.go` and `mage/`.
 - `mage ci` — install deps, lint, coverage, build (matches the GitHub Actions job).
 - `mage test:integration` — runs `go test ./tests/integration -tags "nodes containers vms"` against a real PVE cluster.
 - `mage env` — print the env vars the integration suite reads, masking secrets.
+- `mage endpoints:sync` / `mage endpoints:coverage` — snapshot the upstream PVE
+  API surface (`mage/endpoints/`) and diff the package's wrapper coverage
+  against it. `coverage` writes `.cache/pve-api/coverage.txt` (uncovered
+  endpoints) and `coverage_by_area.txt` (per-area breakdown). The repo is at
+  100% coverage of considered endpoints — see "Endpoint coverage tooling"
+  below for how the by-design exclusion list works.
 
 Run a single unit test directly with `go test -run TestName` from the repo root
 (unit tests live in the root package). To run only one integration suite, use the
@@ -194,6 +200,79 @@ firewall-options) stay on the parent.** Don't introduce a top-level handle
 just because the area is big. Threshold: does the schema path namespace by
 identifier? If yes → handle; if no → parent method.
 
+**Inventory of existing instance types** (mirror their shape for new ones):
+`*Storage`, `*VirtualMachine`, `*Container`, `*VirtualMachineSnapshot`,
+`*ContainerSnapshot`, `*NodeNetwork`, `*NodeService`, `*NodeReplicationJob`,
+`*Task`, `*CephOSD`, `*CephPool`, `*CephMon`, `*CephMgr`, `*CephMDS`,
+`*CephFS`, `*FirewallRule`, `*FirewallSecurityGroup`, `*PCIDevice`,
+`*SDNController`, `*SDNDNS`, `*SDNIPAM`, `*SDNFabric`, `*SDNFabricNode`,
+`*SDNPrefixList`, `*SDNPrefixListEntry`, `*SDNRouteMapEntry`, `*VNet`,
+`*VNetSubnet`, `*ACMEAccount`, `*ACMEPlugin`, `*CustomCPUModel`,
+`*HAResource`, `*HAGroup`, `*HARule`, `*ReplicationJob`, `*RealmSyncJob`,
+`*MetricServer`, `*NotificationGotifyEndpoint`,
+`*NotificationSMTPEndpoint`, `*NotificationSendmailEndpoint`,
+`*NotificationWebhookEndpoint`, `*NotificationMatcher`, `*PCIMapping`,
+`*USBMapping`, `*DirMapping`, `*ClusterBackup`.
+
+### Required: directory-index ("diridx") endpoints use the `Subdirs` naming
+
+PVE exposes many GET endpoints whose body is a static `[{"subdir":"x"}, ...]`
+catalogue of the available sub-resources, ACL-filtered server-side. They're a
+supported permission/capability probe (see how the web UI itself uses them).
+
+**Naming convention:**
+
+- Public method: `Subdirs()` (when there's no scoping prefix) or
+  `<Area>Subdirs()` when several diridx GETs live on the same receiver and
+  the bare name would clash with sibling action methods. Examples:
+  `(*Cluster).Subdirs`, `(*Cluster).FirewallSubdirs`, `(*Node).Subdirs`,
+  `(*Node).DisksSubdirs`, `(*NodeReplicationJob).Subdirs`.
+- Unexported per-area helper: `<area>Diridx(ctx, path) ([]string, error)`,
+  e.g. `sdnDiridx`, `capabilitiesDiridx`, `clusterDiridx`. The endpoint
+  scanner (`mage/endpoints`) keys off the literal `Diridx` suffix to attribute
+  the call site as a GET against the path argument — keep the suffix.
+- Shared decode: every per-area helper one-lines into `decodeSubdirList(ctx,
+  c, path)` (in `nodes_diridx.go`). Don't duplicate the
+  `[{"subdir":...}]` unmarshalling.
+
+The handful of paths that *look* like diridx but actually return a typed
+payload (e.g. `GET /nodes/{node}/storage/{storage}` returns the storage
+status object, not subdirs) are named after the payload they produce:
+`(*Storage).Status() *StorageStatus`. Don't shoehorn them through the
+`Subdirs` shape.
+
+### Required: comma-joined PVE responses use the `CSV` type
+
+Several PVE fields serialize as a comma-joined string on the wire — most
+notoriously `SDNZone.Nodes` and `.Peers`, but also user `Groups`, the various
+firewall ipset references, and a few realm config fields. Declaring these as
+`[]string` is broken: PVE rejects the JSON-array form on PUT and refuses to
+unmarshal the comma-string form on GET, so the round-trip fails.
+
+`CSV` (`types.go`, defined as `type CSV []string`) is the canonical wrapper.
+Its `UnmarshalJSON` accepts both `"a,b,c"` and `["a","b","c"]`; `MarshalJSON`
+always emits `"a,b,c"`. Use `CSV` for any field where the upstream
+description mentions "comma-separated list" or where the schema type is
+`string` but the data is plural-by-convention. When in doubt, check whether
+the live PVE API returns a string for that field — if yes and the value
+contains commas, it's `CSV`.
+
+### Required: comment every pointer field tied to a PVE default
+
+When you add a `*T` field per the rule above, ship a brief comment on the
+same line block explaining the specific PVE default and the failure mode the
+pointer prevents. Example shape:
+
+```go
+// CPUUnits — PVE default 1024 (cgroup v1) / 100 (cgroup v2). Plain int
+// would default to 0 and override the server's CPU weight on edit. See #199.
+CPUUnits *int `json:"cpuunits,omitempty"`
+```
+
+Future readers shouldn't need `git blame` to understand why a field is a
+pointer. Don't ship `FIXME(issue-199)` comments — the FIXME-era pointerize
+work is done; new fields are either pointers-with-rationale or plain values.
+
 ### Required: don't clobber PVE-side defaults on config structs
 
 Background: see issue #199. Several config structs (e.g. `ContainerConfig`,
@@ -312,6 +391,40 @@ gock.New(config.C.URI).
 
 …plus a `TestClient_Foo` in the matching `*_test.go` that calls `mocks.On` /
 `mocks.Off` and asserts on the parsed response.
+
+### Endpoint coverage tooling (`mage/endpoints`)
+
+`mage endpoints:sync` fetches the upstream `apidoc.js` schema and flattens it
+to `(method, path)` tuples in `.cache/pve-api/`. `mage endpoints:coverage`
+scans the package source for call sites, normalizes their path templates, and
+diffs against the schema.
+
+The scanner is deliberately conservative — it only counts call sites it can
+statically prove correspond to a schema endpoint. To keep it accurate it
+recognises a few non-obvious shapes:
+
+- `<x>.Get|Post|Put|Delete(WithParams)?(ctx, "/path"|fmt.Sprintf("/path", …), …)`
+  — the canonical form.
+- `<x>.VNCWebSocket|TermWebSocket(...)` — counts as GET against the path arg.
+- `<x>.<Name>[Dd]iridx(ctx, path, …)` — counts as GET. **This is why diridx
+  helpers must keep the `Diridx`/`diridx` suffix.**
+- `<x>.client.Upload[\w]*(path, …)` — counts as POST. Catches both
+  `Upload` and `UploadReader` (and multi-line forms where `(` is at EOL).
+- `<var> := url.URL{Path: …}` followed by `<var>.String()` and
+  `<var> := fmt.Sprintf("/…")` followed by a bare-var call argument — both
+  resolve via a per-file tracked path map.
+
+**By-design exclusions** live in `intentionallyExcluded` (top of
+`endpoints.go`). The map is reconciled against the live schema on every run,
+so a stale entry (PVE renamed/removed the endpoint) fails loudly rather than
+silently masking a regression. Adding a new entry requires an explanatory
+rationale (URL-builder helpers, streaming binary downloads, etc.). Diridx
+GETs do **not** belong here — we wrap them.
+
+**Coverage as a quality gate.** The repo currently sits at 100% of considered
+endpoints. New PRs that add a method should bump the coverage in the right
+direction. If a PR introduces a wrapper the scanner can't detect, prefer
+teaching the scanner over adding to the exclusion list.
 
 ### Integration tests (`tests/integration/`)
 
