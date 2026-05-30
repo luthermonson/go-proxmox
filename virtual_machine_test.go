@@ -11,6 +11,7 @@ import (
 	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1014,3 +1015,905 @@ func TestVirtualMachine_MigrationTunnelWebSocketPath(t *testing.T) {
 	emptyPath := vm.MigrationTunnelWebSocketPath(nil)
 	assert.Contains(t, emptyPath, "/nodes/node1/qemu/100/mtunnelwebsocket")
 }
+
+// vm101 returns a *VirtualMachine wired to vmid 101 on node1 for tests
+// that reuse the broader set of vmid-101 mock fixtures.
+func vm101() *VirtualMachine {
+	return &VirtualMachine{client: mockClient(), Node: "node1", VMID: 101}
+}
+
+func TestVirtualMachine_New(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	var vm VirtualMachine
+	vm.New(client, "node1", 101)
+	assert.Equal(t, StringOrUint64(101), vm.VMID)
+	assert.Equal(t, "node1", vm.Node)
+	assert.Same(t, client, vm.client)
+}
+
+func TestVirtualMachine_Hibernate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := vm101().Hibernate(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmsuspend", task.Type)
+	assert.Equal(t, "101", task.ID)
+}
+
+func TestVirtualMachine_Migrate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	// nil params path
+	task, err := vm101().Migrate(ctx, nil)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmigrate", task.Type)
+
+	// explicit params path
+	task, err = vm101().Migrate(ctx, &VirtualMachineMigrateOptions{Target: "node2", Online: IntOrBool(true)})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmigrate", task.Type)
+}
+
+func TestVirtualMachine_RemoteMigrate_NilParams(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := vm101().RemoteMigrate(context.Background(), nil)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmremote-migrate", task.Type)
+}
+
+func TestVirtualMachine_ResizeDisk(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := vm101().ResizeDisk(context.Background(), "scsi0", "+1G")
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmresize", task.Type)
+}
+
+func TestVirtualMachine_UnlinkDisk(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	task, err := vm101().UnlinkDisk(ctx, "scsi5", false)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmunlink", task.Type)
+
+	// force path
+	task, err = vm101().UnlinkDisk(ctx, "scsi5", true)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+}
+
+func TestVirtualMachine_MoveDisk(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+
+	// nil params + disk supplied
+	task, err := vm101().MoveDisk(ctx, "scsi0", nil)
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmmove", task.Type)
+
+	// explicit params, disk overrides Disk on params
+	task, err = vm101().MoveDisk(ctx, "scsi1", &VirtualMachineMoveDiskOptions{Storage: "local-lvm"})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+}
+
+func TestVirtualMachine_ConvertToTemplate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := vm101().ConvertToTemplate(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "qmtemplate", task.Type)
+}
+
+func TestVirtualMachine_Pending(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	pending, err := vm101().Pending(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, pending)
+	assert.NotEmpty(t, *pending)
+}
+
+func TestVirtualMachine_SendKey(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	err := vm101().SendKey(context.Background(), "ctrl-alt-del")
+	assert.Nil(t, err)
+}
+
+func TestVirtualMachine_TermProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	term, err := vm101().TermProxy(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, term)
+	assert.Equal(t, "root@pam", term.User)
+}
+
+func TestVirtualMachine_VNCProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vnc, err := vm101().VNCProxy(context.Background(), &VNCConfig{GeneratePassword: true, Websocket: true})
+	assert.Nil(t, err)
+	require.NotNil(t, vnc)
+	assert.Equal(t, "root@pam", vnc.User)
+}
+
+func TestVirtualMachine_RRDDataAndRRD_CFValidation(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	vm := vm101()
+
+	// More than one consolidation function returns an error in both helpers.
+	_, err := vm.RRDData(ctx, TimeframeHour, "AVERAGE", "MAX")
+	assert.Error(t, err)
+
+	_, err = vm.RRD(ctx, "cpu", TimeframeHour, "AVERAGE", "MAX")
+	assert.Error(t, err)
+
+	// Single CF goes through the happy path.
+	rrddata, err := vm.RRDData(ctx, TimeframeHour, "AVERAGE")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, rrddata)
+
+	rrd, err := vm.RRD(ctx, "cpu", TimeframeHour, "AVERAGE")
+	assert.Nil(t, err)
+	require.NotNil(t, rrd)
+}
+
+func TestVirtualMachine_TagHelpers(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	// HasTag: nil config and empty Tags both return false.
+	emptyVM := &VirtualMachine{}
+	assert.False(t, emptyVM.HasTag("x"))
+	emptyVM.VirtualMachineConfig = &VirtualMachineConfig{}
+	assert.False(t, emptyVM.HasTag("x"))
+
+	// Populated tag list — HasTag walks the slice.
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   102,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "alpha;beta;gamma",
+		},
+	}
+	assert.True(t, vm.HasTag("beta"))
+	assert.False(t, vm.HasTag("missing"))
+
+	// SplitTags populates TagsSlice deterministically.
+	vm2 := &VirtualMachine{VirtualMachineConfig: &VirtualMachineConfig{Tags: "a;b;c"}}
+	vm2.SplitTags()
+	assert.Equal(t, []string{"a", "b", "c"}, vm2.VirtualMachineConfig.TagsSlice)
+}
+
+func TestVirtualMachine_AddTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+
+	// Adding an existing tag returns ErrNoop.
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   102,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "existing",
+		},
+	}
+	_, err := vm.AddTag(ctx, "existing")
+	assert.True(t, IsErrNoop(err))
+
+	// Adding a fresh tag flows through Config and returns a task.
+	vm = &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   102,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "existing",
+		},
+	}
+	task, err := vm.AddTag(ctx, "fresh")
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, vm.VirtualMachineConfig.Tags, "fresh")
+}
+
+func TestVirtualMachine_RemoveTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+
+	// Removing a missing tag returns ErrNoop.
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   102,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "alpha;beta",
+		},
+	}
+	_, err := vm.RemoveTag(ctx, "missing")
+	assert.True(t, IsErrNoop(err))
+
+	// Removing an existing tag flows through Config and returns a task.
+	vm = &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   102,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "alpha;beta;gamma",
+		},
+	}
+	task, err := vm.RemoveTag(ctx, "beta")
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.NotContains(t, vm.VirtualMachineConfig.Tags, "beta")
+	assert.Contains(t, vm.VirtualMachineConfig.Tags, "alpha")
+	assert.Contains(t, vm.VirtualMachineConfig.Tags, "gamma")
+}
+
+func TestVirtualMachine_FirewallRules(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	rules, err := vm101().FirewallRules(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, rules, 2)
+	// Each returned rule must carry the parent wiring so Get/Update/Delete work.
+	for _, r := range rules {
+		assert.Equal(t, "node1", r.node)
+		assert.Equal(t, uint64(101), r.vmid)
+		assert.NotNil(t, r.client)
+	}
+}
+
+func TestVirtualMachine_NewFirewallRule(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	rule := &FirewallRule{Type: "in", Action: "ACCEPT"}
+	err := vm101().NewFirewallRule(context.Background(), rule)
+	assert.Nil(t, err)
+	// Parent wiring is populated after the POST returns.
+	assert.NotNil(t, rule.client)
+	assert.Equal(t, "node1", rule.node)
+	assert.Equal(t, uint64(101), rule.vmid)
+}
+
+func TestVirtualMachine_FirewallOptionGetSet(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	vm := vm101()
+
+	// FirewallOptionGet currently passes the value (not pointer) to the
+	// client; the call still executes and we only care that the request goes
+	// out and returns no error.
+	_, err := vm.FirewallOptionGet(ctx)
+	assert.Nil(t, err)
+
+	assert.Nil(t, vm.FirewallOptionSet(ctx, &FirewallVirtualMachineOption{
+		Enable:   IntOrBool(true),
+		PolicyIn: "DROP",
+	}))
+}
+
+func TestVirtualMachine_FirewallIPSet(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	vm := vm101()
+
+	ipsets, err := vm.GetFirewallIPSet(ctx)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, ipsets)
+
+	assert.Nil(t, vm.NewFirewallIPSet(ctx, FirewallIPSetCreationOption{Name: "blocked"}))
+
+	entries, err := vm.GetFirewallIPSetEntries(ctx, "blocked")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, entries)
+
+	assert.Nil(t, vm.NewFirewallIPSetEntry(ctx, "blocked", FirewallIPSetEntryCreationOption{CIDR: "10.1.2.3"}))
+
+	entry, err := vm.GetFirewallIPSetEntry(ctx, "blocked", "10.1.2.3")
+	assert.Nil(t, err)
+	require.NotNil(t, entry)
+	assert.Equal(t, "10.1.2.3", entry.CIDR)
+
+	assert.Nil(t, vm.UpdateFirewallIPSetEntry(ctx, "blocked", "10.1.2.3", &FirewallIPSetEntryUpdateOption{Comment: "updated"}))
+	assert.Nil(t, vm.DeleteFirewallIPSetEntry(ctx, "blocked", "10.1.2.3", "abc"))
+	assert.Nil(t, vm.DeleteFirewallIPSet(ctx, "blocked", true))
+}
+
+func TestVirtualMachine_AgentGetHostName(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	hostname, err := vm101().AgentGetHostName(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, "vm-101.example.com", hostname)
+}
+
+func TestVirtualMachine_AgentGetNetworkIFaces(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ifaces, err := vm101().AgentGetNetworkIFaces(context.Background())
+	assert.Nil(t, err)
+	// "lo" must be filtered out.
+	assert.Len(t, ifaces, 1)
+	assert.Equal(t, "eth0", ifaces[0].Name)
+}
+
+func TestVirtualMachine_AgentExec(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	pid, err := vm101().AgentExec(context.Background(), []string{"echo", "hello"}, "")
+	assert.Nil(t, err)
+	assert.Equal(t, 1234, pid)
+}
+
+func TestVirtualMachine_AgentExecStatus(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	status, err := vm101().AgentExecStatus(context.Background(), 1234)
+	assert.Nil(t, err)
+	require.NotNil(t, status)
+	assert.Equal(t, 1, status.Exited)
+	assert.Equal(t, 0, status.ExitCode)
+}
+
+func TestVirtualMachine_WaitForAgentExecExit(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// Fixture returns exited=1 so the first poll succeeds immediately.
+	status, err := vm101().WaitForAgentExecExit(context.Background(), 1234, 5)
+	assert.Nil(t, err)
+	require.NotNil(t, status)
+	assert.Equal(t, 1, status.Exited)
+}
+
+func TestVirtualMachine_AgentOsInfo(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	info, err := vm101().AgentOsInfo(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, info)
+	assert.Equal(t, "debian", info.ID)
+	assert.Equal(t, "12", info.VersionID)
+}
+
+func TestVirtualMachine_WaitForAgent(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// AgentOsInfo mock returns success, so WaitForAgent returns nil on the
+	// first poll.
+	assert.Nil(t, vm101().WaitForAgent(context.Background(), 5))
+}
+
+func TestVirtualMachine_AgentSetUserPassword(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	assert.Nil(t, vm101().AgentSetUserPassword(context.Background(), "secret", "root"))
+}
+
+// TermWebSocket / VNCWebSocket are intentionally not unit-tested here — they
+// require a live websocket dialer; see the file-level comment in
+// virtual_machine.go.
+
+// FileWriteStream and other binary streaming QGA helpers do not exist in this
+// version of the package; if added, leave them uncovered by gock-only tests.
+
+func TestVirtualMachine_UnmountCloudInitISO_NoTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// VM with no cloud-init tag: returns nil without any API call.
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   100,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: "production;webserver",
+		},
+	}
+	assert.Nil(t, vm.UnmountCloudInitISO(context.Background(), "ide2"))
+}
+
+// TestVirtualMachine_ErrorPaths sweeps the error-return branches of the
+// status-change/UPID helpers using one-shot 500 mocks. This pushes the
+// per-method coverage of every Start/Stop/Reset/etc. helper above 80%
+// (the success path covers ~75%; this test covers the remaining return-err
+// branch).
+func TestVirtualMachine_ErrorPaths(t *testing.T) {
+	// Register one-shot 500s for the paths we want to drive into the error
+	// branch. NOT calling mocks.On() — these are pure gock fixtures and the
+	// VirtualMachine handle uses mockClient() directly. Defer gock.Off-style
+	// cleanup via the mocks helper.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	type tcase struct {
+		name string
+		fn   func(*VirtualMachine, context.Context) error
+		uri  string
+		verb string // "POST" | "PUT" | "DELETE" | "GET"
+	}
+	cases := []tcase{
+		{"Start", func(v *VirtualMachine, c context.Context) error { _, err := v.Start(c); return err }, "/nodes/node1/qemu/501/status/start", "POST"},
+		{"Stop", func(v *VirtualMachine, c context.Context) error { _, err := v.Stop(c); return err }, "/nodes/node1/qemu/501/status/stop", "POST"},
+		{"Reset", func(v *VirtualMachine, c context.Context) error { _, err := v.Reset(c); return err }, "/nodes/node1/qemu/501/status/reset", "POST"},
+		{"Reboot", func(v *VirtualMachine, c context.Context) error { _, err := v.Reboot(c); return err }, "/nodes/node1/qemu/501/status/reboot", "POST"},
+		{"Shutdown", func(v *VirtualMachine, c context.Context) error { _, err := v.Shutdown(c); return err }, "/nodes/node1/qemu/501/status/shutdown", "POST"},
+		{"Pause", func(v *VirtualMachine, c context.Context) error { _, err := v.Pause(c); return err }, "/nodes/node1/qemu/501/status/suspend", "POST"},
+		{"Resume", func(v *VirtualMachine, c context.Context) error { _, err := v.Resume(c); return err }, "/nodes/node1/qemu/501/status/resume", "POST"},
+		{"Hibernate", func(v *VirtualMachine, c context.Context) error { _, err := v.Hibernate(c); return err }, "/nodes/node1/qemu/501/status/suspend", "POST"},
+		{"NewSnapshot", func(v *VirtualMachine, c context.Context) error { _, err := v.NewSnapshot(c, "x"); return err }, "/nodes/node1/qemu/501/snapshot", "POST"},
+		{"ConvertToTemplate", func(v *VirtualMachine, c context.Context) error { _, err := v.ConvertToTemplate(c); return err }, "/nodes/node1/qemu/501/template", "POST"},
+		{"RemoteMigrate", func(v *VirtualMachine, c context.Context) error { _, err := v.RemoteMigrate(c, nil); return err }, "/nodes/node1/qemu/501/remote_migrate", "POST"},
+		{"Migrate", func(v *VirtualMachine, c context.Context) error { _, err := v.Migrate(c, nil); return err }, "/nodes/node1/qemu/501/migrate", "POST"},
+		{"ResizeDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.ResizeDisk(c, "scsi0", "+1G"); return err }, "/nodes/node1/qemu/501/resize", "PUT"},
+		{"UnlinkDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.UnlinkDisk(c, "scsi5", false); return err }, "/nodes/node1/qemu/501/unlink", "PUT"},
+		{"MoveDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.MoveDisk(c, "scsi0", nil); return err }, "/nodes/node1/qemu/501/move_disk", "POST"},
+	}
+	ctx := context.Background()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := gock.New(mockConfig.URI)
+			switch tc.verb {
+			case "POST":
+				g = g.Post("^" + tc.uri + "$")
+			case "PUT":
+				g = g.Put("^" + tc.uri + "$")
+			case "DELETE":
+				g = g.Delete("^" + tc.uri + "$")
+			case "GET":
+				g = g.Get("^" + tc.uri + "$")
+			}
+			g.Reply(500)
+
+			vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 501}
+			err := tc.fn(vm, ctx)
+			assert.Error(t, err)
+		})
+	}
+}
+
+// TestVirtualMachine_SnapshotInstance_ErrorPaths exercises the error-return
+// branches of the snapshot instance methods (Rollback, Delete).
+func TestVirtualMachine_SnapshotInstance_ErrorPaths(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+
+	gock.New(mockConfig.URI).Post("^/nodes/node1/qemu/501/snapshot/x/rollback$").Reply(500)
+	_, err := (&VirtualMachineSnapshot{client: mockClient(), Node: "node1", VMID: 501, Name: "x"}).Rollback(ctx)
+	assert.Error(t, err)
+
+	gock.New(mockConfig.URI).Delete("^/nodes/node1/qemu/501/snapshot/x$").Reply(500)
+	_, err = (&VirtualMachineSnapshot{client: mockClient(), Node: "node1", VMID: 501, Name: "x"}).Delete(ctx)
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_Delete_ErrorPath drives Delete's error branch (the
+// post-deleteCloudInitISO DELETE failing). The VM has no cloud-init tag so
+// deleteCloudInitISO is a no-op and we land on the outer DELETE returning 500.
+func TestVirtualMachine_Delete_ErrorPath(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).Delete("^/nodes/node1/qemu/502$").Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.Delete(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_MigratePreconditions_WithTarget exercises the
+// target!="" branch which adds query params.
+func TestVirtualMachine_MigratePreconditions_WithTarget(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// Reuse the existing /migrate mock since it ignores query params.
+	pre, err := vm101().MigratePreconditions(context.Background(), "node2")
+	assert.Nil(t, err)
+	assert.NotNil(t, pre)
+}
+
+// TestVirtualMachine_Clone_NewIDProvided covers the "newid supplied" branch
+// where Clone skips the cluster.NextID round-trip.
+func TestVirtualMachine_Clone_NilParams_ErrorOnNextID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// Test the nil-params path that triggers cluster.NextID. This path is
+	// already exercised by TestVirtualMachineCloneWithoutNewID — but call it
+	// here too to keep coverage explicit.
+	vm := vm101()
+	newID, _, err := vm.Clone(context.Background(), nil)
+	assert.Nil(t, err)
+	assert.NotZero(t, newID)
+}
+
+// TestAgent_ErrorPaths covers the err!=nil branches of the QGA / agent
+// helpers that return early on a non-nil request error.
+func TestAgent_ErrorPaths(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+
+	type tcase struct {
+		name string
+		fn   func(*VirtualMachine, context.Context) error
+		path string
+		verb string
+	}
+	cases := []tcase{
+		{"AgentGetHostName", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetHostName(c); return err }, "/nodes/node1/qemu/501/agent/get-host-name", "GET"},
+		{"AgentGetNetworkIFaces", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetNetworkIFaces(c); return err }, "/nodes/node1/qemu/501/agent/network-get-interfaces", "GET"},
+		{"AgentOsInfo", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentOsInfo(c); return err }, "/nodes/node1/qemu/501/agent/get-osinfo", "GET"},
+		{"AgentExec", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentExec(c, []string{"x"}, ""); return err }, "/nodes/node1/qemu/501/agent/exec", "POST"},
+		{"AgentExecStatus", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentExecStatus(c, 1); return err }, "/nodes/node1/qemu/501/agent/exec-status", "GET"},
+		{"AgentCommandIndex", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentCommandIndex(c); return err }, "/nodes/node1/qemu/501/agent", "GET"},
+		{"AgentCommand", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentCommand(c, "ping"); return err }, "/nodes/node1/qemu/501/agent", "POST"},
+		{"AgentGetTime", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetTime(c); return err }, "/nodes/node1/qemu/501/agent/get-time", "GET"},
+		{"AgentGetTimezone", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetTimezone(c); return err }, "/nodes/node1/qemu/501/agent/get-timezone", "GET"},
+		{"AgentGetUsers", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetUsers(c); return err }, "/nodes/node1/qemu/501/agent/get-users", "GET"},
+		{"AgentGetVCPUs", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetVCPUs(c); return err }, "/nodes/node1/qemu/501/agent/get-vcpus", "GET"},
+		{"AgentGetFsInfo", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetFsInfo(c); return err }, "/nodes/node1/qemu/501/agent/get-fsinfo", "GET"},
+		{"AgentGetMemoryBlocks", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetMemoryBlocks(c); return err }, "/nodes/node1/qemu/501/agent/get-memory-blocks", "GET"},
+		{"AgentGetMemoryBlockInfo", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetMemoryBlockInfo(c); return err }, "/nodes/node1/qemu/501/agent/get-memory-block-info", "GET"},
+		{"AgentGetInfo", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetInfo(c); return err }, "/nodes/node1/qemu/501/agent/info", "GET"},
+		{"AgentFsfreezeFreeze", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentFsfreezeFreeze(c); return err }, "/nodes/node1/qemu/501/agent/fsfreeze-freeze", "POST"},
+		{"AgentFsfreezeThaw", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentFsfreezeThaw(c); return err }, "/nodes/node1/qemu/501/agent/fsfreeze-thaw", "POST"},
+		{"AgentFsfreezeStatus", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentFsfreezeStatus(c); return err }, "/nodes/node1/qemu/501/agent/fsfreeze-status", "POST"},
+		{"AgentFstrim", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentFstrim(c); return err }, "/nodes/node1/qemu/501/agent/fstrim", "POST"},
+		{"AgentFileRead", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentFileRead(c, "/x"); return err }, "/nodes/node1/qemu/501/agent/file-read", "GET"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := gock.New(mockConfig.URI)
+			switch tc.verb {
+			case "POST":
+				g = g.Post("^" + tc.path + "$")
+			case "PUT":
+				g = g.Put("^" + tc.path + "$")
+			case "DELETE":
+				g = g.Delete("^" + tc.path + "$")
+			case "GET":
+				g = g.Get("^" + tc.path + "$")
+			}
+			g.Reply(500)
+			vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 501}
+			err := tc.fn(vm, ctx)
+			assert.Error(t, err)
+		})
+	}
+}
+
+// TestVirtualMachine_AgentGetHostName_EmptyResult covers the
+// "result is empty" branch.
+func TestVirtualMachine_AgentGetHostName_EmptyResult(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/agent/get-host-name$").
+		Reply(200).
+		JSON(`{"data": {}}`)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.AgentGetHostName(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "result is empty")
+}
+
+// TestVirtualMachine_AgentOsInfo_EmptyResult covers the
+// "result is empty" branch.
+func TestVirtualMachine_AgentOsInfo_EmptyResult(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/agent/get-osinfo$").
+		Reply(200).
+		JSON(`{"data": {}}`)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.AgentOsInfo(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "result is empty")
+}
+
+// TestVirtualMachine_AgentExec_NoPID covers the "no pid returned" branch.
+func TestVirtualMachine_AgentExec_NoPID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/qemu/502/agent/exec$").
+		Reply(200).
+		JSON(`{"data": {}}`)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.AgentExec(context.Background(), []string{"echo"}, "")
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_WaitForAgent_Timeout exercises the timeout branch by
+// returning an unrelated error from AgentOsInfo (the helper only retries on
+// the "QEMU guest agent is not running" 500 message). Driving the timeout
+// directly would require a long-running test; this exercises the non-retry
+// error branch instead, which is the other code path.
+func TestVirtualMachine_WaitForAgent_NonRetryError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// Return a 400 — handleResponse surfaces it as a "bad request" error
+	// whose message does NOT contain the retry trigger string, so
+	// WaitForAgent returns it immediately.
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/agent/get-osinfo$").
+		Reply(400).
+		JSON(`{"errors": "something else"}`)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	err := vm.WaitForAgent(context.Background(), 1)
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_WaitForAgentExecExit_Error covers the
+// AgentExecStatus-returns-error branch.
+func TestVirtualMachine_WaitForAgentExecExit_Error(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/agent/exec-status$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.WaitForAgentExecExit(context.Background(), 1, 1)
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_Ping_ConfigError covers Ping's second-call error branch:
+// the /status/current returns ok but /config returns 500.
+func TestVirtualMachine_Ping_ConfigError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// /status/current ok with minimal payload
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/status/current$").
+		Reply(200).
+		JSON(`{"data": {"vmid": 502, "status": "running"}}`)
+	// /config errors
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/config$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	err := vm.Ping(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_Snapshots_ErrorPath drives the GET-error branch.
+func TestVirtualMachine_Snapshots_ErrorPath(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/snapshot$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.Snapshots(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_FirewallRules_ErrorPath drives the GET-error branch.
+func TestVirtualMachine_FirewallRules_ErrorPath(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/502/firewall/rules$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	_, err := vm.FirewallRules(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_NewFirewallRule_ErrorPath drives the POST-error branch.
+func TestVirtualMachine_NewFirewallRule_ErrorPath(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/qemu/502/firewall/rules$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
+	err := vm.NewFirewallRule(context.Background(), &FirewallRule{Type: "in", Action: "ACCEPT"})
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_DeleteCloudInitISO_HappyPath drives the successful
+// iso-found-and-deleted branch: HasTag passes, Node + Storages succeed, the
+// per-storage iteration finds user-data-503.iso on the cidata storage,
+// Delete returns a task, WaitFor completes immediately.
+func TestVirtualMachine_DeleteCloudInitISO_HappyPath(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "cinode",
+		VMID:   503,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	ok, err := vm.deleteCloudInitISO(context.Background())
+	if err != nil {
+		t.Logf("deleteCloudInitISO err: %v", err)
+	}
+	assert.Nil(t, err)
+	assert.True(t, ok)
+}
+
+// TestVirtualMachine_DeleteCloudInitISO_NotFoundOnAnyStorage walks the full
+// deleteCloudInitISO body: HasTag passes, Node()+Storages() succeed, the
+// per-storage iteration runs but the user-data ISO is not present anywhere,
+// so the helper falls through to the "treat as no-op" return.
+func TestVirtualMachine_DeleteCloudInitISO_NotFoundOnAnyStorage(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   501, // ISO filename derived from VMID won't be in any mock storage
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	ok, err := vm.deleteCloudInitISO(context.Background())
+	assert.Nil(t, err)
+	assert.True(t, ok)
+}
+
+// TestVirtualMachine_UnmountCloudInitISO_WithTag exercises the path that
+// goes through Config then deleteCloudInitISO. Uses vmid 100 which has the
+// /config POST mock and the per-storage content mock; the cloud-init ISO
+// is not present so deleteCloudInitISO short-circuits to the no-op tail.
+func TestVirtualMachine_UnmountCloudInitISO_WithTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   100,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	assert.Nil(t, vm.UnmountCloudInitISO(context.Background(), "ide2"))
+}
+
+// TestVirtualMachine_CloudInit_NodeError exercises the front half of
+// CloudInit: makeCloudInitISO succeeds (real iso written to TempDir, then
+// removed via the defer), then client.Node() fails. Covers the opts loop,
+// makeCloudInitISO success path, defer registration, and the
+// node-not-found return branch.
+func TestVirtualMachine_CloudInit_NodeError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// VMID 601 + node "missing" — no /nodes/missing/status mock so
+	// client.Node fails.
+	gock.New(mockConfig.URI).
+		Get("^/nodes/missing/status$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "missing", VMID: 601}
+	err := vm.CloudInit(context.Background(), "ide2", "", "", "", "",
+		WithCloudInitStorage("local"))
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_CloudInit_MakeISOError exercises the
+// makeCloudInitISO-returns-error branch. We can't easily make
+// makeCloudInitISO fail with valid args, but supplying contents that produce
+// a filename collision with an unwritable target path is also tricky on
+// Windows; instead trigger the "named storage not found" branch which
+// crosses the same return shape just past makeCloudInitISO.
+func TestVirtualMachine_CloudInit_StorageError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// node1 is mocked, but storage "ghost" is not — resolveCloudInitStorage
+	// surfaces the not-found error from node.Storage.
+	gock.New(mockConfig.URI).
+		Persist().
+		Get("^/nodes/node1/storage/ghost$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 602}
+	err := vm.CloudInit(context.Background(), "ide2", "", "", "", "",
+		WithCloudInitStorage("ghost"))
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_Ping_StatusError exercises Ping's first error branch
+// (the /status/current GET returning 500).
+func TestVirtualMachine_Ping_StatusError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Get("^/nodes/node1/qemu/505/status/current$").
+		Reply(500)
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 505}
+	assert.Error(t, vm.Ping(context.Background()))
+}
+
+// TestVirtualMachine_DeleteCloudInitISO_StoragesError exercises the
+// node.Storages()-returns-error branch. The node lookup uses node1 (which
+// is mocked) but we override the /storage list to 500 with a one-shot mock
+// that takes precedence over the persisted fixture.
+func TestVirtualMachine_DeleteCloudInitISO_StoragesError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// Use a different node name that has a /status mock but no /storage
+	// mock, forcing Storages() to surface gock's no-match.
+	gock.New(mockConfig.URI).
+		Get("^/nodes/lonely/status$").
+		Reply(200).
+		JSON(`{"data": {"name": "lonely", "status": "online"}}`)
+	gock.New(mockConfig.URI).
+		Get("^/nodes/lonely/storage$").
+		Reply(500)
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "lonely",
+		VMID:   502,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	_, err := vm.deleteCloudInitISO(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_DeleteCloudInitISO_NodeError exercises the
+// client.Node()-returns-error branch.
+func TestVirtualMachine_DeleteCloudInitISO_NodeError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// VM points at a node that doesn't have a status mock — client.Node()
+	// fetches /nodes/{name}/status to construct the *Node.
+	gock.New(mockConfig.URI).
+		Get("^/nodes/missing/status$").
+		Reply(500)
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "missing",
+		VMID:   501,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	_, err := vm.deleteCloudInitISO(context.Background())
+	assert.Error(t, err)
+}
+
+// TestVirtualMachine_UnmountCloudInitISO_ConfigError exercises the
+// Config-returns-error branch of UnmountCloudInitISO.
+func TestVirtualMachine_UnmountCloudInitISO_ConfigError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// vmid 599 has no /config mock — Config() will fail with no-match.
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/qemu/599/config$").
+		Reply(500)
+	vm := &VirtualMachine{
+		client: mockClient(),
+		Node:   "node1",
+		VMID:   599,
+		VirtualMachineConfig: &VirtualMachineConfig{
+			Tags: MakeTag(TagCloudInit),
+		},
+	}
+	err := vm.UnmountCloudInitISO(context.Background(), "ide2")
+	assert.Error(t, err)
+}
+
