@@ -62,3 +62,13 @@ func TestCluster_SDNDryRun(t *testing.T) {
 	_, err = cluster.SDNDryRun(context.Background(), "")
 	assert.NotNil(t, err)
 }
+
+func TestCluster_SDNLock_AllowPending(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	token, err := cluster.SDNLock(context.Background(), true)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, token)
+}

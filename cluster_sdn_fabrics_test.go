@@ -113,3 +113,62 @@ func TestSDNFabric_AddNode(t *testing.T) {
 
 	assert.NotNil(t, f.AddNode(context.Background(), nil))
 }
+
+func TestCluster_SDNFabricsFiltered(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	fabrics, err := cluster.SDNFabrics(context.Background(), true, false)
+	assert.Nil(t, err)
+	assert.Len(t, fabrics, 1)
+	assert.Equal(t, "fab1", fabrics[0].ID)
+}
+
+func TestSDNFabric_UpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	f := cluster.SDNFabric("fab1")
+	assert.Nil(t, f.Update(context.Background(), nil))
+}
+
+func TestSDNFabric_EmptyID_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	f := &SDNFabric{client: mockClient()}
+	assert.Error(t, f.Read(context.Background()))
+	assert.Error(t, f.Update(context.Background(), &SDNFabricOptions{}))
+	assert.Error(t, f.Delete(context.Background()))
+	_, err := f.Nodes(context.Background())
+	assert.Error(t, err)
+	assert.Error(t, f.AddNode(context.Background(), &SDNFabricNodeOptions{NodeID: "n"}))
+}
+
+func TestSDNFabric_Read_NotFound(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	f := cluster.SDNFabric("missing")
+	assert.Error(t, f.Read(context.Background()))
+}
+
+func TestSDNFabricNode_UpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	n := cluster.SDNFabric("fab1").Node("node1")
+	assert.Nil(t, n.Update(context.Background(), nil))
+}
+
+func TestSDNFabricNode_EmptyIDs_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	n := &SDNFabricNode{client: mockClient()}
+	assert.Error(t, n.Read(context.Background()))
+	assert.Error(t, n.Update(context.Background(), &SDNFabricNodeOptions{}))
+	assert.Error(t, n.Delete(context.Background()))
+}

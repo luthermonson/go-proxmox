@@ -55,3 +55,42 @@ func TestCluster_NewSDNIPAM(t *testing.T) {
 	assert.NotNil(t, cluster.NewSDNIPAM(context.Background(), nil))
 	assert.NotNil(t, cluster.NewSDNIPAM(context.Background(), &SDNIPAMOptions{IPAM: "x"}))
 }
+
+func TestCluster_SDNIPAMsFiltered(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	ipams, err := cluster.SDNIPAMs(context.Background(), "pve")
+	assert.Nil(t, err)
+	assert.Len(t, ipams, 1)
+}
+
+func TestSDNIPAM_UpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	i := cluster.SDNIPAM("pve")
+	assert.Nil(t, i.Update(context.Background(), nil))
+}
+
+func TestSDNIPAM_EmptyName_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	i := &SDNIPAM{client: mockClient()}
+	assert.Error(t, i.Read(context.Background()))
+	assert.Error(t, i.Update(context.Background(), &SDNIPAMOptions{}))
+	assert.Error(t, i.Delete(context.Background()))
+	_, err := i.Status(context.Background())
+	assert.Error(t, err)
+}
+
+func TestSDNIPAM_Read_NotFound(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	i := cluster.SDNIPAM("missing")
+	assert.Error(t, i.Read(context.Background()))
+}
