@@ -854,3 +854,112 @@ func TestNodeReplicationJob_ScheduleNow(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, task)
 }
+
+func TestNode_NewVirtualMachine(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	task, err := node.NewVirtualMachine(context.Background(), 300,
+		VirtualMachineOption{Name: "name", Value: "newvm"})
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "qmcreate", task.Type)
+}
+
+func TestNode_NewContainer_ExplicitID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	task, err := node.NewContainer(context.Background(), 300,
+		ContainerOption{Name: "ostemplate", Value: "local:vztmpl/debian.tar.zst"})
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "vzcreate", task.Type)
+}
+
+func TestNode_OrderACMECertificate_Force(t *testing.T) {
+	// force=true hits the body["force"]=1 branch missed by the default test.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	task, err := node.OrderACMECertificate(context.Background(), true)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}
+
+func TestNode_RefreshSubscription_NoForce(t *testing.T) {
+	// existing test sets force=true; cover the false branch.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	assert.Nil(t, node.RefreshSubscription(context.Background(), false))
+}
+
+func TestNode_Vzdump_NilOpts(t *testing.T) {
+	// nil-params branch in Vzdump.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	task, err := node.Vzdump(context.Background(), nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}
+
+func TestNode_StartAll_NilOpts(t *testing.T) {
+	// nil-opts already covered by existing test; add StopAll / SuspendAll nil
+	// paths and MigrateAll which uses NodeMigrateAllOptions{}.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	node, err := mockClient().Node(context.Background(), "node1")
+	assert.Nil(t, err)
+	task, err := node.StopAll(context.Background(), nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}
+
+func TestNode_NewConstructor(t *testing.T) {
+	// (*Node).New is a pure constructor — no HTTP call. Cover it directly.
+	c := mockClient()
+	parent := &Node{client: c, Name: "node1"}
+	child := parent.New(c, "node2")
+	assert.NotNil(t, child)
+	assert.Equal(t, "node2", child.Name)
+	assert.Equal(t, c, child.client)
+}
+
+func TestNodeReplicationJob_Log_StartLimit(t *testing.T) {
+	// Exercises the start/limit query-string branches of Log.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	node := &Node{client: mockClient(), Name: "node1"}
+	job := node.Replication("100-0")
+
+	// only start
+	_, err := job.Log(context.Background(), 5, 0)
+	assert.Nil(t, err)
+	// only limit
+	_, err = job.Log(context.Background(), 0, 10)
+	assert.Nil(t, err)
+	// both
+	_, err = job.Log(context.Background(), 5, 10)
+	assert.Nil(t, err)
+}
+
+func TestNode_FindStorageByContent_NoMatch(t *testing.T) {
+	// findStorageByContent's "no storage matches" path returns ErrNotFound.
+	// Use a content type the standard fixtures don't expose to drive it.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	node := &Node{client: mockClient(), Name: "node1"}
+	_, err := node.findStorageByContent(context.Background(), "doesnotexist")
+	assert.ErrorIs(t, err, ErrNotFound)
+}

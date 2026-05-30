@@ -288,4 +288,105 @@ func storage() {
 			{"time": 1715000000, "used": 1000000, "total": 2000000},
 			{"time": 1715000060, "used": 1100000, "total": 2000000}
 		]}`)
+
+	// --- per-volume GETs for ISO/VzTmpl/Import/Backup ----------------------
+
+	// ISO volume detail.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content/local:iso/debian-12\\.iso$").
+		Reply(200).
+		JSON(`{"data": {
+			"volid": "local:iso/debian-12.iso",
+			"format": "iso",
+			"size": 654311424,
+			"ctime": 1693252591,
+			"path": "/var/lib/vz/template/iso/debian-12.iso"
+		}}`)
+
+	// vztmpl volume detail.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content/local:vztmpl/debian-12-standard\\.tar\\.zst$").
+		Reply(200).
+		JSON(`{"data": {
+			"volid": "local:vztmpl/debian-12-standard.tar.zst",
+			"format": "tar.zst",
+			"size": 128974848,
+			"ctime": 1693252600,
+			"path": "/var/lib/vz/template/cache/debian-12-standard.tar.zst"
+		}}`)
+
+	// import volume detail (lives on the "esxi" storage in fixtures).
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/esxi/content/esxi:import/MyVM\\.vmx$").
+		Reply(200).
+		JSON(`{"data": {
+			"volid": "esxi:import/MyVM.vmx",
+			"format": "vmx",
+			"size": 4096,
+			"ctime": 1700000000,
+			"path": "/mnt/esxi/MyVM/MyVM.vmx"
+		}}`)
+
+	// backup volume detail.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content/local:backup/vzdump-qemu-100\\.vma\\.zst$").
+		Reply(200).
+		JSON(`{"data": {
+			"volid": "local:backup/vzdump-qemu-100.vma.zst",
+			"format": "vma.zst",
+			"size": 2147483648,
+			"ctime": 1693252800,
+			"path": "/var/lib/vz/dump/vzdump-qemu-100.vma.zst"
+		}}`)
+
+	// DELETE per-volume endpoints used by (*ISO|*VzTmpl|*Backup).Delete.
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/storage/local/content/local:iso/debian-12\\.iso$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000010:00000010:00000010:imgdel:iso:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/storage/local/content/local:vztmpl/debian-12-standard\\.tar\\.zst$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000011:00000011:00000011:imgdel:vztmpl:root@pam:"}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/storage/local/content/local:backup/vzdump-qemu-100\\.vma\\.zst$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000012:00000012:00000012:imgdel:backup:root@pam:"}`)
+
+	// deleteVolume regenerates volid from path when volid is empty. Register
+	// the rebuilt path so the path-only branch is exercisable.
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/storage/local/content/local:backup/from-path\\.vma\\.zst$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00000013:00000013:00000013:imgdel:backup:root@pam:"}`)
+
+	// Per-volume GETs that intentionally omit volid in the body so the
+	// ISO/VzTmpl/Import "regenerate VolID" branch is exercised.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content/local:iso/no-volid\\.iso$").
+		Reply(200).
+		JSON(`{"data": {"format": "iso", "size": 1, "path": "/var/lib/vz/template/iso/no-volid.iso"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/local/content/local:vztmpl/no-volid\\.tar\\.zst$").
+		Reply(200).
+		JSON(`{"data": {"format": "tar.zst", "size": 1, "path": "/var/lib/vz/template/cache/no-volid.tar.zst"}}`)
+
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/storage/esxi/content/esxi:import/no-volid\\.vmx$").
+		Reply(200).
+		JSON(`{"data": {"format": "vmx", "size": 1, "path": "/mnt/esxi/no-volid.vmx"}}`)
 }

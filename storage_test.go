@@ -476,6 +476,46 @@ func TestStorage_PruneBackups(t *testing.T) {
 	assert.Equal(t, "prunebackups", task.Type)
 }
 
+func TestStorage_PruneBackups_WithOpts(t *testing.T) {
+	// Hit the opts-not-nil / query-string-appended branch.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	task, err := storage.PruneBackups(context.Background(), &StoragePruneBackupsOptions{
+		PruneBackups: "keep-last=1", Type: "qemu", VMID: 100,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, task)
+}
+
+func TestStorage_ISO_RegeneratesVolID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	iso, err := storage.ISO(context.Background(), "no-volid.iso")
+	require.NoError(t, err)
+	assert.Equal(t, "local:iso/no-volid.iso", iso.VolID)
+}
+
+func TestStorage_VzTmpl_RegeneratesVolID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	vz, err := storage.VzTmpl(context.Background(), "no-volid.tar.zst")
+	require.NoError(t, err)
+	assert.Equal(t, "local:vztmpl/no-volid.tar.zst", vz.VolID)
+}
+
+func TestStorage_Import_RegeneratesVolID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "esxi"}
+	imp, err := storage.Import(context.Background(), "no-volid.vmx")
+	require.NoError(t, err)
+	assert.Equal(t, "esxi:import/no-volid.vmx", imp.VolID)
+}
+
 func TestStoragePruneBackupsOptions_QueryString(t *testing.T) {
 	cases := []struct {
 		name string
@@ -496,6 +536,150 @@ func TestStoragePruneBackupsOptions_QueryString(t *testing.T) {
 			assert.Equal(t, tc.want, tc.opts.queryString())
 		})
 	}
+}
+
+func TestStorage_UploadWithHash_InvalidContent(t *testing.T) {
+	storage := &Storage{Node: "node1", Name: "local"}
+	rename := "renamed.iso"
+	_, err := storage.UploadWithHash("not-a-real-content", "file", &rename, "deadbeef", "sha256")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "iso")
+}
+
+func TestStorage_UploadWithHash(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	tmp, err := os.CreateTemp("", "upload-hash-*.iso")
+	require.NoError(t, err)
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	_, err = tmp.WriteString("fake iso data")
+	require.NoError(t, err)
+	require.NoError(t, tmp.Close())
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	rename := "hashed.iso"
+	task, err := storage.UploadWithHash("iso", tmp.Name(), &rename, "deadbeef", "sha256")
+	require.NoError(t, err)
+	require.NotNil(t, task)
+
+	require.NotNil(t, capture.LastUpload)
+	assert.Equal(t, "hashed.iso", capture.LastUpload.Filename)
+	assert.Equal(t, "deadbeef", capture.LastUpload.Fields["checksum"])
+	assert.Equal(t, "sha256", capture.LastUpload.Fields["checksum-algorithm"])
+
+	// nil rename branch: filename derives from file basename.
+	task, err = storage.UploadWithHash("iso", tmp.Name(), nil, "cafebabe", "md5")
+	require.NoError(t, err)
+	require.NotNil(t, task)
+}
+
+func TestStorage_DownloadURLWithHash(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	task, err := storage.DownloadURLWithHash(
+		context.Background(), "iso", "debian.iso",
+		"https://example.com/debian.iso", "deadbeef", "sha256",
+	)
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "download", task.Type)
+}
+
+func TestStorage_DownloadURL_InvalidContent(t *testing.T) {
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	_, err := storage.DownloadURL(context.Background(), "bogus", "x", "https://e/x")
+	require.Error(t, err)
+}
+
+func TestStorage_ISO(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	iso, err := storage.ISO(context.Background(), "debian-12.iso")
+	require.NoError(t, err)
+	require.NotNil(t, iso)
+	assert.Equal(t, "local:iso/debian-12.iso", iso.VolID)
+	assert.Equal(t, "node1", iso.Node)
+	assert.Equal(t, "local", iso.Storage)
+
+	task, err := iso.Delete(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "imgdel", task.Type)
+}
+
+func TestStorage_VzTmpl_Detail(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	vz, err := storage.VzTmpl(context.Background(), "debian-12-standard.tar.zst")
+	require.NoError(t, err)
+	require.NotNil(t, vz)
+	assert.Equal(t, "local:vztmpl/debian-12-standard.tar.zst", vz.VolID)
+	assert.Equal(t, "local", vz.Storage)
+
+	task, err := vz.Delete(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "imgdel", task.Type)
+}
+
+func TestStorage_Import(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "esxi"}
+	imp, err := storage.Import(context.Background(), "MyVM.vmx")
+	require.NoError(t, err)
+	require.NotNil(t, imp)
+	assert.Equal(t, "esxi:import/MyVM.vmx", imp.VolID)
+	assert.Equal(t, "esxi", imp.Storage)
+}
+
+func TestStorage_Backup(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	b, err := storage.Backup(context.Background(), "vzdump-qemu-100.vma.zst")
+	require.NoError(t, err)
+	require.NotNil(t, b)
+	assert.Equal(t, "local:backup/vzdump-qemu-100.vma.zst", b.VolID)
+
+	task, err := b.Delete(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+}
+
+func TestStorage_DeleteVolume_FromPath(t *testing.T) {
+	// deleteVolume's path-only branch rebuilds volid from filepath.Base(path)
+	// for callers that don't carry a VolID. Construct a Backup directly so the
+	// reconstruction path is exercised.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	b := &Backup{Content: Content{
+		client:  mockClient(),
+		Node:    "node1",
+		Storage: "local",
+		Path:    "/var/lib/vz/dump/from-path.vma.zst",
+	}}
+	task, err := b.Delete(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+}
+
+func TestStorage_DeleteVolume_MissingFields(t *testing.T) {
+	// Both VolID and Path empty must surface an error without making a request.
+	b := &Backup{Content: Content{client: mockClient(), Node: "node1", Storage: "local"}}
+	_, err := b.Delete(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "volid or path required")
 }
 
 func TestStorage_ImportMetadata(t *testing.T) {
