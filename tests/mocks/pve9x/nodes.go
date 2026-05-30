@@ -172,6 +172,71 @@ func nodes() {
     }
 }`)
 
+	// POST /nodes/{node}/network — create new interface, echoes a body back.
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/network$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "iface": "vmbr99",
+        "type": "bridge",
+        "method": "static",
+        "method6": "manual",
+        "address": "10.0.0.1",
+        "netmask": "24",
+        "cidr": "10.0.0.1/24",
+        "autostart": 1
+    }
+}`)
+
+	// PUT /nodes/{node}/network — reload pending changes; returns UPID.
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/network$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00009999:00009999:00009999:srvreload:networking:root@pam:"}`)
+
+	// PUT /nodes/{node}/network/{iface} — update interface.
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/network/vmbr99$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /nodes/{node}/network/{iface} — drop interface.
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/network/vmbr99$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00009998:00009998:00009998:srvreload:networking:root@pam:"}`)
+
+	// POST /nodes/{node}/qemu — create new VM. Returns a UPID. Lives on the
+	// nodes group because the (*Node).NewVirtualMachine creates against the
+	// node, not a specific VMID.
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00007777:00007777:00007777:qmcreate:300:root@pam:"}`)
+
+	// POST /nodes/{node}/lxc — create new container.
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/lxc$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00007778:00007778:00007778:vzcreate:300:root@pam:"}`)
+
+	// GET /cluster/sdn/ipams/{node}/status — IPAM listing scoped to node.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams/node1/status$").
+		Reply(200).
+		JSON(`{"data": [
+			{"hostname": "vm100", "ip": "10.0.0.10", "mac": "aa:bb:cc:dd:ee:01", "subnet": "10.0.0.0/24", "vmid": "100", "vnet": "vnet1", "zone": "zone1"},
+			{"hostname": "vm101", "ip": "10.0.0.11", "mac": "aa:bb:cc:dd:ee:02", "subnet": "10.0.0.0/24", "vmid": "101", "vnet": "vnet1", "zone": "zone1"}
+		]}`)
+
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/network").

@@ -172,4 +172,79 @@ func TestNode_DeleteZFSPool(t *testing.T) {
 	task, err := diskNode().DeleteZFSPool(context.Background(), "rpool", true, true)
 	assert.Nil(t, err)
 	assert.Equal(t, "rmzfs", task.Type)
+
+	_, err = diskNode().DeleteZFSPool(context.Background(), "", false, false)
+	assert.NotNil(t, err)
+}
+
+func TestNode_Disks_AllQueryBranches(t *testing.T) {
+	// Hit every conditional in the query-string builder.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	_, err := diskNode().Disks(context.Background(), true, true, "unused")
+	assert.Nil(t, err)
+}
+
+func TestNode_DiskSMART_HealthOnly(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	_, err := diskNode().DiskSMART(context.Background(), "/dev/sda", true)
+	assert.Nil(t, err)
+}
+
+func TestNode_DiskInitGPT_WithUUID(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := diskNode().DiskInitGPT(context.Background(), "/dev/sda",
+		"01234567-89ab-cdef-0123-456789abcdef")
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}
+
+func TestNode_DiskWipe_Validation(t *testing.T) {
+	_, err := diskNode().DiskWipe(context.Background(), "")
+	assert.NotNil(t, err)
+}
+
+func TestNode_NewLVM_Validation(t *testing.T) {
+	_, err := diskNode().NewLVM(context.Background(), nil)
+	assert.NotNil(t, err)
+	_, err = diskNode().NewLVM(context.Background(), &NodeLVMOptions{Name: "x"})
+	assert.NotNil(t, err)
+}
+
+func TestNode_DeleteLVM_Validation(t *testing.T) {
+	_, err := diskNode().DeleteLVM(context.Background(), "", false, false)
+	assert.NotNil(t, err)
+}
+
+func TestNode_DeleteDirectory_QueryBranches(t *testing.T) {
+	// cleanupConfig but no cleanupDisks (and a query-string branch already
+	// covered by the existing TestNode_DeleteDirectory, which sets both).
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := diskNode().DeleteDirectory(context.Background(), "iso", false, true)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+}
+
+func TestNode_NewLVMThin_Validation(t *testing.T) {
+	_, err := diskNode().NewLVMThin(context.Background(), nil)
+	assert.NotNil(t, err)
+}
+
+func TestNode_DeleteLVMThin_Validation(t *testing.T) {
+	_, err := diskNode().DeleteLVMThin(context.Background(), "", "", false, false)
+	assert.NotNil(t, err)
+}
+
+func TestNode_ZFSPool_Validation(t *testing.T) {
+	_, err := diskNode().ZFSPool(context.Background(), "")
+	assert.NotNil(t, err)
+}
+
+func TestNode_NewZFSPool_PartialValidation(t *testing.T) {
+	_, err := diskNode().NewZFSPool(context.Background(), &NodeZFSPoolOptions{Name: "n"})
+	assert.NotNil(t, err)
 }

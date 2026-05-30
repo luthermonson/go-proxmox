@@ -143,6 +143,96 @@ func TestNode_SpiceShell(t *testing.T) {
 	assert.Equal(t, "spice", proxy.Type)
 }
 
+func TestNode_SpiceShell_AllOpts(t *testing.T) {
+	// Exercise the cmd/cmd-opts/proxy branches.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	proxy, err := looseNode().SpiceShell(context.Background(), &NodeSpiceShellOptions{
+		Cmd:     NodeConsoleUpgrade,
+		CmdOpts: "--yes",
+		Proxy:   "proxy.example.com",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, proxy)
+}
+
+func TestNode_VNCShell_DefaultOpts(t *testing.T) {
+	// Nil opts path — the conditional `if opts != nil` short-circuits.
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vnc, err := looseNode().VNCShell(context.Background(), nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, vnc)
+}
+
+func TestNode_Journal_AllBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	_, err := looseNode().Journal(context.Background(), &NodeJournalOptions{
+		Since:       1715000000,
+		Until:       1715100000,
+		StartCursor: "cur-start",
+		EndCursor:   "cur-end",
+	})
+	assert.Nil(t, err)
+}
+
+func TestNode_Syslog_AllBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	_, err := looseNode().Syslog(context.Background(), &NodeSyslogOptions{
+		Start:   1,
+		Limit:   10,
+		Since:   "2025-01-01",
+		Until:   "2025-12-31",
+		Service: "pveproxy",
+	})
+	assert.Nil(t, err)
+
+	// Empty opts also exercises the "no query params" path.
+	_, err = looseNode().Syslog(context.Background(), &NodeSyslogOptions{})
+	assert.Nil(t, err)
+
+	// nil opts skips the conditional entirely.
+	_, err = looseNode().Syslog(context.Background(), nil)
+	assert.Nil(t, err)
+}
+
+func TestNode_Tasks_AllBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	_, err := looseNode().Tasks(context.Background(), &NodeTasksOptions{
+		Errors:       true,
+		Limit:        10,
+		Since:        1715000000,
+		Until:        1715100000,
+		Source:       "all",
+		Start:        5,
+		StatusFilter: "OK",
+		TypeFilter:   "vzdump",
+		UserFilter:   "root@pam",
+		VMID:         100,
+	})
+	assert.Nil(t, err)
+}
+
+func TestNode_GetConfigProperty_EmptyDelegates(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cfg, err := looseNode().GetConfigProperty(context.Background(), "")
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+}
+
+func TestNode_FirewallLog_AllBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	_, err := looseNode().FirewallLog(context.Background(), &NodeFirewallLogOptions{
+		Start: 1, Limit: 10, Since: 1715000000, Until: 1715100000,
+	})
+	assert.Nil(t, err)
+}
+
 func TestNode_RRD(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
