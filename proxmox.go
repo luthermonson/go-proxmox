@@ -110,6 +110,7 @@ type Client struct {
 	timeout      time.Duration
 	tlsMods      []func(*tls.Config)
 	retryPolicy  *retryPolicy
+	proxyFunc    func(*http.Request) (*url.URL, error)
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -159,6 +160,14 @@ func (c *Client) finalizeOptions() {
 	if c.timeout > 0 {
 		c.ensureOwnHTTPClient()
 		c.httpClient.Timeout = c.timeout
+	}
+
+	if c.proxyFunc != nil {
+		if t := c.ensureTransport(); t != nil {
+			t.Proxy = c.proxyFunc
+		} else {
+			c.log.Debugf("WithProxy: client's RoundTripper is not an *http.Transport; option has no effect")
+		}
 	}
 
 	c.installRetryWrapper()
