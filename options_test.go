@@ -287,3 +287,16 @@ func containsByte(haystack, needle []byte) bool {
 	}
 	return false
 }
+
+// --- retry option ---------------------------------------------------------
+
+func TestWithRetry_InstallsWrapper(t *testing.T) {
+	client := NewClient("", WithRetry())
+	_, ok := client.httpClient.Transport.(*retryRoundTripper)
+	assert.True(t, ok, "WithRetry() should install a *retryRoundTripper on the transport")
+	// Sanity: the default policy is non-zero.
+	rt := client.httpClient.Transport.(*retryRoundTripper)
+	assert.Equal(t, 3, rt.policy.maxAttempts)
+	assert.Equal(t, 200*time.Millisecond, rt.policy.initialBackoff)
+	assert.Equal(t, 5*time.Second, rt.policy.maxBackoff)
+}

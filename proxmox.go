@@ -104,11 +104,12 @@ type Client struct {
 	// Option-backed fields. See options.go for the corresponding With*
 	// setters. These are collected during NewClient option evaluation and
 	// applied in finalizeOptions before NewClient returns.
-	otp           string
-	defaultRealm  string
-	eagerAuth     bool
-	timeout       time.Duration
-	tlsMods       []func(*tls.Config)
+	otp          string
+	defaultRealm string
+	eagerAuth    bool
+	timeout      time.Duration
+	tlsMods      []func(*tls.Config)
+	retryPolicy  *retryPolicy
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -159,6 +160,8 @@ func (c *Client) finalizeOptions() {
 		c.ensureOwnHTTPClient()
 		c.httpClient.Timeout = c.timeout
 	}
+
+	c.installRetryWrapper()
 
 	if c.eagerAuth && c.credentials != nil && c.token == "" {
 		// Best-effort eager session. Errors are intentionally swallowed:
