@@ -386,23 +386,21 @@ func TestWithProxy(t *testing.T) {
 }
 
 func TestWithProxyFromEnvironment(t *testing.T) {
-	t.Setenv("HTTP_PROXY", "http://env-proxy.example.com:8080")
-	t.Setenv("HTTPS_PROXY", "")
-	t.Setenv("NO_PROXY", "")
-
 	c := NewClient("", WithProxyFromEnvironment())
 	tr := transportFromClient(t, c)
 	require.NotNil(t, tr.Proxy, "Proxy should be set")
 
-	// http.ProxyFromEnvironment caches its env lookup on first call across the
-	// process, so we can't reliably assert pointer identity with the package
-	// symbol — instead exercise it.
-	req, err := http.NewRequest(http.MethodGet, "http://target.example.com/", nil)
-	require.NoError(t, err)
-	got, err := tr.Proxy(req)
-	require.NoError(t, err)
-	require.NotNil(t, got, "ProxyFromEnvironment should resolve a proxy for HTTP_PROXY")
-	assert.Equal(t, "env-proxy.example.com:8080", got.Host)
+	// Assert by function-pointer identity rather than by exercising the
+	// returned func with a t.Setenv-driven HTTP_PROXY. http.ProxyFromEnvironment
+	// populates its env lookup behind a process-wide sync.Once, so any prior
+	// test that touches the default transport (every gock-using test does) primes
+	// the cache to whatever the environment looked like at that moment, and a
+	// later t.Setenv has no effect on the cached result. The pointer-identity
+	// check still proves the option installed the expected proxy resolver.
+	assert.Equal(t,
+		reflect.ValueOf(http.ProxyFromEnvironment).Pointer(),
+		reflect.ValueOf(tr.Proxy).Pointer(),
+		"WithProxyFromEnvironment should install http.ProxyFromEnvironment as the transport proxy func")
 }
 
 // roundTripperFunc is a test helper that adapts a function into a
