@@ -225,6 +225,47 @@ func TestClusterBackup_Delete(t *testing.T) {
 	assert.Nil(t, backup.Delete(ctx))
 }
 
+func TestCluster_Tasks(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
+	tasks, err := cluster.Tasks(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, tasks, 2)
+	// every returned task must carry the client back
+	for _, task := range tasks {
+		assert.NotNil(t, task.client, "Task.client must be wired for %s", task.UPID)
+	}
+}
+
+func TestCluster_Ceph(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
+	ceph, err := cluster.Ceph(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, ceph)
+	assert.NotNil(t, ceph.client)
+}
+
+func TestCluster_New(t *testing.T) {
+	client := mockClient()
+	cl := &Cluster{}
+	got := cl.New(client)
+	assert.NotNil(t, got)
+	assert.Same(t, client, got.client)
+}
+
 func TestCluster_SDNVNets(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

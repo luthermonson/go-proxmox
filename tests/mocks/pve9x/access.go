@@ -912,6 +912,7 @@ func access() {
 }`)
 
 	gock.New(config.C.URI).
+		Persist().
 		Post("^/access/users/userid/token/test").
 		Reply(200).
 		JSON(`{
@@ -1029,4 +1030,37 @@ func access() {
 			"CSRFPreventionToken": "csrf123",
 			"username": "alice@pve"
 		}}`)
+
+	// --- additional CRUD mocks for User/Role/ACL/NewAPIToken --------------
+
+	// PUT /access/acl — UpdateACL
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/access/acl$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT/DELETE /access/users/{userid}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/access/users/userid$").
+		Reply(200).
+		JSON(`{"data": null}`)
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/access/users/userid$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// PUT/DELETE /access/roles/{roleid}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/access/roles/test-role$").
+		Reply(200).
+		JSON(`{"data": null}`)
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/access/roles/test-role$").
+		Reply(200).
+		JSON(`{"data": null}`)
 }

@@ -267,6 +267,26 @@ func TestCluster_UpdateUSBMapping(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestCluster_Mappings_CheckNode(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	assert.Nil(t, err)
+
+	// Each listing helper appends a check-node query string when given a node
+	// name. The shared pve9x mocks ignore extra params, so the request still
+	// matches and we cover the URL-building branch.
+	_, err = cluster.DirMappings(ctx, "node1")
+	assert.Nil(t, err)
+	_, err = cluster.PCIMappings(ctx, "node1")
+	assert.Nil(t, err)
+	_, err = cluster.USBMappings(ctx, "node1")
+	assert.Nil(t, err)
+}
+
 func TestCluster_DeleteUSBMapping(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
