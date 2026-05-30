@@ -1320,4 +1320,278 @@ func virtualMachines() {
         "upid": "UPID:node1:00001234:00005678:00009ABC:qmtunnel:100:root@pam:"
     }
 }`)
+
+	// ===== Additional fixtures for coverage tests =====
+
+	// POST /nodes/{node}/qemu/{vmid}/status/suspend with todisk for Hibernate
+	// (uses vmid 101 to avoid colliding with Pause's 100 mock above).
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/status/suspend$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000A001:0000A001:0000A001:qmsuspend:101:root@pam:"}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/migrate - Migrate VM
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/migrate$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000B001:0000B001:0000B001:qmigrate:101:root@pam:"}`)
+
+	// PUT /nodes/{node}/qemu/{vmid}/resize - ResizeDisk
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/101/resize$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000B002:0000B002:0000B002:qmresize:101:root@pam:"}`)
+
+	// PUT /nodes/{node}/qemu/{vmid}/unlink - UnlinkDisk
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/101/unlink$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000B003:0000B003:0000B003:qmunlink:101:root@pam:"}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/move_disk - MoveDisk
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/move_disk$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000B004:0000B004:0000B004:qmmove:101:root@pam:"}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/template - ConvertToTemplate
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/template$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000B005:0000B005:0000B005:qmtemplate:101:root@pam:"}`)
+
+	// GET /nodes/{node}/qemu/{vmid}/pending - Pending config
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/pending$").
+		Reply(200).
+		JSON(`{"data": [
+			{"key": "cores", "value": 2, "pending": 4},
+			{"key": "memory", "value": 2048}
+		]}`)
+
+	// PUT /nodes/{node}/qemu/{vmid}/sendkey - SendKey
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/101/sendkey$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/termproxy - TermProxy
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/termproxy$").
+		Reply(200).
+		JSON(`{"data": {"user": "root@pam", "ticket": "PVEVNC:ABC123", "upid": "UPID:node1:0000C001:0000C001:0000C001:vncproxy:101:root@pam:", "port": "5901"}}`)
+
+	// POST /nodes/{node}/qemu/{vmid}/vncproxy - VNCProxy
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/vncproxy").
+		Reply(200).
+		JSON(`{"data": {"user": "root@pam", "cert": "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----", "ticket": "PVEVNC:DEF456", "upid": "UPID:node1:0000C002:0000C002:0000C002:vncproxy:101:root@pam:", "port": "5902"}}`)
+
+	// ----- Per-VM legacy firewall helpers (vmid 101) -----
+
+	// GET /firewall/ipset - list IPSets
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/firewall/ipset$").
+		Reply(200).
+		JSON(`{"data": [{"name": "blocked", "comment": "blocked clients", "digest": "abc"}]}`)
+
+	// POST /firewall/ipset - create IPSet
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/firewall/ipset$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /firewall/ipset/{name} - list IPSet entries
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/firewall/ipset/blocked$").
+		Reply(200).
+		JSON(`{"data": [{"cidr": "10.1.2.3", "comment": "client", "digest": "abc"}]}`)
+
+	// POST /firewall/ipset/{name} - add entry
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/firewall/ipset/blocked$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE /firewall/ipset/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/qemu/101/firewall/ipset/blocked$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET single IPSet entry
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/firewall/ipset/blocked/10\\.1\\.2\\.3$").
+		Reply(200).
+		JSON(`{"data": {"cidr": "10.1.2.3", "comment": "client", "digest": "abc"}}`)
+
+	// PUT update IPSet entry
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/101/firewall/ipset/blocked/10\\.1\\.2\\.3$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// DELETE single IPSet entry
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/node1/qemu/101/firewall/ipset/blocked/10\\.1\\.2\\.3$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /firewall/options - FirewallOptionGet
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/firewall/options$").
+		Reply(200).
+		JSON(`{"data": {"enable": 1, "policy_in": "ACCEPT", "policy_out": "ACCEPT"}}`)
+
+	// PUT /firewall/options - FirewallOptionSet
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/nodes/node1/qemu/101/firewall/options$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// GET /firewall/rules - FirewallRules (list)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/firewall/rules$").
+		Reply(200).
+		JSON(`{"data": [
+			{"pos": 0, "type": "in", "action": "ACCEPT", "enable": 1, "comment": "allow http"},
+			{"pos": 1, "type": "out", "action": "DROP", "enable": 0}
+		]}`)
+
+	// POST /firewall/rules - NewFirewallRule
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/firewall/rules$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// ----- QGA endpoints for vmid 101 not yet covered -----
+
+	// GET /agent/get-host-name - AgentGetHostName
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-host-name$").
+		Reply(200).
+		JSON(`{"data": {"result": {"host-name": "vm-101.example.com"}}}`)
+
+	// GET /agent/network-get-interfaces - AgentGetNetworkIFaces (includes lo to test filtering)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/network-get-interfaces$").
+		Reply(200).
+		JSON(`{"data": {"result": [
+			{"name": "lo", "hardware-address": "00:00:00:00:00:00", "ip-addresses": []},
+			{"name": "eth0", "hardware-address": "BC:24:11:2E:C5:4A", "ip-addresses": [{"ip-address": "10.0.0.10", "ip-address-type": "ipv4", "prefix": 24}]}
+		]}}`)
+
+	// POST /agent/exec - AgentExec
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/exec$").
+		Reply(200).
+		JSON(`{"data": {"pid": 1234}}`)
+
+	// GET /agent/exec-status?pid=... - AgentExecStatus (exited=1)
+	// Unlike most agent endpoints AgentExecStatus does NOT wrap in a "result"
+	// envelope — the struct sits directly under "data".
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/exec-status$").
+		Reply(200).
+		JSON(`{"data": {"exited": 1, "exitcode": 0, "out-data": "hello\n", "out-truncated": false}}`)
+
+	// GET /agent/get-osinfo - AgentOsInfo
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/101/agent/get-osinfo$").
+		Reply(200).
+		JSON(`{"data": {"result": {"id": "debian", "name": "Debian GNU/Linux", "pretty-name": "Debian GNU/Linux 12 (bookworm)", "version": "12 (bookworm)", "version-id": "12", "machine": "x86_64", "kernel-release": "6.1.0", "kernel-version": "#1 SMP"}}}`)
+
+	// POST /agent/set-user-password - AgentSetUserPassword
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/101/agent/set-user-password$").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	// vmid 102: POST /config for tag mutations (Add/RemoveTag).
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/node1/qemu/102/config$").
+		Reply(200).
+		JSON(`{"data": "UPID:node1:0000A002:0000A002:0000A002:qmconfig:102:root@pam:"}`)
+
+	// ----- deleteCloudInitISO happy-path scaffolding (cinode + vmid 503) -----
+	// Provide a self-contained node ("cinode") with a single iso-capable
+	// storage that already contains user-data-503.iso. Using a dedicated
+	// node sidesteps registration-order collisions with nodes.go's persisted
+	// /nodes/node1/storage list.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/status$").
+		Reply(200).
+		JSON(`{"data": {"name": "cinode", "status": "online"}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/storage$").
+		Reply(200).
+		JSON(`{"data": [
+			{"storage": "cidata", "type": "dir", "enabled": 1, "content": "iso", "active": 1}
+		]}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/storage/cidata$").
+		Reply(200).
+		JSON(`{"data": {"name": "cidata", "type": "dir", "enabled": 1, "content": "iso", "active": 1}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/storage/cidata/status$").
+		Reply(200).
+		JSON(`{"data": {"name": "cidata", "type": "dir", "enabled": 1, "content": "iso", "active": 1}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/storage/cidata/content$").
+		Reply(200).
+		JSON(`{"data": [
+			{"volid": "cidata:iso/user-data-503.iso", "format": "iso", "size": 374784}
+		]}`)
+	// Storage.ISO(name) issues a GET on the individual content endpoint.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/storage/cidata/content/cidata:iso/user-data-503\\.iso$").
+		Reply(200).
+		JSON(`{"data": {"path": "/var/lib/vz/template/iso/user-data-503.iso", "volid": "cidata:iso/user-data-503.iso", "format": "iso", "size": 374784}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/nodes/cinode/storage/cidata/content/cidata:iso/user-data-503\\.iso$").
+		Reply(200).
+		JSON(`{"data": "UPID:cinode:0000D001:0000D001:0000D001:imgdel:cidata:root@pam:"}`)
+	// Task status mock for the delete worker — return "stopped" immediately
+	// so task.WaitFor returns nil on the first poll.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/tasks/UPID:cinode:0000D001:0000D001:0000D001:imgdel:cidata:root@pam:/status$").
+		Reply(200).
+		JSON(`{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "imgdel", "id": "cidata", "user": "root@pam", "upid": "UPID:cinode:0000D001:0000D001:0000D001:imgdel:cidata:root@pam:"}}`)
 }
