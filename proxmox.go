@@ -98,6 +98,17 @@ type Client struct {
 	session     *Session
 	log         LeveledLoggerInterface
 
+	// interceptors is the chain of WithRequestInterceptor callbacks invoked
+	// on every outgoing HTTP request after auth headers are populated and
+	// before the request is handed to httpClient.Do. They run in
+	// registration order; the first non-nil error short-circuits the
+	// request. The chain fires from Req, Upload, and UploadReader.
+	// Websocket upgrades (TermWebSocket, VNCWebSocket) are deliberately
+	// exempt — the spec does not require interceptors on the upgrade
+	// handshake and the websocket dialer does not surface a *http.Request
+	// the chain could mutate.
+	interceptors []func(*http.Request) error
+
 	sessionExpiresAt time.Time
 	sessionMux       sync.Mutex
 
@@ -111,6 +122,22 @@ type Client struct {
 	tlsMods      []func(*tls.Config)
 	retryPolicy  *retryPolicy
 	proxyFunc    func(*http.Request) (*url.URL, error)
+}
+
+// runInterceptors invokes the registered request interceptors in registration
+// order. The first non-nil error short-circuits the chain and is wrapped with
+// a "request interceptor:" prefix so callers can errors.Is against their own
+// sentinel errors.
+func (c *Client) runInterceptors(req *http.Request) error {
+	for _, fn := range c.interceptors {
+		if fn == nil {
+			continue
+		}
+		if err := fn(req); err != nil {
+			return fmt.Errorf("request interceptor: %w", err)
+		}
+	}
+	return nil
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -218,6 +245,10 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 	}
 
 	c.authHeaders(&req.Header)
+
+	if err := c.runInterceptors(req); err != nil {
+		return err
+	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -385,6 +416,10 @@ func (c *Client) UploadReader(path string, fields map[string]string, filename st
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.ContentLength = int64(b.Len()) + size
 	c.authHeaders(&req.Header)
+
+	if err := c.runInterceptors(req); err != nil {
+		return err
+	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {

@@ -4,15 +4,19 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -408,4 +412,181 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
+}
+
+// --- request interceptor --------------------------------------------------
+
+// TestWithRequestInterceptor_RegistrationAppends verifies the option appends
+// to the interceptor chain rather than replacing earlier entries, that nil
+// callbacks are skipped at registration time, and that no-options returns
+// nil.
+func TestWithRequestInterceptor_RegistrationAppends(t *testing.T) {
+	noop := func(*http.Request) error { return nil }
+
+	c := NewClient("")
+	assert.Nil(t, c.interceptors)
+
+	c = NewClient("", WithRequestInterceptor(noop), WithRequestInterceptor(noop))
+	assert.Len(t, c.interceptors, 2)
+
+	// nil fn should be a silent no-op at registration time.
+	c = NewClient("", WithRequestInterceptor(nil), WithRequestInterceptor(noop))
+	assert.Len(t, c.interceptors, 1)
+}
+
+// TestWithRequestInterceptor_SingleSeesAuthHeader fires a real request
+// through gock with API-token auth and asserts the interceptor was called
+// exactly once and saw the Authorization header populated by authHeaders.
+// This pins the "fires after authHeaders" contract.
+func TestWithRequestInterceptor_SingleSeesAuthHeader(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	gock.New(config.C.URI).
+		Get("^/version$").
+		Reply(200).
+		JSON(`{"data":{"version":"9.0"}}`)
+
+	var (
+		calls   int
+		sawAuth string
+		sawPath string
+	)
+	intercept := func(req *http.Request) error {
+		calls++
+		sawAuth = req.Header.Get("Authorization")
+		if req.URL != nil {
+			sawPath = req.URL.Path
+		}
+		return nil
+	}
+
+	c := NewClient(
+		mockConfig.URI,
+		WithAPIToken("root@pam!test", "secret"),
+		WithRequestInterceptor(intercept),
+	)
+
+	_, err := c.Version(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, calls, "interceptor should fire exactly once per request")
+	assert.Equal(t, "PVEAPIToken=root@pam!test=secret", sawAuth,
+		"interceptor must run AFTER authHeaders so it can observe the wire-bound Authorization header")
+	// The interceptor must see the URL.Path that's about to be sent, so
+	// tracing exporters can attach span attributes.
+	assert.Equal(t, "/version", sawPath)
+}
+
+// TestWithRequestInterceptor_OrderPreserved registers two interceptors and
+// asserts they ran in registration order.
+func TestWithRequestInterceptor_OrderPreserved(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	gock.New(config.C.URI).
+		Get("^/version$").
+		Reply(200).
+		JSON(`{"data":{"version":"9.0"}}`)
+
+	var order []string
+	first := func(*http.Request) error { order = append(order, "first"); return nil }
+	second := func(*http.Request) error { order = append(order, "second"); return nil }
+
+	c := NewClient(
+		mockConfig.URI,
+		WithAPIToken("root@pam!test", "secret"),
+		WithRequestInterceptor(first),
+		WithRequestInterceptor(second),
+	)
+
+	_, err := c.Version(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"first", "second"}, order)
+}
+
+// errInterceptorSentinel is a package-level sentinel so the test can assert
+// errors.Is unwraps through the "request interceptor:" wrapper.
+var errInterceptorSentinel = errors.New("sentinel: interceptor refused")
+
+// TestWithRequestInterceptor_ErrorAborts verifies that returning an error
+// from an interceptor short-circuits the request (gock never matches), the
+// returned error wraps the sentinel via fmt.Errorf("%w") so callers can
+// errors.Is against their own sentinels, and a later interceptor in the
+// chain never runs.
+func TestWithRequestInterceptor_ErrorAborts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	// Register a strict route that, if hit, would respond 200. We assert
+	// after the call that this route is *still* pending (never matched).
+	pending := gock.New(config.C.URI).
+		Get("^/version$").
+		Reply(200).
+		JSON(`{"data":{"version":"9.0"}}`)
+
+	bad := func(*http.Request) error { return errInterceptorSentinel }
+	laterCalled := false
+	later := func(*http.Request) error { laterCalled = true; return nil }
+
+	c := NewClient(
+		mockConfig.URI,
+		WithAPIToken("root@pam!test", "secret"),
+		WithRequestInterceptor(bad),
+		WithRequestInterceptor(later),
+	)
+
+	_, err := c.Version(context.Background())
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, errInterceptorSentinel),
+		"returned error must wrap the sentinel so callers can errors.Is")
+	assert.True(t, strings.Contains(err.Error(), "request interceptor:"),
+		"error message should be prefixed with 'request interceptor:' for diagnostics, got: %s", err.Error())
+	assert.False(t, laterCalled, "first non-nil error must short-circuit the chain")
+
+	// gock should never have matched — the request was aborted before
+	// httpClient.Do was reached.
+	assert.False(t, pending.Done(), "interceptor error must abort before httpClient.Do; gock saw a request when it should not have")
+}
+
+// TestWithRequestInterceptor_FiresForUpload verifies that the interceptor
+// chain also runs for the Upload/UploadReader path, so tracing and auditing
+// is uniform across every outgoing request the client makes.
+func TestWithRequestInterceptor_FiresForUpload(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	var (
+		calls   int
+		sawAuth string
+		sawPath string
+	)
+	intercept := func(req *http.Request) error {
+		calls++
+		sawAuth = req.Header.Get("Authorization")
+		if req.URL != nil {
+			sawPath = req.URL.Path
+		}
+		return nil
+	}
+
+	c := NewClient(
+		mockConfig.URI,
+		WithAPIToken("root@pam!test", "secret"),
+		WithRequestInterceptor(intercept),
+	)
+
+	body := strings.NewReader("payload")
+	err := c.UploadReader(
+		"/nodes/node1/storage/local/upload",
+		map[string]string{"content": "iso"},
+		"hello.txt", body, int64(body.Len()), nil,
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, calls, "interceptor should fire once for an Upload/UploadReader request")
+	assert.Equal(t, "PVEAPIToken=root@pam!test=secret", sawAuth,
+		"interceptor must run after authHeaders on the upload path too")
+	assert.Equal(t, "/nodes/node1/storage/local/upload", sawPath)
 }
