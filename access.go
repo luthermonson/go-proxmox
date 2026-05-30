@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -44,13 +45,38 @@ func (c *Client) CreateSession(ctx context.Context) error {
 		}
 	}
 
-	if _, err := c.Ticket(ctx, c.credentials); err != nil {
+	if _, err := c.Ticket(ctx, c.sessionCredentials()); err != nil {
 		return err
 	}
 
 	c.sessionExpiresAt = time.Now().Add(time.Hour)
 
 	return nil
+}
+
+// sessionCredentials returns the Credentials value to send to
+// /access/ticket on the next CreateSession call. If WithOTP or
+// WithDefaultRealm has been used the value is a per-call copy with those
+// fields merged in; otherwise the caller's original *Credentials is
+// returned unchanged. The OTP is consumed (zeroed on the client) so a
+// subsequent CreateSession (e.g. after a session loss) doesn't re-send a
+// stale single-use code.
+func (c *Client) sessionCredentials() *Credentials {
+	if c.credentials == nil {
+		return nil
+	}
+	if c.otp == "" && c.defaultRealm == "" {
+		return c.credentials
+	}
+	merged := *c.credentials
+	if c.otp != "" {
+		merged.Otp = c.otp
+		c.otp = "" // single-use; PVE accepts a TOTP code exactly once
+	}
+	if c.defaultRealm != "" && merged.Realm == "" && !strings.Contains(merged.Username, "@") {
+		merged.Realm = c.defaultRealm
+	}
+	return &merged
 }
 
 func (c *Client) Ticket(ctx context.Context, credentials *Credentials) (*Session, error) {

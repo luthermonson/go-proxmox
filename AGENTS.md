@@ -70,8 +70,43 @@ xterm.js / VNC protocols Proxmox exposes.
 
 `NewClient(baseURL, opts...)` accepts `Option` funcs. Prefer the non-deprecated
 forms: `WithHTTPClient`, `WithCredentials`, `WithAPIToken`, `WithSession`,
-`WithUserAgent`, `WithLogger`. `WithClient` and `WithLogins` are kept for
-backwards compatibility — don't introduce new uses.
+`WithUserAgent`, `WithLogger`, plus the auth/transport options below.
+`WithClient` and `WithLogins` are kept for backwards compatibility — don't
+introduce new uses.
+
+**TLS and transport options** (`WithInsecureSkipVerify`, `WithRootCAs`,
+`WithRootCAFile`, `WithClientCertificate`, `WithTimeout`, plus the Tier 3
+proxy/retry/interceptor options when they land) defer their side effects
+until `finalizeOptions` runs after all option funcs. This makes option order
+irrelevant — `WithHTTPClient(custom) + WithInsecureSkipVerify()` and the
+reverse both end up with the option applied to `custom.Transport`. The
+shared private helpers `ensureOwnHTTPClient`, `ensureTransport`, and
+`ensureTLSConfig` handle the lazy promotion of `http.DefaultClient` /
+`http.DefaultTransport` to writable clones so transport mutations never
+bleed into the package-global singletons. When you add a new
+transport-touching option, route through those helpers rather than mutating
+`c.httpClient` directly.
+
+**Auth ergonomics.** `WithOTP` stashes a single-use TOTP/2FA code on the
+client and threads it into `Credentials.Otp` inside `sessionCredentials`
+(called by `CreateSession`). The OTP is zeroed after first use so a
+re-authentication after session loss doesn't resend a stale code.
+`WithDefaultRealm` is applied at the same merge point — it sets
+`Credentials.Realm` only when both the field is empty and the username has
+no `@realm` suffix.
+
+**Eager auth.** `WithEagerAuth` exists specifically because pveproxy
+enforces a hardcoded 3-second delay on every 401 from `auth_handler` (PVE
+upstream: `# always delay unauthorized calls by 3 seconds` in
+`PVE::APIServer::AnyEvent`). The library's credential-auth path is
+intentionally reactive — the first request goes out unauthenticated and
+triggers the retry-after-/access/ticket loop — which means the first
+user-facing call eats that 3 seconds. `WithEagerAuth` calls `CreateSession`
+synchronously inside `NewClient` to pay that cost at construction time.
+Errors are swallowed (option funcs can't return errors) and logged at debug
+level; the next user request retries via the existing lazy path. Callers
+who need auth errors surfaced at startup should call `CreateSession`
+directly.
 
 ### Resource model
 
