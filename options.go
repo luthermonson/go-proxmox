@@ -279,3 +279,31 @@ func (c *Client) ensureTLSConfig() *tls.Config {
 	}
 	return t.TLSClientConfig
 }
+
+// WithRequestInterceptor registers a function called on every outgoing HTTP
+// request after the client's auth headers are added and before the request is
+// sent. Use cases: tracing (OpenTelemetry span injection), custom audit
+// headers, correlation IDs, request logging.
+//
+// The interceptor fires from Client.Req, Client.Upload, and
+// Client.UploadReader. Websocket upgrades (Client.TermWebSocket and
+// Client.VNCWebSocket) are exempt — the dialer does not surface a request
+// object the chain could mutate.
+//
+// Multiple WithRequestInterceptor options compose — each call appends to the
+// interceptor chain. Interceptors run in registration order. The first
+// non-nil error short-circuits the request, is wrapped with a
+// "request interceptor:" prefix (so callers can errors.Is against their own
+// sentinel errors), and is returned to the caller; the HTTP request is never
+// sent.
+//
+// A nil fn is silently skipped at registration; nil entries in the chain are
+// also skipped at request time.
+func WithRequestInterceptor(fn func(*http.Request) error) Option {
+	return func(c *Client) {
+		if fn == nil {
+			return
+		}
+		c.interceptors = append(c.interceptors, fn)
+	}
+}
