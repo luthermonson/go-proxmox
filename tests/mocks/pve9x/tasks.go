@@ -124,4 +124,46 @@ func tasks() {
 			{"subdir":"log"},
 			{"subdir":"status"}
 		]}`)
+
+	// --- Watch / Wait test fixtures ----------------------------------------
+	// status — task already stopped, so Wait/Watch terminate on first ping.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:/status$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "status": "stopped",
+        "exitstatus": "OK",
+        "upid": "UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:",
+        "type": "watchme",
+        "id": "99",
+        "user": "root@pam",
+        "node": "node1",
+        "starttime": 1700000000,
+        "endtime": 1700000005
+    }
+}`)
+	// log — has entries so Watch returns a channel.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:/log$").
+		Reply(200).
+		JSON(`{"data":[
+			{"n":1,"t":"line one"},
+			{"n":2,"t":"line two"}
+		]}`)
+
+	// status — task that never produces logs (used to exercise the
+	// "no logs available" error path in Watch).
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:000000AA:000000AA:000000AA:emptylog:AA:root@pam:/status$").
+		Reply(200).
+		JSON(`{"data":{"status":"stopped","exitstatus":"OK","upid":"UPID:node1:000000AA:000000AA:000000AA:emptylog:AA:root@pam:","type":"emptylog","id":"AA","user":"root@pam","node":"node1"}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:000000AA:000000AA:000000AA:emptylog:AA:root@pam:/log$").
+		Reply(200).
+		JSON(`{"data":[]}`)
 }

@@ -3,9 +3,11 @@ package proxmox
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewTask(t *testing.T) {
@@ -122,5 +124,83 @@ func TestTask_Log_Running(t *testing.T) {
 	assert.Len(t, log, 2)
 	assert.Equal(t, "task started", log[0])
 	assert.Equal(t, "processing...", log[1])
+}
+
+func TestTask_Wait_Completed(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	// task is already stopped -> Wait returns nil immediately after first ping.
+	task := NewTask(UPID("UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:"), client)
+	require.NoError(t, task.Wait(ctx, 10*time.Millisecond, 1*time.Second))
+}
+
+func TestTask_WaitFor_Completed(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	task := NewTask(UPID("UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:"), client)
+	require.NoError(t, task.WaitFor(ctx, 1))
+}
+
+func TestTask_WaitForCompleteStatus(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	task := NewTask(UPID("UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:"), client)
+	status, completed, err := task.WaitForCompleteStatus(ctx, 2, 1)
+	require.NoError(t, err)
+	assert.True(t, completed)
+	assert.True(t, status)
+}
+
+func TestTask_Watch(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	task := NewTask(UPID("UPID:node1:00000099:00000099:00000099:watchme:99:root@pam:"), client)
+	watch, err := task.Watch(ctx, 0)
+	require.NoError(t, err)
+	require.NotNil(t, watch)
+
+	// Drain the channel — task is already stopped so the tail loop exits
+	// after the first ping and closes the channel.
+	var lines []string
+	timeout := time.After(5 * time.Second)
+	for {
+		select {
+		case ln, ok := <-watch:
+			if !ok {
+				assert.GreaterOrEqual(t, len(lines), 2)
+				return
+			}
+			lines = append(lines, ln)
+		case <-timeout:
+			t.Fatalf("timed out waiting for watcher to close; got %d lines", len(lines))
+		}
+	}
+}
+
+func TestTask_Watch_NoLogs(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	// This task's log endpoint returns []; Watch retries 3x with a 1s sleep
+	// then returns the "no logs available" error. Total wall-time is ~3s.
+	task := NewTask(UPID("UPID:node1:000000AA:000000AA:000000AA:emptylog:AA:root@pam:"), client)
+	watch, err := task.Watch(ctx, 0)
+	assert.Nil(t, watch)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no logs available")
 }
 

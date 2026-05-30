@@ -188,6 +188,53 @@ func TestCluster_UpdateACMEPlugin(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestCluster_ACMETermsOfService_WithDirectory(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	cluster, err := mockClient().Cluster(ctx)
+	assert.Nil(t, err)
+
+	tos, err := cluster.ACMETermsOfService(ctx, "https://acme-staging-v02.api.letsencrypt.org/directory")
+	assert.Nil(t, err)
+	assert.Contains(t, tos, "letsencrypt.org")
+}
+
+func TestCluster_ACMEPlugins_WithType(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	cluster, err := mockClient().Cluster(ctx)
+	assert.Nil(t, err)
+
+	plugins, err := cluster.ACMEPlugins(ctx, "dns")
+	assert.Nil(t, err)
+	assert.NotNil(t, plugins)
+}
+
+func TestCluster_UpdateACMEPlugin_NilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	cluster, err := mockClient().Cluster(ctx)
+	assert.Nil(t, err)
+
+	// nil opts is allowed; method should still PUT without panicking.
+	assert.Nil(t, cluster.UpdateACMEPlugin(ctx, "cloudflare", nil))
+}
+
+func TestCluster_NewACMEAccount_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	cluster, err := mockClient().Cluster(ctx)
+	assert.Nil(t, err)
+
+	// opts without contact -> error
+	_, err = cluster.NewACMEAccount(ctx, &ACMEAccountOptions{})
+	assert.Error(t, err)
+}
+
 func TestCluster_DeleteACMEPlugin(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

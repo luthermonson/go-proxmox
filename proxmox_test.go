@@ -3,11 +3,13 @@ package proxmox
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/stretchr/testify/assert"
@@ -227,6 +229,91 @@ func TestClientMethods(t *testing.T) {
 	err = client.Delete(ctx, "/version", &v)
 	assert.Nil(t, err)
 	assert.Equal(t, "9.1", v.Release)
+}
+
+func TestErrorPredicates(t *testing.T) {
+	// matching sentinels
+	assert.True(t, IsNotAuthorized(ErrNotAuthorized))
+	assert.True(t, IsTimeout(ErrTimeout))
+	assert.True(t, IsNotFound(ErrNotFound))
+	assert.True(t, IsErrNoop(ErrNoop))
+	assert.True(t, IsAPITokenWebSocketUnsupported(ErrAPITokenWebSocketUnsupported))
+
+	// non-matching errors should return false everywhere
+	other := errors.New("other")
+	assert.False(t, IsNotAuthorized(other))
+	assert.False(t, IsTimeout(other))
+	assert.False(t, IsNotFound(other))
+	assert.False(t, IsErrNoop(other))
+	assert.False(t, IsAPITokenWebSocketUnsupported(other))
+
+	// nil errors
+	assert.False(t, IsNotAuthorized(nil))
+	assert.False(t, IsTimeout(nil))
+	assert.False(t, IsNotFound(nil))
+	assert.False(t, IsErrNoop(nil))
+}
+
+func TestClient_GetWithParams(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// register a persistent /version mock so two calls succeed
+	gock.New(TestURI).
+		Persist().
+		Get("^/version$").
+		Reply(200).
+		JSON(`{"data":{"repoid":"r","release":"9.1","version":"9.1-1"}}`)
+
+	client := mockClient()
+	var v Version
+	err := client.GetWithParams(context.Background(), "/version", map[string]string{"foo": "bar"}, &v)
+	assert.Nil(t, err)
+	assert.Equal(t, "9.1", v.Release)
+
+	// nil data — should still hit the endpoint.
+	v = Version{}
+	err = client.GetWithParams(context.Background(), "/version", nil, &v)
+	assert.Nil(t, err)
+	assert.Equal(t, "9.1", v.Release)
+}
+
+func TestClient_GetWithParams_BadData(t *testing.T) {
+	client := mockClient()
+	// channels can't be marshalled — dataParserForURL surfaces the error.
+	err := client.GetWithParams(context.Background(), "/version", make(chan int), nil)
+	assert.Error(t, err)
+}
+
+func TestClient_DeleteWithParams(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(TestURI).
+		Persist().
+		Delete("^/version$").
+		Reply(200).
+		JSON(`{"data":{"repoid":"r","release":"9.1","version":"9.1-1"}}`)
+
+	client := mockClient()
+	var v Version
+	err := client.DeleteWithParams(context.Background(), "/version", map[string]string{"foo": "bar"}, &v)
+	assert.Nil(t, err)
+}
+
+func TestClient_DeleteWithParams_BadData(t *testing.T) {
+	client := mockClient()
+	err := client.DeleteWithParams(context.Background(), "/version", make(chan int), nil)
+	assert.Error(t, err)
+}
+
+func TestDataParserForURL(t *testing.T) {
+	// Returns key=val pairs in url.Values encoding.
+	out, err := dataParserForURL(map[string]string{"foo": "bar"})
+	assert.NoError(t, err)
+	assert.Equal(t, "foo=bar", out)
+
+	// Marshal error path.
+	_, err = dataParserForURL(make(chan int))
+	assert.Error(t, err)
 }
 
 func TestClient_handleResponse(t *testing.T) {

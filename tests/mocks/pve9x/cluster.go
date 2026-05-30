@@ -2705,4 +2705,14 @@ func clusterReplication() {
 		Get("^/cluster/firewall/groups/test-group/0$").
 		Reply(200).
 		JSON(`{"data":{"pos":0,"type":"in","action":"ACCEPT","enable":1,"source":"10.0.0.0/24"}}`)
+
+	// --- /cluster/tasks ------------------------------------------------------
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/tasks$").
+		Reply(200).
+		JSON(`{"data":[
+			{"upid":"UPID:node1:00000010:00000010:00000010:vzdump:100:root@pam:","node":"node1","type":"vzdump","id":"100","user":"root@pam","status":"OK","starttime":1700000000,"endtime":1700000060},
+			{"upid":"UPID:node2:00000011:00000011:00000011:qmstart:101:root@pam:","node":"node2","type":"qmstart","id":"101","user":"root@pam","status":"running","starttime":1700000100}
+		]}`)
 }
