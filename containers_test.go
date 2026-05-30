@@ -715,3 +715,369 @@ func TestContainer_MigrationTunnelWebSocketPath(t *testing.T) {
 	emptyPath := c.MigrationTunnelWebSocketPath(nil)
 	assert.Contains(t, emptyPath, "/nodes/node1/lxc/100/mtunnelwebsocket")
 }
+
+// ----- Lifecycle / status helpers -----
+
+func TestContainer_Ping(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	err := ct100().Ping(context.Background())
+	assert.Nil(t, err)
+}
+
+func TestContainer_TermProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	term, err := ct100().TermProxy(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, term)
+	assert.Equal(t, "root@pam", term.User)
+	assert.Contains(t, term.UPID, "vncproxy")
+}
+
+func TestContainer_Feature(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	has, err := ct100().Feature(context.Background())
+	assert.Nil(t, err)
+	assert.True(t, has)
+}
+
+func TestContainer_Migrate(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := ct100().Migrate(context.Background(), &ContainerMigrateOptions{
+		Target: "node2",
+		Online: IntOrBool(true),
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "vzmigrate")
+}
+
+func TestContainer_Resize(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := ct100().Resize(context.Background(), "rootfs", "+1G")
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "vzresize")
+}
+
+func TestContainer_MoveVolume(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	task, err := ct100().MoveVolume(context.Background(), &VirtualMachineMoveDiskOptions{
+		Disk:    "rootfs",
+		Storage: "local-lvm",
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, task)
+	assert.Contains(t, string(task.UPID), "vzmovevolume")
+}
+
+func TestContainer_VNCProxy(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vnc, err := ct100().VNCProxy(context.Background(), VNCProxyOptions{
+		Websocket: "1",
+		Height:    768,
+		Width:     1024,
+	})
+	assert.Nil(t, err)
+	require.NotNil(t, vnc)
+	assert.Equal(t, "root@pam", vnc.User)
+	assert.NotEmpty(t, vnc.Ticket)
+}
+
+// ----- Tag helpers (SplitTags / AddTag noop paths) -----
+
+func TestContainer_SplitTags(t *testing.T) {
+	c := &Container{
+		ContainerConfig: &ContainerConfig{Tags: "a;b;c"},
+	}
+	c.SplitTags()
+	assert.Equal(t, []string{"a", "b", "c"}, c.ContainerConfig.TagsSlice)
+}
+
+func TestContainer_HasTag_NilConfig(t *testing.T) {
+	c := &Container{}
+	assert.False(t, c.HasTag("any"))
+
+	// empty tag string also returns false
+	c.ContainerConfig = &ContainerConfig{}
+	assert.False(t, c.HasTag("any"))
+}
+
+func TestContainer_AddTag_NoopWhenPresent(t *testing.T) {
+	c := &Container{
+		ContainerConfig: &ContainerConfig{Tags: "existing"},
+	}
+	_, err := c.AddTag(context.Background(), "existing")
+	assert.ErrorIs(t, err, ErrNoop)
+}
+
+func TestContainer_RemoveTag_NoopWhenAbsent(t *testing.T) {
+	c := &Container{
+		ContainerConfig: &ContainerConfig{Tags: "existing"},
+	}
+	_, err := c.RemoveTag(context.Background(), "missing")
+	assert.ErrorIs(t, err, ErrNoop)
+}
+
+// TestContainer_AddTag_NilTagsSlice covers the SplitTags() lazy-init branch in
+// AddTag — the existing test enters via node.Container which pre-populates
+// TagsSlice through HasTag, so the explicit nil branch on AddTag itself was
+// otherwise unreached.
+func TestContainer_AddTag_NilTagsSlice(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	c := &Container{
+		client:          mockClient(),
+		Node:            "node1",
+		VMID:            101,
+		ContainerConfig: &ContainerConfig{Tags: "preexisting"},
+	}
+	// HasTag of an absent value short-circuits before priming TagsSlice, so
+	// the nil branch in AddTag fires on the next line.
+	_, err := c.AddTag(context.Background(), "fresh")
+	assert.Nil(t, err)
+	assert.Contains(t, c.ContainerConfig.TagsSlice, "fresh")
+	assert.Contains(t, c.ContainerConfig.TagsSlice, "preexisting")
+}
+
+// TestContainer_RemoveTag_NilTagsSlice mirrors AddTag — exercises the
+// SplitTags() lazy-init when TagsSlice is nil on entry.
+func TestContainer_RemoveTag_NilTagsSlice(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	c := &Container{
+		client:          mockClient(),
+		Node:            "node1",
+		VMID:            101,
+		ContainerConfig: &ContainerConfig{Tags: "keep;drop"},
+	}
+	_, err := c.RemoveTag(context.Background(), "drop")
+	assert.Nil(t, err)
+	assert.False(t, c.HasTag("drop"))
+	assert.True(t, c.HasTag("keep"))
+}
+
+// TestContainer_RRDData_TooManyCFs covers the variadic guard rejecting >1 cf.
+func TestContainer_RRDData_TooManyCFs(t *testing.T) {
+	c := &Container{client: mockClient(), Node: "node1", VMID: 100}
+	_, err := c.RRDData(context.Background(), TimeframeHour, AVERAGE, MAX)
+	assert.Error(t, err)
+}
+
+// TestContainer_RRD_TooManyCFs mirrors RRDData for the RRD endpoint.
+func TestContainer_RRD_TooManyCFs(t *testing.T) {
+	c := &Container{client: mockClient(), Node: "node1", VMID: 100}
+	_, err := c.RRD(context.Background(), "cpu", TimeframeHour, AVERAGE, MAX)
+	assert.Error(t, err)
+}
+
+// ----- Error paths: cover post-call `if err != nil { return nil, err }`
+// branches by routing each mutating endpoint at a deliberately-unmocked VMID
+// (999). Gock has no matcher so the request fails, exercising the early
+// return that the happy-path tests skip.
+
+func errCt() *Container {
+	return &Container{client: mockClient(), Node: "node1", VMID: 999}
+}
+
+func TestContainer_ErrorPaths_Mutations(t *testing.T) {
+	defer gock.Off()
+	ctx := context.Background()
+
+	// Delete (DeleteWithParams)
+	_, err := errCt().Delete(ctx, &ContainerDeleteOptions{Force: true})
+	assert.Error(t, err)
+
+	// Lifecycle (Post)
+	_, err = errCt().Start(ctx)
+	assert.Error(t, err)
+	_, err = errCt().Stop(ctx)
+	assert.Error(t, err)
+	_, err = errCt().Suspend(ctx)
+	assert.Error(t, err)
+	_, err = errCt().Reboot(ctx)
+	assert.Error(t, err)
+	_, err = errCt().Resume(ctx)
+	assert.Error(t, err)
+	_, err = errCt().Shutdown(ctx, false, 30)
+	assert.Error(t, err)
+
+	// Clone with explicit NewID (skips the NextID branch but still hits the post error)
+	_, _, err = errCt().Clone(ctx, &ContainerCloneOptions{NewID: 1000})
+	assert.Error(t, err)
+
+	// Migrate / Resize / MoveVolume
+	_, err = errCt().Migrate(ctx, &ContainerMigrateOptions{Target: "node2"})
+	assert.Error(t, err)
+	_, err = errCt().Resize(ctx, "rootfs", "+1G")
+	assert.Error(t, err)
+	_, err = errCt().MoveVolume(ctx, &VirtualMachineMoveDiskOptions{Disk: "rootfs", Storage: "local"})
+	assert.Error(t, err)
+
+	// Snapshots / NewSnapshot / Snapshot ops
+	_, err = errCt().Snapshots(ctx)
+	assert.Error(t, err)
+	_, err = errCt().NewSnapshot(ctx, "snap1")
+	assert.Error(t, err)
+	_, err = errCt().Snapshot("snap1").Rollback(ctx, true)
+	assert.Error(t, err)
+	_, err = errCt().Snapshot("snap1").Delete(ctx)
+	assert.Error(t, err)
+
+	// Firewall rules / NewFirewallRule
+	_, err = errCt().FirewallRules(ctx)
+	assert.Error(t, err)
+	assert.Error(t, errCt().NewFirewallRule(ctx, &FirewallRule{Type: "in", Action: "ACCEPT"}))
+
+	// RemoteMigrate
+	_, err = errCt().RemoteMigrate(ctx, &ContainerRemoteMigrateOptions{TargetEndpoint: "x"})
+	assert.Error(t, err)
+}
+
+// ----- Firewall: top-level + aliases -----
+
+func TestContainer_Firewall(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	fw, err := ct100().Firewall(context.Background())
+	assert.Nil(t, err)
+	require.NotNil(t, fw)
+	assert.NotEmpty(t, fw.Rules)
+	assert.NotEmpty(t, fw.Aliases)
+}
+
+func TestContainer_FirewallAliases(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	aliases, err := c.GetFirewallAliases(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, aliases, 1)
+	assert.Equal(t, "lan", aliases[0].Name)
+
+	alias, err := c.GetFirewallAlias(ctx, "lan")
+	assert.Nil(t, err)
+	require.NotNil(t, alias)
+	assert.Equal(t, "192.168.0.0/16", alias.Cidr)
+
+	assert.Nil(t, c.NewFirewallAlias(ctx, &FirewallAlias{Name: "lan", Cidr: "192.168.0.0/16"}))
+	assert.Nil(t, c.UpdateFirewallAlias(ctx, "lan", &FirewallAlias{Cidr: "192.168.0.0/16", Comment: "updated"}))
+	assert.Nil(t, c.DeleteFirewallAlias(ctx, "lan"))
+}
+
+// ----- Firewall: IPSet collection + entries -----
+
+func TestContainer_FirewallIPSet(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	sets, err := c.GetFirewallIPSet(ctx)
+	assert.Nil(t, err)
+	assert.Len(t, sets, 1)
+	assert.Equal(t, "blocked", sets[0].Name)
+
+	assert.Nil(t, c.NewFirewallIPSet(ctx, FirewallIPSetCreationOption{Name: "blocked"}))
+	assert.Nil(t, c.DeleteFirewallIPSet(ctx, "blocked", true))
+}
+
+func TestContainer_FirewallIPSetEntries(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	entries, err := c.GetFirewallIPSetEntries(ctx, "blocked")
+	assert.Nil(t, err)
+	assert.Len(t, entries, 1)
+	assert.Equal(t, "10.0.0.1", entries[0].CIDR)
+
+	entry, err := c.GetFirewallIPSetEntry(ctx, "blocked", "10.0.0.1")
+	assert.Nil(t, err)
+	require.NotNil(t, entry)
+	assert.Equal(t, "10.0.0.1", entry.CIDR)
+
+	assert.Nil(t, c.NewFirewallIPSetEntry(ctx, "blocked", FirewallIPSetEntryCreationOption{CIDR: "10.0.0.1"}))
+	assert.Nil(t, c.UpdateFirewallIPSetEntry(ctx, "blocked", "10.0.0.1", &FirewallIPSetEntryUpdateOption{Comment: "updated"}))
+	assert.Nil(t, c.DeleteFirewallIPSetEntry(ctx, "blocked", "10.0.0.1", ""))
+}
+
+// ----- Firewall: rules collection + per-rule instance -----
+
+func TestContainer_FirewallRules(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	c := ct100()
+	rules, err := c.FirewallRules(context.Background())
+	assert.Nil(t, err)
+	assert.Len(t, rules, 2)
+	// Returned rules must be wired with parent context so instance methods
+	// resolve to the container's /firewall/rules/{pos} path.
+	for _, r := range rules {
+		assert.NotNil(t, r)
+		assert.Equal(t, "ACCEPT", rules[0].Action)
+	}
+}
+
+func TestContainer_FirewallRule_Getter(t *testing.T) {
+	c := ct100()
+	r := c.FirewallRule(0)
+	assert.NotNil(t, r)
+	assert.Equal(t, 0, r.Pos)
+}
+
+func TestContainer_FirewallRule_GetUpdateDelete(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	rule := c.FirewallRule(0)
+	assert.Nil(t, rule.Get(ctx))
+	assert.Equal(t, "ACCEPT", rule.Action)
+	assert.Equal(t, "in", rule.Type)
+	assert.True(t, rule.IsEnable())
+
+	rule.Comment = "updated via test"
+	assert.Nil(t, rule.Update(ctx))
+	assert.Nil(t, rule.Delete(ctx))
+}
+
+func TestContainer_NewFirewallRule(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	c := ct100()
+	rule := &FirewallRule{Type: "in", Action: "ACCEPT", Enable: 1}
+	assert.Nil(t, c.NewFirewallRule(context.Background(), rule))
+	// After a successful POST, the rule must be wired with parent context so
+	// follow-up Get/Update/Delete on the returned instance route correctly.
+	assert.Nil(t, rule.Get(context.Background()))
+}
+
+// ----- Firewall: options -----
+
+func TestContainer_FirewallOptions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	opts, err := c.GetFirewallOptions(ctx)
+	assert.Nil(t, err)
+	require.NotNil(t, opts)
+	assert.Equal(t, "DROP", opts.PolicyIn)
+
+	assert.Nil(t, c.UpdateFirewallOptions(ctx, &FirewallVirtualMachineOption{
+		PolicyIn:  "ACCEPT",
+		PolicyOut: "ACCEPT",
+	}))
+}
