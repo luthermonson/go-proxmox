@@ -100,6 +100,15 @@ type Client struct {
 
 	sessionExpiresAt time.Time
 	sessionMux       sync.Mutex
+
+	// Option-backed fields. See options.go for the corresponding With*
+	// setters. These are collected during NewClient option evaluation and
+	// applied in finalizeOptions before NewClient returns.
+	otp           string
+	defaultRealm  string
+	eagerAuth     bool
+	timeout       time.Duration
+	tlsMods       []func(*tls.Config)
 }
 
 func NewClient(baseURL string, opts ...Option) *Client {
@@ -117,7 +126,50 @@ func NewClient(baseURL string, opts ...Option) *Client {
 		c.httpClient = http.DefaultClient
 	}
 
+	c.finalizeOptions()
+
 	return c
+}
+
+// finalizeOptions applies deferred option side-effects after all opt funcs
+// have run. Two reasons for deferral:
+//
+//  1. Order independence — TLS option order shouldn't matter, and
+//     WithHTTPClient should compose regardless of whether it ran before or
+//     after the TLS options.
+//  2. We must avoid mutating http.DefaultClient or http.DefaultTransport
+//     (the package-global singletons) when the caller didn't provide their
+//     own. ensureTransport promotes them via Clone() on demand.
+//
+// Order: TLS first (transport-touching), then timeout (on httpClient), then
+// eager auth (which makes a network request and needs everything else
+// settled).
+func (c *Client) finalizeOptions() {
+	if len(c.tlsMods) > 0 {
+		if tc := c.ensureTLSConfig(); tc != nil {
+			for _, mod := range c.tlsMods {
+				mod(tc)
+			}
+		} else {
+			c.log.Debugf("TLS options requested but client's RoundTripper is not an *http.Transport; options have no effect")
+		}
+	}
+
+	if c.timeout > 0 {
+		c.ensureOwnHTTPClient()
+		c.httpClient.Timeout = c.timeout
+	}
+
+	if c.eagerAuth && c.credentials != nil && c.token == "" {
+		// Best-effort eager session. Errors are intentionally swallowed:
+		// the next user request will retry via the existing lazy-auth path,
+		// and option funcs can't return errors. Callers who want auth
+		// errors surfaced at startup time should call CreateSession
+		// explicitly instead of using WithEagerAuth.
+		if err := c.CreateSession(context.Background()); err != nil {
+			c.log.Debugf("WithEagerAuth: CreateSession failed: %v", err)
+		}
+	}
 }
 
 func (c *Client) Version(ctx context.Context) (*Version, error) {

@@ -63,41 +63,70 @@ func main() {
 ```
 
 ### Usage with Client Options
+
+Lab setup (self-signed PVE, short timeout, API token):
+
 ```go
 package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	
+	"time"
+
 	"github.com/luthermonson/go-proxmox"
 )
 
 func main() {
-    insecureHTTPClient := http.Client{
-        Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{
-                InsecureSkipVerify: true,
-            },
-        },
-    }
-    tokenID := "root@pam!mytoken"
-    secret := "somegeneratedapitokenguidefromtheproxmoxui"
-    
-    client := proxmox.NewClient("https://localhost:8006/api2/json",
-        proxmox.WithHTTPClient(&insecureHTTPClient),
-        proxmox.WithAPIToken(tokenID, secret),
-    )
-    
-    version, err := client.Version(context.Background())
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println(version.Release) // 6.3
+	client := proxmox.NewClient("https://localhost:8006/api2/json",
+		proxmox.WithAPIToken("root@pam!mytoken", "somegeneratedapitokenguidefromtheproxmoxui"),
+		proxmox.WithInsecureSkipVerify(),     // lab only
+		proxmox.WithTimeout(30*time.Second),  // http.DefaultClient has no timeout
+	)
+
+	version, err := client.Version(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(version.Release) // 6.3
 }
 ```
+
+Production setup (pinned CA, mTLS optional):
+
+```go
+caBundle, _ := os.ReadFile("/etc/ssl/certs/pve-cluster.pem")
+pool := x509.NewCertPool()
+pool.AppendCertsFromPEM(caBundle)
+
+client := proxmox.NewClient("https://pve.example.com:8006/api2/json",
+	proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+	proxmox.WithRootCAs(pool),
+	proxmox.WithTimeout(30*time.Second),
+	// optional mTLS:
+	// proxmox.WithClientCertificate(clientCert),
+)
+```
+
+### Credential authentication and 2FA
+
+API tokens are the right choice for daemons and CI. For interactive tools — anything with a human typing a password and a TOTP code — use credentials with `WithOTP` and `WithEagerAuth`:
+
+```go
+client := proxmox.NewClient(url,
+	proxmox.WithCredentials(&proxmox.Credentials{
+		Username: "admin",
+		Password: password,
+	}),
+	proxmox.WithDefaultRealm("pam"),  // "admin" gets Realm "pam" merged in
+	proxmox.WithOTP("123456"),        // one-shot; consumed on first /access/ticket
+	proxmox.WithEagerAuth(),          // see note below
+)
+```
+
+`WithEagerAuth` is worth calling out. PVE's pveproxy enforces a **hardcoded 3-second delay on every 401 response** as a brute-force mitigation (see `PVE::APIServer::AnyEvent`'s `# always delay unauthorized calls by 3 seconds` block). With credential auth the library's first request goes out unauthenticated by design — the ticket isn't issued until `/access/ticket` succeeds — so the first user-facing call eats the full 3 seconds. `WithEagerAuth` runs `CreateSession` inside `NewClient` so that cost is paid once at startup and every subsequent request is a normal ticket-authenticated call. Token auth doesn't trigger the 401 path at all and doesn't need this.
+
+The OTP is consumed exactly once; subsequent `RefreshTicket` calls renew the session via the ticket itself and don't need a new code. If the session is fully lost later (PVE restart invalidates tickets), construct a fresh client with a fresh OTP — TOTP codes can't be cached.
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 
