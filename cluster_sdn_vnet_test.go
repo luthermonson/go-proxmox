@@ -92,3 +92,114 @@ func TestVNet_Subnets(t *testing.T) {
 	assert.Nil(t, s.Update(context.Background(), &SDNSubnetOptions{Gateway: "10.0.0.2"}))
 	assert.Nil(t, s.Delete(context.Background()))
 }
+
+// --- error / nil-opts coverage for vnet sub-resource methods ----------------
+
+func TestVNet_EmptyName_FirewallErrors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	v := &VNet{client: mockClient()}
+	_, err := v.FirewallIndex(context.Background())
+	assert.Error(t, err)
+	_, err = v.FirewallOptions(context.Background())
+	assert.Error(t, err)
+	assert.Error(t, v.FirewallOptionsUpdate(context.Background(), &SDNVNetFirewallOptionsUpdate{}))
+	_, err = v.FirewallRules(context.Background())
+	assert.Error(t, err)
+	_, err = v.FirewallRule(context.Background(), 0)
+	assert.Error(t, err)
+	assert.Error(t, v.NewFirewallRule(context.Background(), &SDNVNetFirewallRuleOptions{Type: "in", Action: "ACCEPT"}))
+	assert.Error(t, v.FirewallRuleUpdate(context.Background(), 0, &SDNVNetFirewallRuleOptions{}))
+	assert.Error(t, v.FirewallRuleDelete(context.Background(), 0))
+}
+
+func TestVNet_FirewallOptionsUpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+	v, _ := cluster.SDNVNet(context.Background(), "user1")
+	assert.Nil(t, v.FirewallOptionsUpdate(context.Background(), nil))
+}
+
+func TestVNet_FirewallRuleUpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+	v, _ := cluster.SDNVNet(context.Background(), "user1")
+	assert.Nil(t, v.FirewallRuleUpdate(context.Background(), 0, nil))
+}
+
+func TestVNet_NewFirewallRule_MissingAction(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+	v, _ := cluster.SDNVNet(context.Background(), "user1")
+	// nil opts → error
+	assert.Error(t, v.NewFirewallRule(context.Background(), nil))
+	// Type only → error
+	assert.Error(t, v.NewFirewallRule(context.Background(), &SDNVNetFirewallRuleOptions{Type: "in"}))
+}
+
+func TestVNet_FirewallOptions_NotFound(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	v := &VNet{client: mockClient(), Name: "missing"}
+	_, err := v.FirewallOptions(context.Background())
+	assert.Error(t, err)
+}
+
+func TestVNet_IPs_ErrorBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// empty VNet name
+	empty := &VNet{client: mockClient()}
+	assert.Error(t, empty.CreateIP(context.Background(), &SDNVNetIPOptions{Zone: "z", IP: "1.1.1.1"}))
+	assert.Error(t, empty.UpdateIP(context.Background(), &SDNVNetIPOptions{Zone: "z", IP: "1.1.1.1"}))
+	assert.Error(t, empty.DeleteIP(context.Background(), &SDNVNetIPOptions{Zone: "z", IP: "1.1.1.1"}))
+
+	cluster, _ := mockClient().Cluster(context.Background())
+	v, _ := cluster.SDNVNet(context.Background(), "user1")
+
+	// nil/empty options → validation errors
+	assert.Error(t, v.UpdateIP(context.Background(), nil))
+	assert.Error(t, v.UpdateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
+	assert.Error(t, v.DeleteIP(context.Background(), nil))
+	assert.Error(t, v.DeleteIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
+	assert.Error(t, v.CreateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
+
+	// DeleteIP with MAC populated to exercise the optional path
+	assert.Nil(t, v.DeleteIP(context.Background(), &SDNVNetIPOptions{Zone: "zone1", IP: "10.0.0.10", MAC: "aa:bb:cc:dd:ee:ff"}))
+}
+
+func TestVNet_Subnets_ErrorBranches(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	// empty VNet name
+	empty := &VNet{client: mockClient()}
+	_, err := empty.Subnets(context.Background())
+	assert.Error(t, err)
+	assert.Error(t, empty.NewSubnet(context.Background(), &SDNSubnetOptions{Subnet: "x"}))
+
+	// empty subnet identifiers
+	s := &VNetSubnet{client: mockClient()}
+	assert.Error(t, s.Read(context.Background()))
+	assert.Error(t, s.Update(context.Background(), &SDNSubnetOptions{}))
+	assert.Error(t, s.Delete(context.Background()))
+
+	// NewSubnet with default type/vnet path
+	cluster, _ := mockClient().Cluster(context.Background())
+	v, _ := cluster.SDNVNet(context.Background(), "user1")
+	assert.Nil(t, v.NewSubnet(context.Background(), &SDNSubnetOptions{Subnet: "zone1-10.0.2.0-24"}))
+
+	// nil-opts on Update path
+	s2 := v.Subnet("zone1-10.0.0.0-24")
+	assert.Nil(t, s2.Update(context.Background(), nil))
+}
+
+func TestVNet_Subnets_NotFound(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	v := &VNet{client: mockClient(), Name: "missing"}
+	_, err := v.Subnets(context.Background())
+	assert.Error(t, err)
+}

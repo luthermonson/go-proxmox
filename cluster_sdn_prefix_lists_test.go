@@ -80,3 +80,64 @@ func TestSDNPrefixList_AddEntry(t *testing.T) {
 	assert.NotNil(t, l.AddEntry(context.Background(), nil))
 	assert.NotNil(t, l.AddEntry(context.Background(), &SDNPrefixListEntryOptions{Action: "permit"}))
 }
+
+func TestCluster_SDNPrefixListsFiltered(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	lists, err := cluster.SDNPrefixLists(context.Background(), true, true, true)
+	assert.Nil(t, err)
+	assert.Len(t, lists, 1)
+	assert.Equal(t, "pl1", lists[0].ID)
+}
+
+func TestSDNPrefixList_UpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	l := cluster.SDNPrefixList("pl1")
+	assert.Nil(t, l.Update(context.Background(), nil))
+}
+
+func TestSDNPrefixList_EmptyID_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	l := &SDNPrefixList{client: mockClient()}
+	assert.Error(t, l.Read(context.Background()))
+	assert.Error(t, l.Update(context.Background(), &SDNPrefixListOptions{}))
+	assert.Error(t, l.Delete(context.Background()))
+	_, err := l.ListEntries(context.Background())
+	assert.Error(t, err)
+	assert.Error(t, l.AddEntry(context.Background(), &SDNPrefixListEntryOptions{Action: "permit", Prefix: "10.0.0.0/24"}))
+}
+
+func TestSDNPrefixList_Read_NotFound(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	l := cluster.SDNPrefixList("missing")
+	assert.Error(t, l.Read(context.Background()))
+	_, err := l.ListEntries(context.Background())
+	assert.Error(t, err)
+}
+
+func TestSDNPrefixListEntry_UpdateNilOpts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	cluster, _ := mockClient().Cluster(context.Background())
+
+	e := cluster.SDNPrefixList("pl1").Entry(10)
+	assert.Nil(t, e.Update(context.Background(), nil))
+}
+
+func TestSDNPrefixListEntry_EmptyID_Errors(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	e := &SDNPrefixListEntry{client: mockClient(), Seq: 10}
+	assert.Error(t, e.Read(context.Background()))
+	assert.Error(t, e.Update(context.Background(), &SDNPrefixListEntryOptions{}))
+	assert.Error(t, e.Delete(context.Background()))
+}

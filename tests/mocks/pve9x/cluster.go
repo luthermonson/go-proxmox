@@ -1770,6 +1770,188 @@ func clusterReplication() {
 			{"subdir":"200"}
 		]}`)
 
+	// --- /cluster/sdn apply + zones/vnets mutations + filtered list -----------
+
+	// PUT /cluster/sdn/ — apply pending config (returns UPID)
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/?$").
+		Reply(200).
+		JSON(`{"data":"UPID:node1:0000ABCD:00ABCDEF:00000000:sdnapply:cluster:root@pam:"}`)
+
+	// POST /cluster/sdn/zones — create
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/zones$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// PUT /cluster/sdn/zones/{name} — update (mock by test1)
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/zones/test1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// DELETE /cluster/sdn/zones/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/zones/test1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// POST /cluster/sdn/vnets — create
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/cluster/sdn/vnets$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// PUT /cluster/sdn/vnets/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Put("^/cluster/sdn/vnets/user1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// DELETE /cluster/sdn/vnets/{name}
+	gock.New(config.C.URI).
+		Persist().
+		Delete("^/cluster/sdn/vnets/user1$").
+		Reply(200).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/vnets/user1/subnets — already registered below, leave as-is
+
+	// GET /cluster/sdn/controllers?type=evpn — filtered list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/controllers$").
+		MatchParam("type", "evpn").
+		Reply(200).
+		JSON(`{"data":[{"controller":"ctrl1","type":"evpn","asn":65000}]}`)
+
+	// GET /cluster/sdn/dns?type=powerdns — filtered list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/dns$").
+		MatchParam("type", "powerdns").
+		Reply(200).
+		JSON(`{"data":[{"dns":"pdns1","type":"powerdns"}]}`)
+
+	// GET /cluster/sdn/ipams?type=pve — filtered list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams$").
+		MatchParam("type", "pve").
+		Reply(200).
+		JSON(`{"data":[{"ipam":"pve","type":"pve"}]}`)
+
+	// GET /cluster/sdn/fabrics/fabric?pending=1&running=1 — filtered list
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/fabric$").
+		MatchParam("pending", "1").
+		Reply(200).
+		JSON(`{"data":[{"id":"fab1","protocol":"openfabric","ip_prefix":"10.0.0.0/24","state":"new"}]}`)
+
+	// GET /cluster/sdn/prefix-lists?pending=1&verbose=1
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists$").
+		MatchParam("verbose", "1").
+		Reply(200).
+		JSON(`{"data":[{"id":"pl1","entries":[{"seq":10,"action":"permit","prefix":"10.0.0.0/24"}]}]}`)
+
+	// GET /cluster/sdn/route-maps?running=1
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps$").
+		MatchParam("running", "1").
+		Reply(200).
+		JSON(`{"data":[{"id":"rm1"}]}`)
+
+	// GET /cluster/sdn/route-maps/entries?pending=1
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries$").
+		MatchParam("pending", "1").
+		Reply(200).
+		JSON(`{"data":[{"route-map-id":"rm1","order":10,"action":"permit"}]}`)
+
+	// GET /cluster/sdn/route-maps/entries/rm1?pending=1
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries/rm1$").
+		MatchParam("pending", "1").
+		Reply(200).
+		JSON(`{"data":[{"route-map-id":"rm1","order":10,"action":"permit"}]}`)
+
+	// --- /cluster/sdn error fixtures (404/401) for negative paths -------------
+
+	// GET /cluster/sdn/controllers/missing -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/controllers/missing$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/dns/missing -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/dns/missing$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/ipams/missing -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/ipams/missing$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/fabrics/fabric/missing -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/fabrics/fabric/missing$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/prefix-lists/missing -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists/missing$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/prefix-lists/missing/entries -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/prefix-lists/missing/entries$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/route-maps/entries/missing/entry/99 -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/route-maps/entries/missing/entry/99$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/vnets/missing/subnets -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/missing/subnets$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
+	// GET /cluster/sdn/vnets/missing/firewall/options -> 404
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/cluster/sdn/vnets/missing/firewall/options$").
+		Reply(500).
+		JSON(`{"data":null}`)
+
 	// --- /cluster/sdn lock/rollback/dry-run -----------------------------------
 
 	gock.New(config.C.URI).
