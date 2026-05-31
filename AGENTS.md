@@ -434,6 +434,33 @@ Gated by build tags so they don't run by default: `nodes`, `containers`,
 destructive — they create and delete VMs/containers — and always pair a
 "create" step with a deferred cleanup.
 
+## Release migration guides
+
+Every release that ships at least one apidiff `incompatible` change must
+include a `migration/v<VERSION>.md` file describing the upgrade path FROM
+the previous release. The file is created as part of the release-cut PR,
+not retrofitted later, and is linked from the GitHub release body.
+
+Confirm what's incompatible with:
+
+```shell
+go install golang.org/x/exp/cmd/apidiff@latest
+git worktree add /tmp/old-version v<previous-version>
+cd /tmp/old-version && apidiff -w /tmp/old.api .
+cd <repo>          && apidiff -w /tmp/new.api .
+apidiff -incompatible /tmp/old.api /tmp/new.api
+```
+
+The migration doc should group breaks into themed sections (e.g. "snapshots
+refactored to instance pattern", "indexed device fields dropped",
+"bool → IntOrBool") rather than listing them as a flat dump. Each section
+shows a before/after code example. `v0.7.0.md` is the template; copy its
+structure.
+
+Releases with zero incompatible changes don't need a migration file — the
+GitHub release notes are sufficient. The directory is a record of the
+breaks we've shipped, not a per-release ritual.
+
 ## Repo-specific gotchas
 
 - **Local replace in `go.mod`.** `go.mod` contains

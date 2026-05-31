@@ -303,6 +303,13 @@ The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`T
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
 - [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
 
+### Upgrading between releases
+
+Per-release migration guides live in [`migration/`](./migration/). Each file describes the source-level changes when upgrading FROM the named release.
+
+- [`migration/v0.6.0.md`](./migration/v0.6.0.md) — upgrading from v0.5.x
+- [`migration/v0.7.0.md`](./migration/v0.7.0.md) — upgrading from v0.6.0 (the major cleanup release)
+
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 
 
