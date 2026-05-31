@@ -193,6 +193,111 @@ _ = cluster.NewSDNZone(ctx, &proxmox.SDNZoneOptions{
 })
 ```
 
+### Proxies
+
+Route every request through a forward proxy. Works for `http://`, `https://`, and `socks5://` URLs:
+
+```go
+proxyURL, _ := url.Parse("http://proxy.corp.example.com:3128")
+client := proxmox.NewClient("https://pve.example.com:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithProxy(proxyURL),
+)
+```
+
+Or use the standard `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` env-var convention:
+
+```go
+client := proxmox.NewClient("https://pve.example.com:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithProxyFromEnvironment(),
+)
+```
+
+`WithProxyFromEnvironment` reads env vars per-request (via Go's standard `http.ProxyFromEnvironment`), so changes after `NewClient` take effect on the next call. Composes with `WithHTTPClient`, the TLS options, retry, and request interceptors — option order doesn't matter.
+
+### Retries on transient failures
+
+PVE returns `502` / `503` during cluster transitions and `429` when rate-limited. `WithRetry` installs a `RoundTripper` wrapper that retries with full-jitter exponential backoff, honors `Retry-After` on `429` / `503`, and respects request-context cancellation:
+
+```go
+client := proxmox.NewClient(url,
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRetry(),  // defaults: 3 attempts, 200ms–5s backoff
+)
+```
+
+Tune the defaults for flakier upstreams:
+
+```go
+client := proxmox.NewClient(url,
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRetry(
+        proxmox.WithRetryMax(5),
+        proxmox.WithRetryBackoff(500*time.Millisecond, 30*time.Second),
+    ),
+)
+```
+
+Or replace the predicate that decides what to retry — for example to also retry `423 Locked` while a cluster transition is in flight:
+
+```go
+retryOn423 := func(res *http.Response, err error) bool {
+    if err != nil {
+        return true
+    }
+    switch res.StatusCode {
+    case http.StatusLocked, http.StatusBadGateway,
+        http.StatusServiceUnavailable, http.StatusGatewayTimeout,
+        http.StatusTooManyRequests:
+        return true
+    }
+    return false
+}
+client := proxmox.NewClient(url,
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRetry(proxmox.WithRetryCondition(retryOn423)),
+)
+```
+
+The default predicate retries network errors plus `502` / `503` / `504` / `429`. Only idempotent verbs (`GET`, `PUT`, `DELETE`) and `POST` with a fully-buffered body are eligible — this client always buffers request bodies as `[]byte`, so `POST` is rewindable in practice.
+
+### Request interceptors
+
+Run a function on every outgoing request after the auth headers are populated and before the request is sent. Useful for tracing, correlation IDs, custom audit headers, request logging:
+
+```go
+addCorrelationID := func(req *http.Request) error {
+    req.Header.Set("X-Correlation-Id", "build-1234")
+    return nil
+}
+client := proxmox.NewClient(url,
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRequestInterceptor(addCorrelationID),
+)
+```
+
+Multiple interceptors compose — each `WithRequestInterceptor` call appends to the chain, and they run in registration order. The first non-nil error short-circuits the request (with a `request interceptor:` prefix so callers can `errors.Is` against their own sentinels):
+
+```go
+tracing := func(req *http.Request) error {
+    // pull the active span from req.Context() and inject W3C traceparent.
+    req.Header.Set("Traceparent", traceparent.From(req.Context()))
+    return nil
+}
+audit := func(req *http.Request) error {
+    log.Info().Str("method", req.Method).Str("path", req.URL.Path).Msg("pve")
+    return nil
+}
+client := proxmox.NewClient(url,
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRequestInterceptor(tracing),
+    proxmox.WithRequestInterceptor(audit),
+)
+```
+
+The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`TermWebSocket`, `VNCWebSocket`) are exempt — the dialer doesn't surface a `*http.Request` the chain could mutate.
+
 ### More examples
 
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
