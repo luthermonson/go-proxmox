@@ -438,7 +438,7 @@ type CephPgMap struct {
 
 type CephMonMap struct {
 	Created           time.Time       `json:"created"`
-	DisallowedLeaders string          `json:"disallowed_leaders: "`
+	DisallowedLeaders string          `json:"disallowed_leaders"`
 	ElectionStrategy  int             `json:"election_strategy"`
 	Epoch             int             `json:"epoch"`
 	Features          CephMonFeatures `json:"features"`
@@ -448,7 +448,7 @@ type CephMonMap struct {
 	Modified          time.Time       `json:"modified"`
 	Mons              []ClusterCephMon `json:"mons"`
 	Quorum            []int           `json:"quorum"`
-	RemovedRanks      string          `json:"removed_ranks: "`
+	RemovedRanks      string          `json:"removed_ranks"`
 	StretchMode       bool            `json:"stretch_mode"`
 	TiebreakerMon     string          `json:"tiebreaker_mon"`
 }
@@ -2163,7 +2163,12 @@ type AgentNetworkIPAddress struct {
 	IPAddressType string `json:"ip-address-type"` // ipv4 ipv6
 	IPAddress     string `json:"ip-address"`
 	Prefix        int    `json:"prefix"`
-	MacAddress    string `json:"mac-address"`
+	// Deprecated: QEMU Guest Agent's GuestIpAddress has never carried a
+	// mac-address field (see qga/qapi-schema.json upstream); this was always
+	// unmarshalled as empty. Read the MAC from the parent
+	// AgentNetworkIface.HardwareAddress instead. Will be removed in v0.8.0.
+	// Closes issue #336.
+	MacAddress string `json:"mac-address,omitempty"`
 }
 
 type AgentHostName struct {
@@ -2331,7 +2336,7 @@ type FirewallRule struct {
 	Dest     string `json:"dest,omitempty"`
 	Dport    string `json:"dport,omitempty"`
 	Enable   int    `json:"enable,omitempty"`
-	IcmpType string `json:"icmp_type,omitempty"`
+	IcmpType string `json:"icmp-type,omitempty"`
 	Iface    string `json:"iface,omitempty"`
 	Log      string `json:"log,omitempty"`
 	Macro    string `json:"macro,omitempty"`
@@ -2410,7 +2415,14 @@ type FirewallNodeOption struct {
 	LogLevelIn                       string     `json:"log_level_in,omitempty"`
 	LogLevelOut                      string     `json:"log_level_out,omitempty"`
 	LogNfConntrack                   IntOrBool  `json:"log_nf_conntrack,omitempty"`
-	Ntp                              IntOrBool  `json:"ntp,omitempty"`
+	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
+	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
+	NDP                              IntOrBool  `json:"ndp,omitempty"`
+	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
+	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
+	// has no effect on PVE and reads always return zero. Will be removed in
+	// v0.8.0.
+	Ntp                              IntOrBool  `json:"-"`
 	NFConntrackAllowInvalid          IntOrBool  `json:"nf_conntrack_allow_invalid,omitempty"`
 	// NFConntrackMax — PVE default 262144. Pointer so unset doesn't shrink
 	// the conntrack table to 0. See #199.
@@ -2447,7 +2459,14 @@ type FirewallVirtualMachineOption struct {
 	// updates would disable a security feature that's enabled by default.
 	// See #178 + #199.
 	Macfilter *IntOrBool `json:"macfilter,omitempty"`
-	Ntp         IntOrBool  `json:"ntp,omitempty"`
+	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
+	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
+	NDP         IntOrBool  `json:"ndp,omitempty"`
+	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
+	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
+	// has no effect on PVE and reads always return zero. Will be removed in
+	// v0.8.0.
+	Ntp         IntOrBool  `json:"-"`
 	PolicyIn    string     `json:"policy_in,omitempty"`
 	PolicyOut   string     `json:"policy_out,omitempty"`
 	Radv        IntOrBool  `json:"radv,omitempty"`
@@ -2657,17 +2676,34 @@ type StorageDownloadURLOptions struct {
 	VerifyCertificates *IntOrBool `json:"verify-certificates,omitempty"`
 }
 
+// StorageContentVerification is the last verification result for a PBS-backed
+// backup entry as returned by /nodes/{node}/storage/{storage}/content. UPID
+// points at the verify task; State is the textual outcome (e.g. "ok",
+// "failed").
+type StorageContentVerification struct {
+	State string `json:"state,omitempty"`
+	UPID  string `json:"upid,omitempty"`
+}
+
 type StorageContent struct {
-	Format       string         `json:"format,omitempty"`
-	Size         uint64         `json:"size,omitempty"`
-	Volid        string         `json:"volid,omitempty"`
-	Ctime        StringOrUint64 `json:"ctime,omitempty"`
-	Encryption   string         `json:"encryption,omitempty"`
-	Notes        string         `json:"notes,omitempty"`
-	Parent       string         `json:"parent,omitempty"`
-	Protection   IntOrBool      `json:"protection,omitempty"`
-	Used         uint64         `json:"used,omitempty"`
-	Verification string         `json:"verification,omitempty"`
+	Format     string         `json:"format,omitempty"`
+	Size       uint64         `json:"size,omitempty"`
+	Volid      string         `json:"volid,omitempty"`
+	Ctime      StringOrUint64 `json:"ctime,omitempty"`
+	// Encrypted is the PBS encryption fingerprint, or "1" if the backup is
+	// encrypted without a known fingerprint. PBS-only; empty for other
+	// storage types. (The upstream field is `encrypted`, not `encryption`
+	// — the latter tag was a typo on this struct prior to v0.7.1.)
+	Encrypted    string                       `json:"encrypted,omitempty"`
+	Notes        string                       `json:"notes,omitempty"`
+	Parent       string                       `json:"parent,omitempty"`
+	Protection   IntOrBool                    `json:"protection,omitempty"`
+	Used         uint64                       `json:"used,omitempty"`
+	// Verification is the last PBS verification result for this backup
+	// (PBS-only; nil for other storage types). Upstream returns a nested
+	// object {state, upid}; prior to v0.7.1 this field was typed as a
+	// plain string and never unmarshalled.
+	Verification *StorageContentVerification  `json:"verification,omitempty"`
 	VMID         uint64         `json:"vmid,omitempty"`
 }
 
