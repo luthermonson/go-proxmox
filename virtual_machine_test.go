@@ -467,7 +467,7 @@ func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
 	gock.New(TestURI).
 		Delete("^/nodes/node1/qemu/999$").
 		MatchParams(map[string]string{
-			"force":                      "1",
+			"purge":                      "1",
 			"skiplock":                   "1",
 			"destroy-unreferenced-disks": "1",
 		}).
