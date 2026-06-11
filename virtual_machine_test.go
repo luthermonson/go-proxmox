@@ -451,7 +451,7 @@ func TestVirtualMachine_Delete(t *testing.T) {
 		Node:   "node1",
 	}
 
-	task, err := vm.Delete(ctx)
+	task, err := vm.Delete(ctx, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, task)
 	assert.Equal(t, "node1", task.Node)
@@ -486,7 +486,7 @@ func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
 		SkipLock:                 true,
 		DestroyUnreferencedDisks: true,
 	}
-	task, err := vm.DeleteWithOptions(ctx, options)
+	task, err := vm.Delete(ctx, options)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, task)
 	assert.Equal(t, "node1", task.Node)
@@ -1557,7 +1557,7 @@ func TestVirtualMachine_Delete_ErrorPath(t *testing.T) {
 	defer mocks.Off()
 	gock.New(mockConfig.URI).Delete("^/nodes/node1/qemu/502$").Reply(500)
 	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
-	_, err := vm.Delete(context.Background())
+	_, err := vm.Delete(context.Background(), nil)
 	assert.Error(t, err)
 }
 

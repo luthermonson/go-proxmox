@@ -461,20 +461,7 @@ func (v *VirtualMachine) Reboot(ctx context.Context) (task *Task, err error) {
 	return NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) Delete(ctx context.Context) (task *Task, err error) {
-	if ok, err := v.deleteCloudInitISO(ctx); err != nil || !ok {
-		return nil, err
-	}
-
-	var upid UPID
-	if err = v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d", v.Node, v.VMID), &upid); err != nil {
-		return nil, err
-	}
-
-	return NewTask(upid, v.client), nil
-}
-
-func (v *VirtualMachine) DeleteWithOptions(ctx context.Context, options *VirtualMachineDeleteOptions) (task *Task, err error) {
+func (v *VirtualMachine) Delete(ctx context.Context, options *VirtualMachineDeleteOptions) (task *Task, err error) {
 	if ok, err := v.deleteCloudInitISO(ctx); err != nil || !ok {
 		return nil, err
 	}
