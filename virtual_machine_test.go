@@ -233,7 +233,6 @@ func TestVirtualMachineStateWithoutQMPStatus(t *testing.T) {
 	assert.False(t, hibernatedVM.IsRunning())
 }
 
-
 func TestVirtualMachine_Config(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
@@ -452,12 +451,47 @@ func TestVirtualMachine_Delete(t *testing.T) {
 		Node:   "node1",
 	}
 
-	task, err := vm.Delete(ctx)
+	task, err := vm.Delete(ctx, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, task)
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmdestroy", task.Type)
 	assert.Equal(t, "999", task.ID)
+}
+
+func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Delete("^/nodes/node1/qemu/998$").
+		MatchParams(map[string]string{
+			"purge":                      "1",
+			"skiplock":                   "1",
+			"destroy-unreferenced-disks": "1",
+		}).
+		Reply(200).
+		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:qmdestroy:998:root@pam:"}`)
+	client := mockClient()
+	ctx := context.Background()
+	vm := VirtualMachine{
+		client: client,
+		VMID:   998,
+		Node:   "node1",
+	}
+
+	options := &VirtualMachineDeleteOptions{
+		Purge:                    true,
+		SkipLock:                 true,
+		DestroyUnreferencedDisks: true,
+	}
+	task, err := vm.Delete(ctx, options)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, task)
+	assert.Equal(t, "node1", task.Node)
+	assert.Equal(t, "qmdestroy", task.Type)
+	assert.Equal(t, "998", task.ID)
 }
 
 func TestVirtualMachine_AgentPing(t *testing.T) {
@@ -1466,8 +1500,14 @@ func TestVirtualMachine_ErrorPaths(t *testing.T) {
 		{"ConvertToTemplate", func(v *VirtualMachine, c context.Context) error { _, err := v.ConvertToTemplate(c); return err }, "/nodes/node1/qemu/501/template", "POST"},
 		{"RemoteMigrate", func(v *VirtualMachine, c context.Context) error { _, err := v.RemoteMigrate(c, nil); return err }, "/nodes/node1/qemu/501/remote_migrate", "POST"},
 		{"Migrate", func(v *VirtualMachine, c context.Context) error { _, err := v.Migrate(c, nil); return err }, "/nodes/node1/qemu/501/migrate", "POST"},
-		{"ResizeDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.ResizeDisk(c, "scsi0", "+1G"); return err }, "/nodes/node1/qemu/501/resize", "PUT"},
-		{"UnlinkDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.UnlinkDisk(c, "scsi5", false); return err }, "/nodes/node1/qemu/501/unlink", "PUT"},
+		{"ResizeDisk", func(v *VirtualMachine, c context.Context) error {
+			_, err := v.ResizeDisk(c, "scsi0", "+1G")
+			return err
+		}, "/nodes/node1/qemu/501/resize", "PUT"},
+		{"UnlinkDisk", func(v *VirtualMachine, c context.Context) error {
+			_, err := v.UnlinkDisk(c, "scsi5", false)
+			return err
+		}, "/nodes/node1/qemu/501/unlink", "PUT"},
 		{"MoveDisk", func(v *VirtualMachine, c context.Context) error { _, err := v.MoveDisk(c, "scsi0", nil); return err }, "/nodes/node1/qemu/501/move_disk", "POST"},
 	}
 	ctx := context.Background()
@@ -1517,7 +1557,7 @@ func TestVirtualMachine_Delete_ErrorPath(t *testing.T) {
 	defer mocks.Off()
 	gock.New(mockConfig.URI).Delete("^/nodes/node1/qemu/502$").Reply(500)
 	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 502}
-	_, err := vm.Delete(context.Background())
+	_, err := vm.Delete(context.Background(), nil)
 	assert.Error(t, err)
 }
 
@@ -1563,7 +1603,10 @@ func TestAgent_ErrorPaths(t *testing.T) {
 		{"AgentGetHostName", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetHostName(c); return err }, "/nodes/node1/qemu/501/agent/get-host-name", "GET"},
 		{"AgentGetNetworkIFaces", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentGetNetworkIFaces(c); return err }, "/nodes/node1/qemu/501/agent/network-get-interfaces", "GET"},
 		{"AgentOsInfo", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentOsInfo(c); return err }, "/nodes/node1/qemu/501/agent/get-osinfo", "GET"},
-		{"AgentExec", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentExec(c, []string{"x"}, ""); return err }, "/nodes/node1/qemu/501/agent/exec", "POST"},
+		{"AgentExec", func(v *VirtualMachine, c context.Context) error {
+			_, err := v.AgentExec(c, []string{"x"}, "")
+			return err
+		}, "/nodes/node1/qemu/501/agent/exec", "POST"},
 		{"AgentExecStatus", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentExecStatus(c, 1); return err }, "/nodes/node1/qemu/501/agent/exec-status", "GET"},
 		{"AgentCommandIndex", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentCommandIndex(c); return err }, "/nodes/node1/qemu/501/agent", "GET"},
 		{"AgentCommand", func(v *VirtualMachine, c context.Context) error { _, err := v.AgentCommand(c, "ping"); return err }, "/nodes/node1/qemu/501/agent", "POST"},
@@ -1916,4 +1959,3 @@ func TestVirtualMachine_UnmountCloudInitISO_ConfigError(t *testing.T) {
 	err := vm.UnmountCloudInitISO(context.Background(), "ide2")
 	assert.Error(t, err)
 }
-
