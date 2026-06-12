@@ -465,19 +465,19 @@ func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
 	defer gock.Off()
 
 	gock.New(TestURI).
-		Delete("^/nodes/node1/qemu/999$").
+		Delete("^/nodes/node1/qemu/998$").
 		MatchParams(map[string]string{
 			"purge":                      "1",
 			"skiplock":                   "1",
 			"destroy-unreferenced-disks": "1",
 		}).
 		Reply(200).
-		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:qmdestroy:999:root@pam:"}`)
+		JSON(`{"data": "UPID:node1:00001234:00005678:5A3B7C8D:qmdestroy:998:root@pam:"}`)
 	client := mockClient()
 	ctx := context.Background()
 	vm := VirtualMachine{
 		client: client,
-		VMID:   999,
+		VMID:   998,
 		Node:   "node1",
 	}
 
@@ -491,7 +491,7 @@ func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
 	assert.NotEmpty(t, task)
 	assert.Equal(t, "node1", task.Node)
 	assert.Equal(t, "qmdestroy", task.Type)
-	assert.Equal(t, "999", task.ID)
+	assert.Equal(t, "998", task.ID)
 }
 
 func TestVirtualMachine_AgentPing(t *testing.T) {
