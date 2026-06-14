@@ -151,9 +151,9 @@ type APTUpdate struct {
 	Package      string `json:"Package"`
 	Title        string `json:"Title"`
 	Description  string `json:"Description"`
-	Version      string `json:"Version"`                // new version
-	OldVersion   string `json:"OldVersion,omitempty"`   // installed version
-	Origin       string `json:"Origin"`                 // "Proxmox", "Debian", ...
+	Version      string `json:"Version"`              // new version
+	OldVersion   string `json:"OldVersion,omitempty"` // installed version
+	Origin       string `json:"Origin"`               // "Proxmox", "Debian", ...
 	Arch         string `json:"Arch"`
 	Section      string `json:"Section"`
 	Priority     string `json:"Priority"`
@@ -184,21 +184,21 @@ type APTPackageVersion struct {
 // catalog of repositories the GUI knows how to add; the per-handle Status is
 // nil when the repo isn't configured on the node.
 type APTRepositories struct {
-	Digest        string                  `json:"digest"`
-	Files         []*APTRepositoryFile    `json:"files,omitempty"`
-	Errors        []*APTRepositoryError   `json:"errors,omitempty"`
-	Infos         []*APTRepositoryInfo    `json:"infos,omitempty"`
-	StandardRepos []*APTStandardRepo      `json:"standard-repos,omitempty"`
+	Digest        string                `json:"digest"`
+	Files         []*APTRepositoryFile  `json:"files,omitempty"`
+	Errors        []*APTRepositoryError `json:"errors,omitempty"`
+	Infos         []*APTRepositoryInfo  `json:"infos,omitempty"`
+	StandardRepos []*APTStandardRepo    `json:"standard-repos,omitempty"`
 }
 
 // APTRepositoryFile is one apt sources file on disk. FileType is "list"
 // (one-line) or "sources" (deb822). Digest is the per-file digest as a byte
 // array (PVE returns it as a JSON array of integers).
 type APTRepositoryFile struct {
-	Path         string            `json:"path"`
-	FileType     string            `json:"file-type"`
-	Digest       []int             `json:"digest,omitempty"`
-	Repositories []*APTRepository  `json:"repositories,omitempty"`
+	Path         string           `json:"path"`
+	FileType     string           `json:"file-type"`
+	Digest       []int            `json:"digest,omitempty"`
+	Repositories []*APTRepository `json:"repositories,omitempty"`
 }
 
 // APTRepository is a single repository entry within a file. Components,
@@ -437,20 +437,20 @@ type CephPgMap struct {
 }
 
 type CephMonMap struct {
-	Created           time.Time       `json:"created"`
-	DisallowedLeaders string          `json:"disallowed_leaders"`
-	ElectionStrategy  int             `json:"election_strategy"`
-	Epoch             int             `json:"epoch"`
-	Features          CephMonFeatures `json:"features"`
-	Fsid              string          `json:"fsid"`
-	MinMonRelease     int             `json:"min_mon_release"`
-	MinMonReleaseName string          `json:"min_mon_release_name"`
-	Modified          time.Time       `json:"modified"`
+	Created           time.Time        `json:"created"`
+	DisallowedLeaders string           `json:"disallowed_leaders"`
+	ElectionStrategy  int              `json:"election_strategy"`
+	Epoch             int              `json:"epoch"`
+	Features          CephMonFeatures  `json:"features"`
+	Fsid              string           `json:"fsid"`
+	MinMonRelease     int              `json:"min_mon_release"`
+	MinMonReleaseName string           `json:"min_mon_release_name"`
+	Modified          time.Time        `json:"modified"`
 	Mons              []ClusterCephMon `json:"mons"`
-	Quorum            []int           `json:"quorum"`
-	RemovedRanks      string          `json:"removed_ranks"`
-	StretchMode       bool            `json:"stretch_mode"`
-	TiebreakerMon     string          `json:"tiebreaker_mon"`
+	Quorum            []int            `json:"quorum"`
+	RemovedRanks      string           `json:"removed_ranks"`
+	StretchMode       bool             `json:"stretch_mode"`
+	TiebreakerMon     string           `json:"tiebreaker_mon"`
 }
 
 // ClusterCephMon is the cluster-status snapshot of a monitor (used inside
@@ -786,18 +786,18 @@ func (ec *CephPoolErasureCoding) String() string {
 // that should be preserved when the caller leaves the field unset; this avoids
 // silently clobbering Ceph defaults (size=3, min_size=2, pg_num=128, etc.).
 type CephPoolOptions struct {
-	Name             string                 `json:"name,omitempty"`
-	AddStorages      *bool                  `json:"add_storages,omitempty"`
-	Application      string                 `json:"application,omitempty"`
-	CrushRule        string                 `json:"crush_rule,omitempty"`
-	ErasureCoding    *CephPoolErasureCoding `json:"-"` // serialized by helper, see CreateCephPool
-	MinSize          *int                   `json:"min_size,omitempty"`
-	PgAutoscaleMode  string                 `json:"pg_autoscale_mode,omitempty"`
-	PgNum            *int                   `json:"pg_num,omitempty"`
-	PgNumMin         *int                   `json:"pg_num_min,omitempty"`
-	Size             *int                   `json:"size,omitempty"`
-	TargetSize       string                 `json:"target_size,omitempty"`
-	TargetSizeRatio  *float64               `json:"target_size_ratio,omitempty"`
+	Name            string                 `json:"name,omitempty"`
+	AddStorages     *bool                  `json:"add_storages,omitempty"`
+	Application     string                 `json:"application,omitempty"`
+	CrushRule       string                 `json:"crush_rule,omitempty"`
+	ErasureCoding   *CephPoolErasureCoding `json:"-"` // serialized by helper, see CreateCephPool
+	MinSize         *int                   `json:"min_size,omitempty"`
+	PgAutoscaleMode string                 `json:"pg_autoscale_mode,omitempty"`
+	PgNum           *int                   `json:"pg_num,omitempty"`
+	PgNumMin        *int                   `json:"pg_num_min,omitempty"`
+	Size            *int                   `json:"size,omitempty"`
+	TargetSize      string                 `json:"target_size,omitempty"`
+	TargetSizeRatio *float64               `json:"target_size_ratio,omitempty"`
 }
 
 type NodeStatuses []*NodeStatus
@@ -1064,8 +1064,8 @@ type VirtualMachineConfig struct {
 	// controller when nil. See #199.
 	SCSIHW    *string `json:"scsihw,omitempty"`
 	TPMState0 string  `json:"tpmstate0,omitempty"`
-	Rng0      string `json:"rng0,omitempty"`
-	Audio0    string `json:"audio0,omitempty"`
+	Rng0      string  `json:"rng0,omitempty"`
+	Audio0    string  `json:"audio0,omitempty"`
 
 	// Indexed devices. Populated by UnmarshalJSON from the raw JSON object;
 	// keys are the on-the-wire form ("net0", "scsi30", "ipconfig20", ...).
@@ -1213,8 +1213,8 @@ type VirtualMachineMigrateOptions struct {
 	// BWLimit — PVE default is the datacenter/storage migrate bandwidth
 	// limit. A plain uint64 zero would suppress all rate-limiting on this
 	// call; pointer keeps the datacenter default when nil. See #199.
-	BWLimit *uint64   `json:"bwlimit,omitempty"`
-	Force   IntOrBool `json:"force,omitempty"`
+	BWLimit          *uint64   `json:"bwlimit,omitempty"`
+	Force            IntOrBool `json:"force,omitempty"`
 	MigrationNetwork string    `json:"migration_network,omitempty"`
 	MigrationType    string    `json:"migration_type,omitempty"`
 	Online           IntOrBool `json:"online,omitempty"`
@@ -1226,7 +1226,7 @@ type ContainerMigrateOptions struct {
 	Target string `json:"target"`
 	// BWLimit — see VirtualMachineMigrateOptions.BWLimit; same datacenter
 	// default applies for container migrations.
-	BWLimit *uint64 `json:"bwlimit,omitempty"`
+	BWLimit *uint64   `json:"bwlimit,omitempty"`
 	Online  IntOrBool `json:"online,omitempty"`
 	Restart IntOrBool `json:"restart,omitempty"`
 }
@@ -1251,8 +1251,8 @@ type ContainerDeleteOptions struct {
 // pvesh docs for the exact shape.
 type ContainerRemoteMigrateOptions struct {
 	TargetEndpoint string    `json:"target-endpoint"`
-	TargetBridge   string    `json:"target-bridge"`            // "src=tgt,src2=tgt2" map
-	TargetStorage  string    `json:"target-storage"`           // "src=tgt,src2=tgt2" map
+	TargetBridge   string    `json:"target-bridge"`  // "src=tgt,src2=tgt2" map
+	TargetStorage  string    `json:"target-storage"` // "src=tgt,src2=tgt2" map
 	TargetVMID     int       `json:"target-vmid,omitempty"`
 	BWLimit        uint64    `json:"bwlimit,omitempty"`
 	Delete         IntOrBool `json:"delete,omitempty"`
@@ -1372,8 +1372,8 @@ type VirtualMachineMigratePreconditionsBlockingHAResource struct {
 // VirtualMachineMigratePreconditionsNotAllowedNodes carries the per-node
 // reasons a target node is rejected for migration.
 type VirtualMachineMigratePreconditionsNotAllowedNodes struct {
-	UnavailableStorages  []string                                                `json:"unavailable_storages,omitempty"`
-	BlockingHAResources  []*VirtualMachineMigratePreconditionsBlockingHAResource `json:"blocking-ha-resources,omitempty"`
+	UnavailableStorages []string                                                `json:"unavailable_storages,omitempty"`
+	BlockingHAResources []*VirtualMachineMigratePreconditionsBlockingHAResource `json:"blocking-ha-resources,omitempty"`
 }
 
 // VirtualMachineMigratePreconditions is the response from
@@ -1381,15 +1381,15 @@ type VirtualMachineMigratePreconditionsNotAllowedNodes struct {
 // VM can be migrated, which nodes accept it, and what local state would
 // have to be moved along with it. Pre-flight only; no task is created.
 type VirtualMachineMigratePreconditions struct {
-	Running             bool                                                          `json:"running"`
-	HasDBusVMState      bool                                                          `json:"has-dbus-vmstate"`
-	AllowedNodes        []string                                                      `json:"allowed_nodes,omitempty"`
-	NotAllowedNodes     map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
-	LocalDisks          []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
-	LocalResources      []string                                                      `json:"local_resources,omitempty"`
-	MappedResources     []string                                                      `json:"mapped-resources,omitempty"`
-	MappedResourceInfo  map[string]interface{}                                        `json:"mapped-resource-info,omitempty"`
-	DependentHAResources []string                                                     `json:"dependent-ha-resources,omitempty"`
+	Running              bool                                                          `json:"running"`
+	HasDBusVMState       bool                                                          `json:"has-dbus-vmstate"`
+	AllowedNodes         []string                                                      `json:"allowed_nodes,omitempty"`
+	NotAllowedNodes      map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
+	LocalDisks           []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
+	LocalResources       []string                                                      `json:"local_resources,omitempty"`
+	MappedResources      []string                                                      `json:"mapped-resources,omitempty"`
+	MappedResourceInfo   map[string]interface{}                                        `json:"mapped-resource-info,omitempty"`
+	DependentHAResources []string                                                      `json:"dependent-ha-resources,omitempty"`
 }
 
 // SpiceProxy carries the SPICE connection info returned by /spiceproxy.
@@ -1465,7 +1465,7 @@ type VirtualMachineCloneOptions struct {
 	NewID int `json:"newid"`
 	// BWLimit — PVE default is the datacenter/storage clone limit. Pointer
 	// keeps the configured default when nil. See #199.
-	BWLimit *uint64 `json:"bwlimit,omitempty"`
+	BWLimit     *uint64   `json:"bwlimit,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Format      string    `json:"format,omitempty"`
 	Full        IntOrBool `json:"full,omitempty"`
@@ -1480,7 +1480,7 @@ type VirtualMachineMoveDiskOptions struct {
 	Disk string `json:"disk"`
 	// BWLimit — PVE default is the datacenter/storage move limit. Pointer
 	// keeps the configured default when nil. See #199.
-	BWLimit *uint64 `json:"bwlimit,omitempty"`
+	BWLimit      *uint64   `json:"bwlimit,omitempty"`
 	Delete       IntOrBool `json:"delete,omitempty"`
 	Digest       string    `json:"digest,omitempty"`
 	Format       string    `json:"format,omitempty"`
@@ -1593,7 +1593,7 @@ type ContainerCloneOptions struct {
 	NewID int `json:"newid"`
 	// BWLimit — see VirtualMachineCloneOptions.BWLimit; same datacenter
 	// default applies for container clones.
-	BWLimit *uint64 `json:"bwlimit,omitempty"`
+	BWLimit     *uint64   `json:"bwlimit,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Full        IntOrBool `json:"full,omitempty"`
 	Hostname    string    `json:"hostname,omitempty"`
@@ -2214,22 +2214,22 @@ type AgentFileRead struct {
 // element of AgentGetFsInfo.Result describes one mounted filesystem inside
 // the guest.
 type AgentFsInfo struct {
-	Name           string                  `json:"name"`
-	Mountpoint     string                  `json:"mountpoint"`
-	Type           string                  `json:"type"`
-	UsedBytes      uint64                  `json:"used-bytes,omitempty"`
-	TotalBytes     uint64                  `json:"total-bytes,omitempty"`
-	Disk           []*AgentFsInfoDisk      `json:"disk,omitempty"`
+	Name       string             `json:"name"`
+	Mountpoint string             `json:"mountpoint"`
+	Type       string             `json:"type"`
+	UsedBytes  uint64             `json:"used-bytes,omitempty"`
+	TotalBytes uint64             `json:"total-bytes,omitempty"`
+	Disk       []*AgentFsInfoDisk `json:"disk,omitempty"`
 }
 
 type AgentFsInfoDisk struct {
-	Serial  string             `json:"serial,omitempty"`
-	BusType string             `json:"bus-type,omitempty"`
-	Bus     int                `json:"bus,omitempty"`
-	Unit    int                `json:"unit,omitempty"`
-	Target  int                `json:"target,omitempty"`
+	Serial        string        `json:"serial,omitempty"`
+	BusType       string        `json:"bus-type,omitempty"`
+	Bus           int           `json:"bus,omitempty"`
+	Unit          int           `json:"unit,omitempty"`
+	Target        int           `json:"target,omitempty"`
 	PciController *AgentPciCtrl `json:"pci-controller,omitempty"`
-	Dev     string             `json:"dev,omitempty"`
+	Dev           string        `json:"dev,omitempty"`
 }
 
 type AgentPciCtrl struct {
@@ -2254,8 +2254,8 @@ type AgentUser struct {
 // AgentVCPU represents one logical CPU from qga's guest-get-vcpus. PVE
 // passes the QGA payload through verbatim.
 type AgentVCPU struct {
-	LogicalID int  `json:"logical-id"`
-	Online    bool `json:"online"`
+	LogicalID  int  `json:"logical-id"`
+	Online     bool `json:"online"`
 	CanOffline bool `json:"can-offline,omitempty"`
 }
 
@@ -2274,9 +2274,9 @@ type AgentCommandInfo struct {
 // AgentMemoryBlock describes one hot-pluggable memory block as reported by
 // qga's guest-get-memory-blocks.
 type AgentMemoryBlock struct {
-	PhysIndex   int  `json:"phys-index"`
-	Online      bool `json:"online"`
-	CanOffline  bool `json:"can-offline,omitempty"`
+	PhysIndex  int  `json:"phys-index"`
+	Online     bool `json:"online"`
+	CanOffline bool `json:"can-offline,omitempty"`
 }
 
 // AgentMemoryBlockInfo is the response payload from qga's
@@ -2411,19 +2411,19 @@ type FirewallNodeOption struct {
 	// Enable — PVE default 1 (node firewall on). Unset/zero on partial
 	// updates silently disables an already-enabled node firewall. See
 	// #178 + #199.
-	Enable                           *IntOrBool `json:"enable,omitempty"`
-	LogLevelIn                       string     `json:"log_level_in,omitempty"`
-	LogLevelOut                      string     `json:"log_level_out,omitempty"`
-	LogNfConntrack                   IntOrBool  `json:"log_nf_conntrack,omitempty"`
+	Enable         *IntOrBool `json:"enable,omitempty"`
+	LogLevelIn     string     `json:"log_level_in,omitempty"`
+	LogLevelOut    string     `json:"log_level_out,omitempty"`
+	LogNfConntrack IntOrBool  `json:"log_nf_conntrack,omitempty"`
 	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
 	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
-	NDP                              IntOrBool  `json:"ndp,omitempty"`
+	NDP IntOrBool `json:"ndp,omitempty"`
 	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
 	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
 	// has no effect on PVE and reads always return zero. Will be removed in
 	// v0.8.0.
-	Ntp                              IntOrBool  `json:"-"`
-	NFConntrackAllowInvalid          IntOrBool  `json:"nf_conntrack_allow_invalid,omitempty"`
+	Ntp                     IntOrBool `json:"-"`
+	NFConntrackAllowInvalid IntOrBool `json:"nf_conntrack_allow_invalid,omitempty"`
 	// NFConntrackMax — PVE default 262144. Pointer so unset doesn't shrink
 	// the conntrack table to 0. See #199.
 	NFConntrackMax *int `json:"nf_conntrack_max,omitempty"`
@@ -2440,36 +2440,36 @@ type FirewallNodeOption struct {
 	ProtectionSynfloodBurst *int `json:"protection_synflood_burst,omitempty"`
 	// ProtectionSynfloodRate — PVE default 200 (packets/sec). Pointer so
 	// unset doesn't override the SYN-flood rate threshold. See #199.
-	ProtectionSynfloodRate *int `json:"protection_synflood_rate,omitempty"`
-	SmurfLogLevel                    string     `json:"smurf_log_level,omitempty"`
-	TCPFlagsLogLevel                 string     `json:"tcp_flags_log_level,omitempty"`
-	TCPflags                         IntOrBool  `json:"tcpflags,omitempty"`
+	ProtectionSynfloodRate *int      `json:"protection_synflood_rate,omitempty"`
+	SmurfLogLevel          string    `json:"smurf_log_level,omitempty"`
+	TCPFlagsLogLevel       string    `json:"tcp_flags_log_level,omitempty"`
+	TCPflags               IntOrBool `json:"tcpflags,omitempty"`
 }
 
 // Per-VM firewall is opt-in (Enable defaults to 0) by design, in contrast to
 // FirewallNodeOption which ships enabled. See the doc comment on
 // FirewallNodeOption for the three-gate model.
 type FirewallVirtualMachineOption struct {
-	Enable      IntOrBool  `json:"enable,omitempty"`
-	Dhcp        IntOrBool  `json:"dhcp,omitempty"`
-	Ipfilter    IntOrBool  `json:"ipfilter,omitempty"`
-	LogLevelIn  string     `json:"log_level_in,omitempty"`
-	LogLevelOut string     `json:"log_level_out,omitempty"`
+	Enable      IntOrBool `json:"enable,omitempty"`
+	Dhcp        IntOrBool `json:"dhcp,omitempty"`
+	Ipfilter    IntOrBool `json:"ipfilter,omitempty"`
+	LogLevelIn  string    `json:"log_level_in,omitempty"`
+	LogLevelOut string    `json:"log_level_out,omitempty"`
 	// Macfilter — PVE default 1 (MAC filtering on). Unset on partial
 	// updates would disable a security feature that's enabled by default.
 	// See #178 + #199.
 	Macfilter *IntOrBool `json:"macfilter,omitempty"`
 	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
 	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
-	NDP         IntOrBool  `json:"ndp,omitempty"`
+	NDP IntOrBool `json:"ndp,omitempty"`
 	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
 	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
 	// has no effect on PVE and reads always return zero. Will be removed in
 	// v0.8.0.
-	Ntp         IntOrBool  `json:"-"`
-	PolicyIn    string     `json:"policy_in,omitempty"`
-	PolicyOut   string     `json:"policy_out,omitempty"`
-	Radv        IntOrBool  `json:"radv,omitempty"`
+	Ntp       IntOrBool `json:"-"`
+	PolicyIn  string    `json:"policy_in,omitempty"`
+	PolicyOut string    `json:"policy_out,omitempty"`
+	Radv      IntOrBool `json:"radv,omitempty"`
 }
 
 // VirtualMachineSnapshot is one entry from
@@ -2582,7 +2582,7 @@ type DomainSyncOptions struct {
 	// "none"; pointer prevents an unset Go zero from being interpreted as
 	// an override. See #199.
 	RemoveVanished *string `json:"remove-vanished,omitempty"`
-	Scope          string     `json:"scope,omitempty"` // users, groups, both
+	Scope          string  `json:"scope,omitempty"` // users, groups, both
 }
 
 type Groups []*Group
@@ -2618,12 +2618,12 @@ type UserOptions struct {
 	Email   string    `json:"email,omitempty"`
 	// Enable — PVE default 1 (accounts active). Unset on partial updates
 	// would silently disable a user account. See #178 + #199.
-	Enable *IntOrBool `json:"enable,omitempty"`
-	Expire    int       `json:"expire,omitempty"`
-	Firstname string    `json:"firstname,omitempty"`
-	Groups    CSV       `json:"groups,omitempty"`
-	Keys      string    `json:"keys,omitempty"`
-	Lastname  string    `json:"lastname,omitempty"`
+	Enable    *IntOrBool `json:"enable,omitempty"`
+	Expire    int        `json:"expire,omitempty"`
+	Firstname string     `json:"firstname,omitempty"`
+	Groups    CSV        `json:"groups,omitempty"`
+	Keys      string     `json:"keys,omitempty"`
+	Lastname  string     `json:"lastname,omitempty"`
 }
 
 type Tokens []*Token
@@ -2662,14 +2662,14 @@ type ACLOptions struct {
 }
 
 type StorageDownloadURLOptions struct {
-	Content            string    `json:"content,omitempty"`
-	Filename           string    `json:"filename,omitempty"`
-	Node               string    `json:"node,omitempty"`
-	Storage            string    `json:"storage,omitempty"`
-	URL                string    `json:"url,omitempty"`
-	Checksum           string    `json:"checksum,omitempty"`
-	ChecksumAlgorithm  string    `json:"checksum-algorithm,omitempty"`
-	Compression        string    `json:"compression,omitempty"`
+	Content           string `json:"content,omitempty"`
+	Filename          string `json:"filename,omitempty"`
+	Node              string `json:"node,omitempty"`
+	Storage           string `json:"storage,omitempty"`
+	URL               string `json:"url,omitempty"`
+	Checksum          string `json:"checksum,omitempty"`
+	ChecksumAlgorithm string `json:"checksum-algorithm,omitempty"`
+	Compression       string `json:"compression,omitempty"`
 	// VerifyCertificates — PVE default 1 (verify TLS certs on remote
 	// metrics push). Unset on partial updates would silently disable cert
 	// verification. See #178 + #199.
@@ -2686,25 +2686,25 @@ type StorageContentVerification struct {
 }
 
 type StorageContent struct {
-	Format     string         `json:"format,omitempty"`
-	Size       uint64         `json:"size,omitempty"`
-	Volid      string         `json:"volid,omitempty"`
-	Ctime      StringOrUint64 `json:"ctime,omitempty"`
+	Format string         `json:"format,omitempty"`
+	Size   uint64         `json:"size,omitempty"`
+	Volid  string         `json:"volid,omitempty"`
+	Ctime  StringOrUint64 `json:"ctime,omitempty"`
 	// Encrypted is the PBS encryption fingerprint, or "1" if the backup is
 	// encrypted without a known fingerprint. PBS-only; empty for other
 	// storage types. (The upstream field is `encrypted`, not `encryption`
 	// — the latter tag was a typo on this struct prior to v0.7.1.)
-	Encrypted    string                       `json:"encrypted,omitempty"`
-	Notes        string                       `json:"notes,omitempty"`
-	Parent       string                       `json:"parent,omitempty"`
-	Protection   IntOrBool                    `json:"protection,omitempty"`
-	Used         uint64                       `json:"used,omitempty"`
+	Encrypted  string    `json:"encrypted,omitempty"`
+	Notes      string    `json:"notes,omitempty"`
+	Parent     string    `json:"parent,omitempty"`
+	Protection IntOrBool `json:"protection,omitempty"`
+	Used       uint64    `json:"used,omitempty"`
 	// Verification is the last PBS verification result for this backup
 	// (PBS-only; nil for other storage types). Upstream returns a nested
 	// object {state, upid}; prior to v0.7.1 this field was typed as a
 	// plain string and never unmarshalled.
-	Verification *StorageContentVerification  `json:"verification,omitempty"`
-	VMID         uint64         `json:"vmid,omitempty"`
+	Verification *StorageContentVerification `json:"verification,omitempty"`
+	VMID         uint64                      `json:"vmid,omitempty"`
 }
 
 // StoragePruneBackupsOptions filters which backups PreviewPruneBackups and
@@ -2936,7 +2936,6 @@ type FirewallMacro struct {
 	Descr string `json:"descr,omitempty"`
 }
 
-
 // ---- /cluster/ha types -------------------------------------------------------
 
 // HAGroup is a node-affinity group resources can be bound to. Deprecated by
@@ -2991,7 +2990,7 @@ type HAResource struct {
 // HAResourceCreateOption mirrors HAResource for POST; State/Failback/
 // MaxRelocate/MaxRestart use pointers for the same reason — see HAResource.
 type HAResourceCreateOption struct {
-	SID string `json:"sid"`
+	SID         string     `json:"sid"`
 	Type        string     `json:"type,omitempty"`
 	Group       string     `json:"group,omitempty"`
 	Comment     string     `json:"comment,omitempty"`
@@ -3004,7 +3003,7 @@ type HAResourceCreateOption struct {
 // HAResourceUpdateOption mirrors HAResource for PUT; pointer fields per
 // HAResource. The PUT-only Delete selector unsets fields server-side.
 type HAResourceUpdateOption struct {
-	Delete string `json:"delete,omitempty"`
+	Delete      string     `json:"delete,omitempty"`
 	Digest      string     `json:"digest,omitempty"`
 	Group       string     `json:"group,omitempty"`
 	Comment     string     `json:"comment,omitempty"`
@@ -3095,10 +3094,10 @@ type ReplicationJob struct {
 // ReplicationJobOptions mirrors ReplicationJob for POST; Schedule is a
 // pointer for the same reason — see ReplicationJob.
 type ReplicationJobOptions struct {
-	ID       string  `json:"id"`
-	Target   string  `json:"target"`
-	Type     string  `json:"type"`
-	Schedule *string `json:"schedule,omitempty"`
+	ID        string           `json:"id"`
+	Target    string           `json:"target"`
+	Type      string           `json:"type"`
+	Schedule  *string          `json:"schedule,omitempty"`
 	Comment   string           `json:"comment,omitempty"`
 	Disable   IntOrBool        `json:"disable,omitempty"`
 	Rate      *StringOrFloat64 `json:"rate,omitempty"`
@@ -3109,9 +3108,9 @@ type ReplicationJobOptions struct {
 // ReplicationJobUpdateOption mirrors ReplicationJob for PUT; Schedule
 // pointer per ReplicationJob. Delete unsets fields server-side.
 type ReplicationJobUpdateOption struct {
-	Delete   string  `json:"delete,omitempty"`
-	Digest   string  `json:"digest,omitempty"`
-	Schedule *string `json:"schedule,omitempty"`
+	Delete    string           `json:"delete,omitempty"`
+	Digest    string           `json:"digest,omitempty"`
+	Schedule  *string          `json:"schedule,omitempty"`
 	Comment   string           `json:"comment,omitempty"`
 	Disable   IntOrBool        `json:"disable,omitempty"`
 	Rate      *StringOrFloat64 `json:"rate,omitempty"`
@@ -3123,10 +3122,10 @@ type ReplicationJobUpdateOption struct {
 // the master process state plus LRM details. Fields are loosely typed because
 // PVE's manager_status is a JSON blob that evolves between releases.
 type HAManagerStatus struct {
-	ManagerStatus map[string]any           `json:"manager_status,omitempty"`
-	NodeStatus    map[string]string        `json:"node_status,omitempty"`
+	ManagerStatus map[string]any            `json:"manager_status,omitempty"`
+	NodeStatus    map[string]string         `json:"node_status,omitempty"`
 	ServiceStatus map[string]map[string]any `json:"service_status,omitempty"`
-	Quorum        map[string]any           `json:"quorum,omitempty"`
+	Quorum        map[string]any            `json:"quorum,omitempty"`
 }
 
 type (
@@ -3152,19 +3151,19 @@ const (
 )
 
 type VirtualMachineBackupOptions struct {
-	All                IntOrBool                              `json:"all,omitempty"`
-	BwLimit            uint                                   `json:"bwlimit,omitempty"`
-	Compress           VirtualMachineBackupCompress           `json:"compress,omitempty"`
-	DumpDir            string                                 `json:"dumpDir,omitempty"`
-	Exclude            string                                 `json:"exclude,omitempty"`
-	ExcludePath        []string                               `json:"exclude-path,omitempty"`
+	All         IntOrBool                    `json:"all,omitempty"`
+	BwLimit     uint                         `json:"bwlimit,omitempty"`
+	Compress    VirtualMachineBackupCompress `json:"compress,omitempty"`
+	DumpDir     string                       `json:"dumpDir,omitempty"`
+	Exclude     string                       `json:"exclude,omitempty"`
+	ExcludePath []string                     `json:"exclude-path,omitempty"`
 	// IoNice — PVE default 7 (best-effort scheduler class). A plain uint
 	// zero would request realtime priority (class 0) instead of preserving
 	// the configured default. See #199.
 	IoNice *uint `json:"ionice,omitempty"`
 	// LockWait — PVE default 180 (seconds the backup waits for the guest
 	// lock). Pointer so unset doesn't drop the wait to 0. See #199.
-	LockWait *uint `json:"lockwait,omitempty"`
+	LockWait           *uint                                  `json:"lockwait,omitempty"`
 	MailTo             string                                 `json:"mailto,omitempty"`
 	Mode               VirtualMachineBackupMode               `json:"mode,omitempty"`
 	Node               string                                 `json:"node,omitempty"`
@@ -3190,10 +3189,10 @@ type VirtualMachineBackupOptions struct {
 	Stop        IntOrBool  `json:"stop,omitempty"`
 	// StopWait — PVE default 10 (minutes to wait for a guest shutdown in
 	// "stop" mode). Pointer so unset doesn't drop the wait to 0. See #199.
-	StopWait *uint `json:"stopwait,omitempty"`
-	Storage            string                                 `json:"storage,omitempty"`
-	TmpDir             string                                 `json:"tmpdir,omitempty"`
-	VMID               uint64                                 `json:"vmid,omitempty"`
+	StopWait *uint  `json:"stopwait,omitempty"`
+	Storage  string `json:"storage,omitempty"`
+	TmpDir   string `json:"tmpdir,omitempty"`
+	VMID     uint64 `json:"vmid,omitempty"`
 	// Zstd — PVE default 1 (zstd worker thread count). Pointer so unset
 	// doesn't disable parallel compression. See #199.
 	Zstd *uint `json:"zstd,omitempty"`
@@ -3217,7 +3216,7 @@ type VzdumpConfig struct {
 	Numa       string `json:"numa"`
 	OsType     string `json:"ostype"`
 	Scsihw     string `json:"scsihw"`
-	Sockets uint64 `json:"sockets,string"`
+	Sockets    uint64 `json:"sockets,string"`
 	// SSHKeys is reflected back from VzDump's recorded VM config; if you
 	// round-trip this into a VirtualMachineConfig.SSHKeys, the value is
 	// already PVE-encoded — re-encoding it would double-encode. See #144.
@@ -3469,7 +3468,7 @@ type SDNZoneOptions struct {
 	Peers                    string    `json:"peers,omitempty"`
 	ReverseDNS               string    `json:"reversedns,omitempty"`
 	RTImport                 string    `json:"rt-import,omitempty"`
-	Tag uint `json:"tag,omitempty"`
+	Tag                      uint      `json:"tag,omitempty"`
 	// VLANProtocol — PVE default "802.1q". An empty-string override would
 	// drop 802.1ad zones; pointer keeps the server default. See #199.
 	VLANProtocol *string `json:"vlan-protocol,omitempty"`
@@ -3488,23 +3487,23 @@ type SDNZoneOptions struct {
 type SDNController struct {
 	client *Client `json:"-"`
 
-	Controller             string `json:"controller,omitempty"`
-	Type                   string `json:"type,omitempty"`
-	ASN                    uint32 `json:"asn,omitempty"`
-	BGPMode                string `json:"bgp-mode,omitempty"`
-	BGPMultipathASRelax    bool   `json:"bgp-multipath-as-relax,omitempty"`
-	EBGP                   bool   `json:"ebgp,omitempty"`
-	EBGPMultihop           int    `json:"ebgp-multihop,omitempty"`
-	ISISDomain             string `json:"isis-domain,omitempty"`
-	ISISIfaces             string `json:"isis-ifaces,omitempty"`
-	ISISNet                string `json:"isis-net,omitempty"`
-	Loopback               string `json:"loopback,omitempty"`
-	Node                   string `json:"node,omitempty"`
-	Nodes                  string `json:"nodes,omitempty"`
-	PeerGroupName          string `json:"peer-group-name,omitempty"`
-	Peers                  string `json:"peers,omitempty"`
-	State                  string `json:"state,omitempty"` // new | changed | deleted
-	Digest                 string `json:"digest,omitempty"`
+	Controller          string `json:"controller,omitempty"`
+	Type                string `json:"type,omitempty"`
+	ASN                 uint32 `json:"asn,omitempty"`
+	BGPMode             string `json:"bgp-mode,omitempty"`
+	BGPMultipathASRelax bool   `json:"bgp-multipath-as-relax,omitempty"`
+	EBGP                bool   `json:"ebgp,omitempty"`
+	EBGPMultihop        int    `json:"ebgp-multihop,omitempty"`
+	ISISDomain          string `json:"isis-domain,omitempty"`
+	ISISIfaces          string `json:"isis-ifaces,omitempty"`
+	ISISNet             string `json:"isis-net,omitempty"`
+	Loopback            string `json:"loopback,omitempty"`
+	Node                string `json:"node,omitempty"`
+	Nodes               string `json:"nodes,omitempty"`
+	PeerGroupName       string `json:"peer-group-name,omitempty"`
+	Peers               string `json:"peers,omitempty"`
+	State               string `json:"state,omitempty"` // new | changed | deleted
+	Digest              string `json:"digest,omitempty"`
 }
 
 // SDNControllerOptions is the request body for creating/updating a controller.
@@ -3606,9 +3605,9 @@ type SDNFabric struct {
 	Protocol            string   `json:"protocol,omitempty"` // openfabric | ospf | wireguard | bgp
 	IPPrefix            string   `json:"ip_prefix,omitempty"`
 	IP6Prefix           string   `json:"ip6_prefix,omitempty"`
-	Area                string   `json:"area,omitempty"`           // ospf
-	HelloInterval       float64  `json:"hello_interval,omitempty"` // openfabric
-	CSNPInterval        float64  `json:"csnp_interval,omitempty"`  // openfabric
+	Area                string   `json:"area,omitempty"`                 // ospf
+	HelloInterval       float64  `json:"hello_interval,omitempty"`       // openfabric
+	CSNPInterval        float64  `json:"csnp_interval,omitempty"`        // openfabric
 	PersistentKeepalive int      `json:"persistent_keepalive,omitempty"` // wireguard
 	Redistribute        []string `json:"redistribute,omitempty"`         // ospf | bgp
 	RouteFilter         string   `json:"route_filter,omitempty"`         // ospf | openfabric
@@ -3780,7 +3779,7 @@ type SDNDryRun struct {
 // safe and the wire form stays `0`/`1` thanks to IntOrBool.
 type SDNVNetFirewallOptions struct {
 	Enable          IntOrBool `json:"enable,omitempty"`
-	PolicyForward   string    `json:"policy_forward,omitempty"`   // ACCEPT | DROP
+	PolicyForward   string    `json:"policy_forward,omitempty"` // ACCEPT | DROP
 	LogLevelForward string    `json:"log_level_forward,omitempty"`
 	Digest          string    `json:"digest,omitempty"`
 }
@@ -3851,17 +3850,17 @@ type SDNVNetIPOptions struct {
 
 // SDNSubnetOptions is the create/update body for an SDN subnet under a VNet.
 type SDNSubnetOptions struct {
-	Subnet        string   `json:"subnet,omitempty"`
-	Type          string   `json:"type,omitempty"` // "subnet" — only valid value on POST
-	VNet          string   `json:"vnet,omitempty"`
-	Gateway       string   `json:"gateway,omitempty"`
-	DHCPDNSServer string   `json:"dhcp-dns-server,omitempty"`
-	DHCPRange     []string `json:"dhcp-range,omitempty"`
-	DNSZonePrefix string   `json:"dnszoneprefix,omitempty"`
+	Subnet        string    `json:"subnet,omitempty"`
+	Type          string    `json:"type,omitempty"` // "subnet" — only valid value on POST
+	VNet          string    `json:"vnet,omitempty"`
+	Gateway       string    `json:"gateway,omitempty"`
+	DHCPDNSServer string    `json:"dhcp-dns-server,omitempty"`
+	DHCPRange     []string  `json:"dhcp-range,omitempty"`
+	DNSZonePrefix string    `json:"dnszoneprefix,omitempty"`
 	SNAT          IntOrBool `json:"snat,omitempty"`
-	LockToken     string   `json:"lock-token,omitempty"`
-	Digest        string   `json:"digest,omitempty"`
-	Delete        string   `json:"delete,omitempty"`
+	LockToken     string    `json:"lock-token,omitempty"`
+	Digest        string    `json:"digest,omitempty"`
+	Delete        string    `json:"delete,omitempty"`
 }
 
 // ClusterMetricServers is the list payload returned by GET /cluster/metrics/server.
@@ -3936,10 +3935,10 @@ type ClusterMetricServerOptions struct {
 	OtelProtocol           string `json:"otel-protocol,omitempty"`
 	OtelResourceAttributes string `json:"otel-resource-attributes,omitempty"`
 	OtelTimeout            uint   `json:"otel-timeout,omitempty"`
-	OtelVerifySSL          *bool  `json:"otel-verify-ssl,omitempty"`     // PVE default true; pointer so unset doesn't flip server-side
-	VerifyCertificate      *bool  `json:"verify-certificate,omitempty"`  // PVE default true; pointer to avoid silently disabling TLS verification
-	Digest                 string `json:"digest,omitempty"`              // PUT only — optimistic concurrency
-	Delete                 string `json:"delete,omitempty"`              // PUT only — comma-separated keys to clear
+	OtelVerifySSL          *bool  `json:"otel-verify-ssl,omitempty"`    // PVE default true; pointer so unset doesn't flip server-side
+	VerifyCertificate      *bool  `json:"verify-certificate,omitempty"` // PVE default true; pointer to avoid silently disabling TLS verification
+	Digest                 string `json:"digest,omitempty"`             // PUT only — optimistic concurrency
+	Delete                 string `json:"delete,omitempty"`             // PUT only — comma-separated keys to clear
 }
 
 // --- /cluster/jobs ---------------------------------------------------------
@@ -3989,33 +3988,33 @@ type ClusterRealmSyncJobOptions struct {
 // Disk is one row returned by GET /nodes/{node}/disks/list. Fields are
 // best-effort optional — PVE omits keys that don't apply to a given device.
 type Disk struct {
-	DevPath     string    `json:"devpath,omitempty"`
-	Used        string    `json:"used,omitempty"`
-	GPT         IntOrBool `json:"gpt,omitempty"`
-	Size        uint64    `json:"size,omitempty"`
-	Health      string    `json:"health,omitempty"`
-	Model       string    `json:"model,omitempty"`
-	Serial      string    `json:"serial,omitempty"`
-	Type        string    `json:"type,omitempty"`
-	Vendor      string    `json:"vendor,omitempty"`
-	WWN         string    `json:"wwn,omitempty"`
-	ByIDLink    string    `json:"by_id_link,omitempty"`
-	Wearout     string    `json:"wearout,omitempty"`
-	OSDID       int       `json:"osdid,omitempty"`
+	DevPath      string    `json:"devpath,omitempty"`
+	Used         string    `json:"used,omitempty"`
+	GPT          IntOrBool `json:"gpt,omitempty"`
+	Size         uint64    `json:"size,omitempty"`
+	Health       string    `json:"health,omitempty"`
+	Model        string    `json:"model,omitempty"`
+	Serial       string    `json:"serial,omitempty"`
+	Type         string    `json:"type,omitempty"`
+	Vendor       string    `json:"vendor,omitempty"`
+	WWN          string    `json:"wwn,omitempty"`
+	ByIDLink     string    `json:"by_id_link,omitempty"`
+	Wearout      string    `json:"wearout,omitempty"`
+	OSDID        int       `json:"osdid,omitempty"`
 	OSDEncrypted IntOrBool `json:"osdencrypted,omitempty"`
-	Parent      string    `json:"parent,omitempty"`
-	RPM         int       `json:"rpm,omitempty"`
-	BLKSize     int       `json:"blocksize,omitempty"`
-	MountPoint  string    `json:"mounted,omitempty"`
-	Vendor2     string    `json:"vendor2,omitempty"`
+	Parent       string    `json:"parent,omitempty"`
+	RPM          int       `json:"rpm,omitempty"`
+	BLKSize      int       `json:"blocksize,omitempty"`
+	MountPoint   string    `json:"mounted,omitempty"`
+	Vendor2      string    `json:"vendor2,omitempty"`
 }
 
 // DiskSMART is the response from GET /nodes/{node}/disks/smart.
 type DiskSMART struct {
-	Health     string                 `json:"health,omitempty"`
-	Type       string                 `json:"type,omitempty"`
-	Text       string                 `json:"text,omitempty"`
-	Attributes []map[string]any       `json:"attributes,omitempty"`
+	Health     string           `json:"health,omitempty"`
+	Type       string           `json:"type,omitempty"`
+	Text       string           `json:"text,omitempty"`
+	Attributes []map[string]any `json:"attributes,omitempty"`
 }
 
 // NodeDirectory is one row returned by GET /nodes/{node}/disks/directory.
@@ -4029,9 +4028,9 @@ type NodeDirectory struct {
 
 // NodeDirectoryOptions is the POST body for /nodes/{node}/disks/directory.
 type NodeDirectoryOptions struct {
-	Name       string `json:"name"`
-	Device     string `json:"device"`
-	Filesystem string `json:"filesystem,omitempty"` // PVE default ext4
+	Name       string    `json:"name"`
+	Device     string    `json:"device"`
+	Filesystem string    `json:"filesystem,omitempty"` // PVE default ext4
 	AddStorage IntOrBool `json:"add_storage,omitempty"`
 }
 
@@ -4044,17 +4043,17 @@ type NodeLVMTree struct {
 }
 
 type NodeLVMVolumeGroup struct {
-	Name     string             `json:"name,omitempty"`
-	Size     uint64             `json:"size,omitempty"`
-	Free     uint64             `json:"free,omitempty"`
-	Leaf     IntOrBool          `json:"leaf,omitempty"`
-	Children []NodeLVMPhysical  `json:"children,omitempty"`
+	Name     string            `json:"name,omitempty"`
+	Size     uint64            `json:"size,omitempty"`
+	Free     uint64            `json:"free,omitempty"`
+	Leaf     IntOrBool         `json:"leaf,omitempty"`
+	Children []NodeLVMPhysical `json:"children,omitempty"`
 }
 
 type NodeLVMPhysical struct {
-	Name string `json:"name,omitempty"`
-	Size uint64 `json:"size,omitempty"`
-	Free uint64 `json:"free,omitempty"`
+	Name string    `json:"name,omitempty"`
+	Size uint64    `json:"size,omitempty"`
+	Free uint64    `json:"free,omitempty"`
 	Leaf IntOrBool `json:"leaf,omitempty"`
 }
 
@@ -4083,24 +4082,24 @@ type NodeLVMThinOptions struct {
 
 // NodeZFSPoolSummary is one row from GET /nodes/{node}/disks/zfs.
 type NodeZFSPoolSummary struct {
-	Name    string  `json:"name,omitempty"`
-	Health  string  `json:"health,omitempty"`
-	Size    uint64  `json:"size,omitempty"`
-	Alloc   uint64  `json:"alloc,omitempty"`
-	Free    uint64  `json:"free,omitempty"`
-	Frag    int     `json:"frag,omitempty"`
-	Dedup   float64 `json:"dedup,omitempty"`
+	Name   string  `json:"name,omitempty"`
+	Health string  `json:"health,omitempty"`
+	Size   uint64  `json:"size,omitempty"`
+	Alloc  uint64  `json:"alloc,omitempty"`
+	Free   uint64  `json:"free,omitempty"`
+	Frag   int     `json:"frag,omitempty"`
+	Dedup  float64 `json:"dedup,omitempty"`
 }
 
 // NodeZFSPool is the detailed pool status from GET /nodes/{node}/disks/zfs/{name}.
 type NodeZFSPool struct {
-	Name     string           `json:"name,omitempty"`
-	State    string           `json:"state,omitempty"`
-	Status   string           `json:"status,omitempty"`
-	Action   string           `json:"action,omitempty"`
-	Scan     string           `json:"scan,omitempty"`
-	Errors   string           `json:"errors,omitempty"`
-	Children []NodeZFSVdev    `json:"children,omitempty"`
+	Name     string        `json:"name,omitempty"`
+	State    string        `json:"state,omitempty"`
+	Status   string        `json:"status,omitempty"`
+	Action   string        `json:"action,omitempty"`
+	Scan     string        `json:"scan,omitempty"`
+	Errors   string        `json:"errors,omitempty"`
+	Children []NodeZFSVdev `json:"children,omitempty"`
 }
 
 type NodeZFSVdev struct {
@@ -4215,10 +4214,10 @@ type ACMEDirectory struct {
 // ACMEMeta is the metadata document returned by GET /cluster/acme/meta — what
 // the CA itself advertises about its capabilities and policies.
 type ACMEMeta struct {
-	CAAIdentities           []string `json:"caaIdentities,omitempty"`
+	CAAIdentities           []string  `json:"caaIdentities,omitempty"`
 	ExternalAccountRequired IntOrBool `json:"externalAccountRequired,omitempty"`
-	TermsOfService          string   `json:"termsOfService,omitempty"`
-	Website                 string   `json:"website,omitempty"`
+	TermsOfService          string    `json:"termsOfService,omitempty"`
+	Website                 string    `json:"website,omitempty"`
 }
 
 // ACMEChallengeSchema is one entry in GET /cluster/acme/challenge-schema —
@@ -4250,12 +4249,12 @@ type ACMEAccount struct {
 // only required field; PVE defaults Name to "default" and Directory to LE prod.
 // EABKid + EABHMACKey are for External Account Binding (e.g. ZeroSSL).
 type ACMEAccountOptions struct {
-	Contact     string `json:"contact"`
-	Directory   string `json:"directory,omitempty"`
-	EABKid      string `json:"eab-kid,omitempty"`
-	EABHMACKey  string `json:"eab-hmac-key,omitempty"`
-	Name        string `json:"name,omitempty"`
-	TOSURL      string `json:"tos_url,omitempty"`
+	Contact    string `json:"contact"`
+	Directory  string `json:"directory,omitempty"`
+	EABKid     string `json:"eab-kid,omitempty"`
+	EABHMACKey string `json:"eab-hmac-key,omitempty"`
+	Name       string `json:"name,omitempty"`
+	TOSURL     string `json:"tos_url,omitempty"`
 }
 
 // ACMEPlugin is the read shape from GET /cluster/acme/plugins[/{id}]. The
@@ -4701,9 +4700,9 @@ type SDNZoneContent struct {
 // SDNZoneBridge is one bridge (vnet) deployed in the zone, with its member
 // ports. VLAN-aware bridges carry primary_vlan + vlans on each port.
 type SDNZoneBridge struct {
-	Name          string              `json:"name"`
-	Ports         []*SDNBridgePort    `json:"ports,omitempty"`
-	VLANFiltering string              `json:"vlan_filtering,omitempty"`
+	Name          string           `json:"name"`
+	Ports         []*SDNBridgePort `json:"ports,omitempty"`
+	VLANFiltering string           `json:"vlan_filtering,omitempty"`
 }
 
 // SDNBridgePort is one port attached to a SDN bridge — guest-owned ports
@@ -4901,25 +4900,25 @@ type NodeConfig struct {
 // Delete to a comma-separated list of keys to unset them; pass Digest from
 // a prior GetConfig for optimistic concurrency.
 type NodeConfigOptions struct {
-	Acme                string `json:"acme,omitempty"`
-	AcmeDomain0         string `json:"acmedomain0,omitempty"`
-	AcmeDomain1         string `json:"acmedomain1,omitempty"`
-	AcmeDomain2         string `json:"acmedomain2,omitempty"`
-	AcmeDomain3         string `json:"acmedomain3,omitempty"`
-	AcmeDomain4         string `json:"acmedomain4,omitempty"`
-	AcmeDomain5         string `json:"acmedomain5,omitempty"`
+	Acme        string `json:"acme,omitempty"`
+	AcmeDomain0 string `json:"acmedomain0,omitempty"`
+	AcmeDomain1 string `json:"acmedomain1,omitempty"`
+	AcmeDomain2 string `json:"acmedomain2,omitempty"`
+	AcmeDomain3 string `json:"acmedomain3,omitempty"`
+	AcmeDomain4 string `json:"acmedomain4,omitempty"`
+	AcmeDomain5 string `json:"acmedomain5,omitempty"`
 	// BallooningTarget — PVE default 80 (% of host RAM the ballooning target
 	// dials toward). Pointer so unset doesn't reset the target to 0% on edit.
 	// See #199.
-	BallooningTarget *int `json:"ballooning-target,omitempty"`
-	Delete              string `json:"delete,omitempty"`
-	Description         string `json:"description,omitempty"`
-	Digest              string `json:"digest,omitempty"`
-	Location            string `json:"location,omitempty"`
+	BallooningTarget *int   `json:"ballooning-target,omitempty"`
+	Delete           string `json:"delete,omitempty"`
+	Description      string `json:"description,omitempty"`
+	Digest           string `json:"digest,omitempty"`
+	Location         string `json:"location,omitempty"`
 	// StartAllOnBootDelay — PVE default 1 (second of delay between guests
 	// during the boot-time startall sweep). Pointer so unset doesn't
 	// collapse the delay to 0. See #199.
-	StartAllOnBootDelay *int `json:"startall-onboot-delay,omitempty"`
+	StartAllOnBootDelay *int   `json:"startall-onboot-delay,omitempty"`
 	WakeOnLAN           string `json:"wakeonlan,omitempty"`
 }
 
@@ -5058,15 +5057,15 @@ type ClusterAddNodeResult struct {
 type CustomCPUModel struct {
 	client *Client `json:"-"`
 
-	CPUType        string `json:"cputype,omitempty"`
-	Flags          string `json:"flags,omitempty"`
-	GuestPhysBits  int    `json:"guest-phys-bits,omitempty"`
-	Hidden         int    `json:"hidden,omitempty"`
-	HVVendorID     string `json:"hv-vendor-id,omitempty"`
-	Level          int    `json:"level,omitempty"`
-	PhysBits       string `json:"phys-bits,omitempty"`
-	ReportedModel  string `json:"reported-model,omitempty"`
-	Digest         string `json:"digest,omitempty"`
+	CPUType       string `json:"cputype,omitempty"`
+	Flags         string `json:"flags,omitempty"`
+	GuestPhysBits int    `json:"guest-phys-bits,omitempty"`
+	Hidden        int    `json:"hidden,omitempty"`
+	HVVendorID    string `json:"hv-vendor-id,omitempty"`
+	Level         int    `json:"level,omitempty"`
+	PhysBits      string `json:"phys-bits,omitempty"`
+	ReportedModel string `json:"reported-model,omitempty"`
+	Digest        string `json:"digest,omitempty"`
 }
 
 // --- /cluster/log ----------------------------------------------------------
@@ -5075,15 +5074,15 @@ type CustomCPUModel struct {
 // PVE's response shape is open (it varies per task kind); we expose the
 // common fields and Extra for the rest.
 type ClusterLogEntry struct {
-	Node    string `json:"node,omitempty"`
-	Time    int64  `json:"time,omitempty"`
-	UID     int    `json:"uid,omitempty"`
-	User    string `json:"user,omitempty"`
-	Pri     int    `json:"pri,omitempty"`
-	Tag     string `json:"tag,omitempty"`
-	Pid     int    `json:"pid,omitempty"`
-	Msg     string `json:"msg,omitempty"`
-	UPID    string `json:"upid,omitempty"`
+	Node string `json:"node,omitempty"`
+	Time int64  `json:"time,omitempty"`
+	UID  int    `json:"uid,omitempty"`
+	User string `json:"user,omitempty"`
+	Pri  int    `json:"pri,omitempty"`
+	Tag  string `json:"tag,omitempty"`
+	Pid  int    `json:"pid,omitempty"`
+	Msg  string `json:"msg,omitempty"`
+	UPID string `json:"upid,omitempty"`
 }
 
 // --- /cluster/options ------------------------------------------------------
@@ -5094,22 +5093,22 @@ type ClusterLogEntry struct {
 // lives in Extra so callers can read every key PVE returned without us
 // having to enumerate the entire wide config space.
 type ClusterOptionsResponse struct {
-	BWLimit         string `json:"bwlimit,omitempty"`
-	ConsentText     string `json:"consent-text,omitempty"`
-	Console         string `json:"console,omitempty"` // applet | vv | html5 | xtermjs
-	Description     string `json:"description,omitempty"`
-	EmailFrom       string `json:"email_from,omitempty"`
-	Fencing         string `json:"fencing,omitempty"` // watchdog (default) | hardware | both
-	HTTPProxy       string `json:"http_proxy,omitempty"`
-	Keyboard        string `json:"keyboard,omitempty"`
-	Language        string `json:"language,omitempty"`
-	MACPrefix       string `json:"mac_prefix,omitempty"`
-	MaxWorkers      int    `json:"max_workers,omitempty"`
-	Migration       string `json:"migration,omitempty"`
+	BWLimit     string `json:"bwlimit,omitempty"`
+	ConsentText string `json:"consent-text,omitempty"`
+	Console     string `json:"console,omitempty"` // applet | vv | html5 | xtermjs
+	Description string `json:"description,omitempty"`
+	EmailFrom   string `json:"email_from,omitempty"`
+	Fencing     string `json:"fencing,omitempty"` // watchdog (default) | hardware | both
+	HTTPProxy   string `json:"http_proxy,omitempty"`
+	Keyboard    string `json:"keyboard,omitempty"`
+	Language    string `json:"language,omitempty"`
+	MACPrefix   string `json:"mac_prefix,omitempty"`
+	MaxWorkers  int    `json:"max_workers,omitempty"`
+	Migration   string `json:"migration,omitempty"`
 	// MigrationUnsecure: deprecated in favor of migration=insecure. PVE
 	// schema is boolean (no documented default beyond "off"); pointer keeps
 	// the field out of the body when callers leave it unset.
-	MigrationUnsecure *bool `json:"migration_unsecure,omitempty"`
+	MigrationUnsecure *bool  `json:"migration_unsecure,omitempty"`
 	RegisteredTags    string `json:"registered-tags,omitempty"`
 
 	// Extra captures every other top-level key PVE returned (HA, CRS,
@@ -5121,18 +5120,18 @@ type ClusterOptionsResponse struct {
 
 // ClusterOptionsUpdate is the body of PUT /cluster/options.
 type ClusterOptionsUpdate struct {
-	BWLimit         string `json:"bwlimit,omitempty"`
-	ConsentText     string `json:"consent-text,omitempty"`
-	Console         string `json:"console,omitempty"`
-	Description     string `json:"description,omitempty"`
-	EmailFrom       string `json:"email_from,omitempty"`
-	Fencing         string `json:"fencing,omitempty"`
-	HTTPProxy       string `json:"http_proxy,omitempty"`
-	Keyboard        string `json:"keyboard,omitempty"`
-	Language        string `json:"language,omitempty"`
-	MACPrefix       string `json:"mac_prefix,omitempty"`
-	MaxWorkers      int    `json:"max_workers,omitempty"`
-	Migration       string `json:"migration,omitempty"`
+	BWLimit           string `json:"bwlimit,omitempty"`
+	ConsentText       string `json:"consent-text,omitempty"`
+	Console           string `json:"console,omitempty"`
+	Description       string `json:"description,omitempty"`
+	EmailFrom         string `json:"email_from,omitempty"`
+	Fencing           string `json:"fencing,omitempty"`
+	HTTPProxy         string `json:"http_proxy,omitempty"`
+	Keyboard          string `json:"keyboard,omitempty"`
+	Language          string `json:"language,omitempty"`
+	MACPrefix         string `json:"mac_prefix,omitempty"`
+	MaxWorkers        int    `json:"max_workers,omitempty"`
+	Migration         string `json:"migration,omitempty"`
 	MigrationUnsecure *bool  `json:"migration_unsecure,omitempty"` // deprecated; see ClusterOptionsResponse
 	RegisteredTags    string `json:"registered-tags,omitempty"`
 	// Delete is a comma-separated list of keys to reset to PVE defaults.
@@ -5206,35 +5205,35 @@ type CephFlag struct {
 // current state untouched (PVE schema has no defaults — they're per-cluster
 // runtime state — so pointer is mandatory to distinguish "not specified").
 type CephFlagsUpdateOptions struct {
-	NoBackfill   *bool `json:"nobackfill,omitempty"`
-	NoDeepScrub  *bool `json:"nodeep-scrub,omitempty"`
-	NoDown       *bool `json:"nodown,omitempty"`
-	NoIn         *bool `json:"noin,omitempty"`
-	NoOut        *bool `json:"noout,omitempty"`
-	NoRebalance  *bool `json:"norebalance,omitempty"`
-	NoRecover    *bool `json:"norecover,omitempty"`
-	NoScrub      *bool `json:"noscrub,omitempty"`
-	NoTierAgent  *bool `json:"notieragent,omitempty"`
-	NoUp         *bool `json:"noup,omitempty"`
-	Pause        *bool `json:"pause,omitempty"`
+	NoBackfill  *bool `json:"nobackfill,omitempty"`
+	NoDeepScrub *bool `json:"nodeep-scrub,omitempty"`
+	NoDown      *bool `json:"nodown,omitempty"`
+	NoIn        *bool `json:"noin,omitempty"`
+	NoOut       *bool `json:"noout,omitempty"`
+	NoRebalance *bool `json:"norebalance,omitempty"`
+	NoRecover   *bool `json:"norecover,omitempty"`
+	NoScrub     *bool `json:"noscrub,omitempty"`
+	NoTierAgent *bool `json:"notieragent,omitempty"`
+	NoUp        *bool `json:"noup,omitempty"`
+	Pause       *bool `json:"pause,omitempty"`
 }
 
 // CephMetadata is the response of /cluster/ceph/metadata. PVE returns per-OSD
 // (and per-MON/MGR/MDS) version+device info; we expose the common service
 // buckets and a Version block when present.
 type CephMetadata struct {
-	Version *CephMetadataVersion        `json:"version,omitempty"`
-	OSD     []map[string]any            `json:"osd,omitempty"`
-	MON     []map[string]any            `json:"mon,omitempty"`
-	MGR     []map[string]any            `json:"mgr,omitempty"`
-	MDS     []map[string]any            `json:"mds,omitempty"`
-	Node    map[string]map[string]any   `json:"node,omitempty"`
+	Version *CephMetadataVersion      `json:"version,omitempty"`
+	OSD     []map[string]any          `json:"osd,omitempty"`
+	MON     []map[string]any          `json:"mon,omitempty"`
+	MGR     []map[string]any          `json:"mgr,omitempty"`
+	MDS     []map[string]any          `json:"mds,omitempty"`
+	Node    map[string]map[string]any `json:"node,omitempty"`
 }
 
 // CephMetadataVersion captures the cluster-wide ceph version string PVE
 // derives across all running daemons.
 type CephMetadataVersion struct {
-	Version string `json:"version,omitempty"`
+	Version     string `json:"version,omitempty"`
 	Buildcommit string `json:"buildcommit,omitempty"`
 }
 
@@ -5278,17 +5277,17 @@ type BulkMigrateOptions struct {
 // CustomCPUModelOptions is the body of POST /cluster/qemu/custom-cpu-models
 // (create) and PUT /cluster/qemu/custom-cpu-models/{cputype} (update).
 type CustomCPUModelOptions struct {
-	CPUType        string `json:"cputype,omitempty"` // required
-	Flags          string `json:"flags,omitempty"`
-	GuestPhysBits  int    `json:"guest-phys-bits,omitempty"`
+	CPUType       string `json:"cputype,omitempty"` // required
+	Flags         string `json:"flags,omitempty"`
+	GuestPhysBits int    `json:"guest-phys-bits,omitempty"`
 	// Hidden: do not identify as a KVM virtual machine. PVE default 0,
 	// matches Go zero — plain bool with omitempty would still flip it when
 	// the caller omits the field, so we keep an int matching the wire shape
 	// and rely on omitempty.
-	Hidden        int    `json:"hidden,omitempty"`
-	HVVendorID    string `json:"hv-vendor-id,omitempty"`
-	Level         int    `json:"level,omitempty"`
-	PhysBits      string `json:"phys-bits,omitempty"`
+	Hidden     int    `json:"hidden,omitempty"`
+	HVVendorID string `json:"hv-vendor-id,omitempty"`
+	Level      int    `json:"level,omitempty"`
+	PhysBits   string `json:"phys-bits,omitempty"`
 	// ReportedModel is required on POST (PVE schema marks it optional=0).
 	ReportedModel string `json:"reported-model,omitempty"`
 	Digest        string `json:"digest,omitempty"` // PUT only — optimistic concurrency

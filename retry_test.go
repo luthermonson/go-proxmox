@@ -29,13 +29,12 @@ func fastNoopSleep(ctx context.Context, _ time.Duration) error {
 	return ctx.Err()
 }
 
-// newRetryClient builds a *Client configured with WithRetry plus any extra
-// options. It also installs the fastNoopSleep into the resulting policy so
-// tests don't actually wait the backoff window.
-func newRetryClient(t *testing.T, retryOpts []RetryOption, opts ...Option) *Client {
+// newRetryClient builds a *Client configured with WithRetry. It also installs
+// the fastNoopSleep into the resulting policy so tests don't actually wait the
+// backoff window.
+func newRetryClient(t *testing.T, retryOpts []RetryOption) *Client {
 	t.Helper()
-	allOpts := append([]Option{WithRetry(retryOpts...)}, opts...)
-	c := NewClient(retryTestURI, allOpts...)
+	c := NewClient(retryTestURI, WithRetry(retryOpts...))
 	rt, ok := c.httpClient.Transport.(*retryRoundTripper)
 	require.True(t, ok, "expected retryRoundTripper, got %T", c.httpClient.Transport)
 	rt.policy.sleep = fastNoopSleep
