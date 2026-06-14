@@ -45,12 +45,13 @@ func (c *Client) Pool(ctx context.Context, poolid string, filters ...string) (po
 		return nil, err
 	}
 
-	if len(pools) == 0 {
+	switch len(pools) {
+	case 0:
 		// This will not hit as the API will return a 500 error if the pool does not exist
 		return nil, fmt.Errorf("pool not found")
-	} else if len(pools) == 1 {
+	case 1:
 		pool = pools[0]
-	} else {
+	default:
 		// Should be impossible to have multiple pools with the same poolid
 		return nil, fmt.Errorf("multiple pools found for poolid: %s", poolid)
 	}

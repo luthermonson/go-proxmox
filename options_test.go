@@ -439,11 +439,7 @@ func TestWithRequestInterceptor_RegistrationAppends(t *testing.T) {
 func TestWithRequestInterceptor_SingleSeesAuthHeader(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-
-	gock.New(config.C.URI).
-		Get("^/version$").
-		Reply(200).
-		JSON(`{"data":{"version":"9.0"}}`)
+	// Shared pve9x mock set already covers GET ^/version$.
 
 	var (
 		calls   int
@@ -481,11 +477,7 @@ func TestWithRequestInterceptor_SingleSeesAuthHeader(t *testing.T) {
 func TestWithRequestInterceptor_OrderPreserved(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-
-	gock.New(config.C.URI).
-		Get("^/version$").
-		Reply(200).
-		JSON(`{"data":{"version":"9.0"}}`)
+	// Shared pve9x mock set already covers GET ^/version$.
 
 	var order []string
 	first := func(*http.Request) error { order = append(order, "first"); return nil }

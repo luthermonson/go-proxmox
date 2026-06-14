@@ -45,11 +45,11 @@ func WithAPIToken(tokenID, secret string) Option {
 }
 
 // WithSession experimental
-func WithSession(ticket, CSRFPreventionToken string) Option {
+func WithSession(ticket, csrfPreventionToken string) Option {
 	return func(c *Client) {
 		c.session = &Session{
 			Ticket:              ticket,
-			CSRFPreventionToken: CSRFPreventionToken,
+			CSRFPreventionToken: csrfPreventionToken,
 		}
 	}
 }
@@ -275,7 +275,7 @@ func (c *Client) ensureTLSConfig() *tls.Config {
 		return nil
 	}
 	if t.TLSClientConfig == nil {
-		t.TLSClientConfig = &tls.Config{}
+		t.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 	}
 	return t.TLSClientConfig
 }

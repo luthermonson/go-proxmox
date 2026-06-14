@@ -42,10 +42,6 @@ var (
 			},
 		},
 	}
-
-	//tinycoreURL     = "https://github.com/luthermonson/go-proxmox/releases/download/tests/tinycore.iso"
-	//ubuntuURL       = "https://releases.ubuntu.com/20.04.3/ubuntu-20.04.3-desktop-amd64.iso"
-	//alpineAppliance = "http://download.proxmox.com/images/system/alpine-3.17-default_20221129_amd64.tar.xz"
 )
 
 func init() {
@@ -82,62 +78,6 @@ func init() {
 		panic(err)
 	}
 }
-
-//func nameGenerator(length int) string {
-//	rand.Seed(time.Now().UnixNano())
-//	b := make([]byte, length)
-//	rand.Read(b)
-//	rstr := fmt.Sprintf("%x", b)[:length]
-//	return fmt.Sprintf("go-proxmox-%s", rstr)
-//}
-
-//func downloadFile(src, dst string) error {
-//	out, err := os.Create(dst)
-//	if err != nil {
-//		return err
-//	}
-//	defer func() { _ = out.Close() }()
-//
-//	resp, err := http.Get(src)
-//	if err != nil {
-//		return err
-//	}
-//	defer func() { _ = resp.Body.Close() }()
-//
-//	_, err = io.Copy(out, resp.Body)
-//	if err != nil {
-//		return err
-//	}
-//
-//	return nil
-//}
-
-//func createTestISO(file string) error {
-//	//making iso
-//	blocksize := int64(2048)
-//	iso, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, os.FileMode(0700))
-//	if err != nil {
-//		return err
-//	}
-//	defer func() { _ = iso.Close() }()
-//
-//	// Wrap the *os.File in a backend.Storage
-//	backend := backendfile.New(iso, false)
-//	fs, err := iso9660.Create(backend, 0, 0, blocksize, "")
-//	if err != nil {
-//		return err
-//	}
-//
-//	err = fs.Mkdir("/")
-//	if err != nil {
-//		return err
-//	}
-//
-//	return fs.Finalize(iso9660.FinalizeOptions{
-//		RockRidge:        true,
-//		VolumeIdentifier: "cidata",
-//	})
-//}
 
 func ClientFromEnv() *proxmox.Client {
 	return proxmox.NewClient(os.Getenv("PROXMOX_URL"),

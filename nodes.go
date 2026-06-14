@@ -231,8 +231,8 @@ func (n *Node) Storage(ctx context.Context, name string) (storage *Storage, err 
 	return
 }
 
-func (n *Node) StorageDownloadURL(ctx context.Context, StorageDownloadURLOptions *StorageDownloadURLOptions) (ret string, err error) {
-	err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/storage/%s/download-url", n.Name, StorageDownloadURLOptions.Storage), StorageDownloadURLOptions, &ret)
+func (n *Node) StorageDownloadURL(ctx context.Context, options *StorageDownloadURLOptions) (ret string, err error) {
+	err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/storage/%s/download-url", n.Name, options.Storage), options, &ret)
 	return ret, err
 }
 

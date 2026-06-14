@@ -287,11 +287,10 @@ func TestClient_GetWithParams_BadData(t *testing.T) {
 func TestClient_DeleteWithParams(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	gock.New(TestURI).
-		Persist().
-		Delete("^/version$").
-		Reply(200).
-		JSON(`{"data":{"repoid":"r","release":"9.1","version":"9.1-1"}}`)
+	// The shared pve9x mock set already registers DELETE ^/version$ — no
+	// inline mock needed. Wire-param assertions belong in inline-only tests
+	// (no mocks.On), since the shared catch-all answers first regardless of
+	// any MatchParams on a subsequently-registered inline mock.
 
 	client := mockClient()
 	var v Version
