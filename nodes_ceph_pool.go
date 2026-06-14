@@ -145,7 +145,7 @@ func (p *CephPool) Status(ctx context.Context, verbose bool) (status *CephPoolSt
 	}
 	path := fmt.Sprintf("/nodes/%s/ceph/pool/%s/status", p.Node, p.PoolName)
 	if verbose {
-		path = path + "?verbose=1"
+		path += "?verbose=1"
 	}
 	return status, p.client.Get(ctx, path, &status)
 }

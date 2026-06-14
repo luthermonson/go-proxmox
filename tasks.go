@@ -133,7 +133,7 @@ func tasktail(ctx context.Context, start int, watch chan string, task *Task) err
 		for _, ln := range logs {
 			watch <- ln
 		}
-		start = start + len(logs)
+		start += len(logs)
 		time.Sleep(2 * time.Second)
 	}
 }

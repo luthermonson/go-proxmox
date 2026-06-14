@@ -5,6 +5,7 @@ package capture
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -54,7 +55,7 @@ func UploadMatcher() gock.MatchFunc {
 		mr := multipart.NewReader(bytes.NewReader(raw), params["boundary"])
 		for {
 			part, err := mr.NextPart()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			if err != nil {

@@ -22,7 +22,7 @@ func TestClient_Nodes(t *testing.T) {
 		assert.Contains(t, n.Node, "node")
 		assert.Equal(t, n.Type, "node")
 	}
-	//assert.Equal(t, 6, len(testData))
+	// assert.Equal(t, 6, len(testData))
 }
 
 func TestClient_Node(t *testing.T) {

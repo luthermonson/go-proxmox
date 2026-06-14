@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func (cl *Cluster) SDNSubnets(ctx context.Context, VNetName string) (subnets []*VNetSubnet, err error) {
-	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", VNetName), &subnets)
+func (cl *Cluster) SDNSubnets(ctx context.Context, vnetName string) (subnets []*VNetSubnet, err error) {
+	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", vnetName), &subnets)
 
 	return
 }

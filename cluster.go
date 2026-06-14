@@ -149,7 +149,7 @@ func (cl *Cluster) Ceph(ctx context.Context) (*Ceph, error) {
 
 	// TODO?
 	//// requires (/, Sys.Audit), do not error out if no access to still get the ceph
-	//if err := ceph.Status(ctx); !IsNotAuthorized(err) {
+	// if err := ceph.Status(ctx); !IsNotAuthorized(err) {
 	//	return ceph, err
 	//}
 
