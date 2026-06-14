@@ -583,4 +583,3 @@ func (c *Container) MigrationTunnelWebSocketPath(tunnel *ContainerMigrationTunne
 	}
 	return fmt.Sprintf("/nodes/%s/lxc/%d/mtunnelwebsocket?%s", c.Node, c.VMID, q.Encode())
 }
-

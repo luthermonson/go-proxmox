@@ -56,9 +56,9 @@ const (
 // proves the wrapper exists in some non-scannable form. Removing an entry is
 // preferable when we add a real wrapper.
 var intentionallyExcluded = map[string]string{
-	"get /nodes/{}/qemu/{}/mtunnelwebsocket":           "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
-	"get /nodes/{}/lxc/{}/mtunnelwebsocket":            "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
-	"get /nodes/{}/storage/{}/file-restore/download":   "streaming binary download; needs custom io.Reader plumbing, not the JSON Get helper",
+	"get /nodes/{}/qemu/{}/mtunnelwebsocket":         "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
+	"get /nodes/{}/lxc/{}/mtunnelwebsocket":          "URL-builder helper (MigrationTunnelWebSocketPath); caller drives the websocket dialer",
+	"get /nodes/{}/storage/{}/file-restore/download": "streaming binary download; needs custom io.Reader plumbing, not the JSON Get helper",
 }
 
 type methodInfo struct {
@@ -523,7 +523,7 @@ var (
 	// method `(*Storage).Upload(content, filename string)` whose first arg
 	// is a content-type, not a path. The `\w*` suffix catches both variants
 	// (and any future Upload* the library adds) without re-listing each.
-	uploadRE = regexp.MustCompile(`\bclient\.Upload\w*\s*\(\s*(.*?)$`)
+	uploadRE    = regexp.MustCompile(`\bclient\.Upload\w*\s*\(\s*(.*?)$`)
 	sprintfRE   = regexp.MustCompile(`fmt\.Sprintf\(\s*"([^"]+)"`)
 	urlAssignRE = regexp.MustCompile(`\b(\w+)\s*:?=\s*url\.URL\{\s*Path:\s*(.+)\}`)
 	// `<var> := fmt.Sprintf("/…", …)` or `<var> := "/…"` — bindings that later

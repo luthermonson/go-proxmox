@@ -78,7 +78,7 @@ func MakeTag(v string) string {
 //
 // PVE applies its own urlencoded-string validator that rejects '+' as a space
 // encoding and requires every reserved character to be percent-encoded — the
-// Python urllib.parse.quote(s, safe='') style. Go's net/url.QueryEscape emits
+// Python urllib.parse.quote(s, safe="") style. Go's net/url.QueryEscape emits
 // '+' for spaces (HTML form encoding), so its output alone fails validation
 // with "invalid format - invalid urlencoded string". See issue #144.
 //

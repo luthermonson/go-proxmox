@@ -15,13 +15,13 @@ import (
 // TFAUserEntry is one row in GET /access/tfa — a user that has at least one
 // TFA entry configured.
 type TFAUserEntry struct {
-	UserID  string         `json:"userid,omitempty"`
-	Entries []TFAEntryInfo `json:"entries,omitempty"`
-	TOTP    bool           `json:"totp,omitempty"`
-	YubicoOTP bool         `json:"yubico,omitempty"`
-	U2F     bool           `json:"u2f,omitempty"`
-	Webauthn bool          `json:"webauthn,omitempty"`
-	Recovery []int         `json:"recovery,omitempty"`
+	UserID    string         `json:"userid,omitempty"`
+	Entries   []TFAEntryInfo `json:"entries,omitempty"`
+	TOTP      bool           `json:"totp,omitempty"`
+	YubicoOTP bool           `json:"yubico,omitempty"`
+	U2F       bool           `json:"u2f,omitempty"`
+	Webauthn  bool           `json:"webauthn,omitempty"`
+	Recovery  []int          `json:"recovery,omitempty"`
 }
 
 // TFAEntryInfo is the read shape of a single TFA entry.

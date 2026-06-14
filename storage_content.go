@@ -92,11 +92,11 @@ func (s *Storage) OCIRegistryPull(ctx context.Context, reference, filename strin
 
 // StorageFileRestoreEntry is one row from GET /file-restore/list.
 type StorageFileRestoreEntry struct {
-	Filepath string `json:"filepath,omitempty"`
-	Type     string `json:"type,omitempty"` // "f" (file), "d" (directory), "l" (link)
-	Text     string `json:"text,omitempty"`
-	Size     uint64 `json:"size,omitempty"`
-	Mtime    int64  `json:"mtime,omitempty"`
+	Filepath string    `json:"filepath,omitempty"`
+	Type     string    `json:"type,omitempty"` // "f" (file), "d" (directory), "l" (link)
+	Text     string    `json:"text,omitempty"`
+	Size     uint64    `json:"size,omitempty"`
+	Mtime    int64     `json:"mtime,omitempty"`
 	Leaf     IntOrBool `json:"leaf,omitempty"`
 }
 

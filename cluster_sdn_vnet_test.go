@@ -162,10 +162,10 @@ func TestVNet_IPs_ErrorBranches(t *testing.T) {
 
 	// nil/empty options → validation errors
 	assert.Error(t, v.UpdateIP(context.Background(), nil))
-	assert.Error(t, v.UpdateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
+	assert.Error(t, v.UpdateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"})) // missing zone
 	assert.Error(t, v.DeleteIP(context.Background(), nil))
-	assert.Error(t, v.DeleteIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
-	assert.Error(t, v.CreateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"}))   // missing zone
+	assert.Error(t, v.DeleteIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"})) // missing zone
+	assert.Error(t, v.CreateIP(context.Background(), &SDNVNetIPOptions{IP: "1.1.1.1"})) // missing zone
 
 	// DeleteIP with MAC populated to exercise the optional path
 	assert.Nil(t, v.DeleteIP(context.Background(), &SDNVNetIPOptions{Zone: "zone1", IP: "10.0.0.10", MAC: "aa:bb:cc:dd:ee:ff"}))
