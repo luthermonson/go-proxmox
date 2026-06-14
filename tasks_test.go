@@ -203,4 +203,3 @@ func TestTask_Watch_NoLogs(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no logs available")
 }
-

@@ -47,7 +47,7 @@ func defaultRetryPolicy() *retryPolicy {
 		condition:      defaultRetryCondition,
 		now:            time.Now,
 		sleep:          contextSleep,
-		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:           rand.New(rand.NewSource(time.Now().UnixNano())), //nolint:gosec // backoff jitter is not security-sensitive
 	}
 }
 
@@ -389,4 +389,3 @@ func contextSleep(ctx context.Context, d time.Duration) error {
 		return nil
 	}
 }
-

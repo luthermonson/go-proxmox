@@ -78,7 +78,7 @@ func MakeTag(v string) string {
 //
 // PVE applies its own urlencoded-string validator that rejects '+' as a space
 // encoding and requires every reserved character to be percent-encoded — the
-// Python urllib.parse.quote(s, safe='') style. Go's net/url.QueryEscape emits
+// Python urllib.parse.quote(s, safe="") style. Go's net/url.QueryEscape emits
 // '+' for spaces (HTML form encoding), so its output alone fails validation
 // with "invalid format - invalid urlencoded string". See issue #144.
 //
@@ -408,7 +408,9 @@ func (c *Client) UploadReader(path string, fields map[string]string, filename st
 		body,
 		bytes.NewReader(b.Bytes()[header:]))
 
-	req, err := http.NewRequest(http.MethodPost, path, multi)
+	// UploadReader predates context plumbing in the public API; a ctx
+	// parameter is queued for v0.8.0.
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, path, multi)
 	if err != nil {
 		return err
 	}
@@ -527,8 +529,12 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 	dialerHeaders := http.Header{}
 	c.authHeaders(&dialerHeaders)
 
-	conn, _, err := dialer.Dial(path, dialerHeaders)
-
+	conn, resp, err := dialer.Dial(path, dialerHeaders)
+	// On a successful upgrade gorilla replaces resp.Body with an empty
+	// NopCloser; on handshake failure the real body must be closed.
+	if resp != nil && resp.Body != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -689,8 +695,12 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 	dialerHeaders := http.Header{}
 	c.authHeaders(&dialerHeaders)
 
-	conn, _, err := dialer.Dial(path, dialerHeaders)
-
+	conn, resp, err := dialer.Dial(path, dialerHeaders)
+	// On a successful upgrade gorilla replaces resp.Body with an empty
+	// NopCloser; on handshake failure the real body must be closed.
+	if resp != nil && resp.Body != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

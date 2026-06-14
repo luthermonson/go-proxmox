@@ -1,6 +1,30 @@
 version: "2"
 linters:
+  enable:
+    - bodyclose
+    - errchkjson
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - unconvert
+    - unparam
+  settings:
+    gosec:
+      excludes:
+        - G115 # integer conversions — VMID/size casts are bounded by PVE
+        - G304 # file inclusion via variable — client library opens caller-supplied paths by design
+  exclusions:
+    rules:
+      - path: (_test\.go|^tests/|^mage/)
+        linters:
+          - gosec
+          - noctx
 formatters:
+  enable:
+    - gofmt
 issues:
 output:
 run:
