@@ -471,4 +471,3 @@ func TestStringOrInt(t *testing.T) {
 		assert.Equal(t, test.expected, unmarshall.Value)
 	}
 }
-
