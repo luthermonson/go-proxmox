@@ -244,17 +244,18 @@ func (v *VirtualMachine) AgentFileRead(ctx context.Context, file string) (*Agent
 	return &out, nil
 }
 
-// AgentFileWrite writes content to a file inside the guest. PVE base64-
-// encodes the payload before handing it to QGA (their `encode` flag), so we
-// do that here unconditionally — the per-call body size cap is ~60 KiB
-// regardless. Pass the raw bytes; this helper handles the encoding.
+// AgentFileWrite writes content to a file inside the guest. QGA's
+// guest-file-write requires a base64 payload, so we encode here (binary-safe)
+// and pass encode=0 to tell PVE the content is already base64 and to forward
+// it to QGA verbatim. With encode=1 PVE would base64-encode our payload a
+// second time, and QGA's single decode would leave the base64 text on disk.
+// The per-call body size cap is ~60 KiB. Pass the raw bytes; this helper
+// handles the encoding.
 func (v *VirtualMachine) AgentFileWrite(ctx context.Context, file string, content []byte) error {
 	body := map[string]interface{}{
 		"file":    file,
 		"content": base64.StdEncoding.EncodeToString(content),
-		// encode=1 tells PVE the content is already base64 and to forward it
-		// to QGA as-is — matches what we just did above.
-		"encode": 1,
+		"encode":  0,
 	}
 	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/file-write", v.Node, v.VMID), body, nil)
 }
