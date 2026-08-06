@@ -164,9 +164,22 @@ See `AGENTS.md` (Required: pick the right shape for new endpoints) for the full 
 Creating or editing a VM goes through `VirtualMachineOption` key/value pairs, whose names are the raw qemu parameter names from the [PVE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu) — the same names `qm create` takes. **`VirtualMachineConfig` is the read side**: `GET /config` unmarshals into it (that's why its fields use tolerant types like `StringOrInt` — PVE returns the same field as a number or a quoted string depending on version), and the library never sends it to the API. Don't populate it to create a VM.
 
 ```go
-node, _ := client.Node(ctx, "pve1")
+node, err := client.Node(ctx, "pve1")
+if err != nil {
+    panic(err)
+}
 
-task, err := node.NewVirtualMachine(ctx, 9000,
+// Ask the cluster for the next free VMID instead of inventing one.
+cluster, err := client.Cluster(ctx)
+if err != nil {
+    panic(err)
+}
+vmid, err := cluster.NextID(ctx)
+if err != nil {
+    panic(err)
+}
+
+task, err := node.NewVirtualMachine(ctx, vmid,
     proxmox.VirtualMachineOption{Name: "name", Value: "ubuntu-template"},
     proxmox.VirtualMachineOption{Name: "memory", Value: 2048},
     proxmox.VirtualMachineOption{Name: "cores", Value: 2},
@@ -183,18 +196,37 @@ if err := task.Wait(ctx, time.Second, 5*time.Minute); err != nil {
     panic(err)
 }
 
-vm, _ := node.VirtualMachine(ctx, 9000)
+// The create task itself carries the new VMID: task.ID is the UPID's id
+// field, which for a qmcreate task is the VMID. Useful when the task is all
+// you're holding.
+vmid, err = strconv.Atoi(task.ID)
+if err != nil {
+    panic(err)
+}
+
+vm, err := node.VirtualMachine(ctx, vmid)
+if err != nil {
+    panic(err)
+}
 
 // Post-create edits use the same options: Config is an async POST returning
 // a *Task, ConfigSync is a synchronous PUT.
-_ = vm.ConfigSync(ctx,
+if err := vm.ConfigSync(ctx,
     proxmox.VirtualMachineOption{Name: "ciuser", Value: "ubuntu"},
     proxmox.VirtualMachineOption{Name: "ipconfig0", Value: "ip=dhcp"},
     // sshkeys needs PVE's exact urlencoding — see EncodeSSHKeys.
     proxmox.VirtualMachineOption{Name: "sshkeys", Value: proxmox.EncodeSSHKeys(pubkey)},
-)
+); err != nil {
+    panic(err)
+}
 
-task, _ = vm.ConvertToTemplate(ctx)
+task, err = vm.ConvertToTemplate(ctx)
+if err != nil {
+    panic(err)
+}
+if err := task.Wait(ctx, time.Second, 2*time.Minute); err != nil {
+    panic(err)
+}
 ```
 
 The full runnable flow — cloud-image download via `Storage.DownloadURL`, disk import, cloud-init, resize, template, clone — lives in [`examples/vm-template`](./examples/vm-template/).

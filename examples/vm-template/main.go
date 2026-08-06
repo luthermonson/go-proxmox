@@ -12,8 +12,9 @@
 // and is never sent to the API.
 //
 // Run it against a lab cluster only — it downloads ~600 MB onto the target
-// storage and creates VMID 9000. Expects PROXMOX_URL, PROXMOX_TOKENID,
-// PROXMOX_SECRET in the environment; see the README for the optional knobs.
+// storage and creates a VM at the cluster's next free VMID. Expects
+// PROXMOX_URL, PROXMOX_TOKENID, PROXMOX_SECRET in the environment; see the
+// README for the optional knobs.
 package main
 
 import (
@@ -23,13 +24,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/luthermonson/go-proxmox"
 )
 
 const (
-	templateVMID = 9000
 	templateName = "ubuntu-noble-template"
 
 	imageURL  = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
@@ -81,12 +82,20 @@ func main() {
 
 	// --- Create the VM ------------------------------------------------------
 
+	// Ask the cluster for the next free VMID rather than inventing one. If
+	// you prefer templates at a fixed, well-known ID (9000 is a common
+	// convention), pass that instead — creation fails if the ID is taken.
+	cluster, err := client.Cluster(ctx)
+	must(err, "client.Cluster")
+	vmid, err := cluster.NextID(ctx)
+	must(err, "cluster.NextID")
+
 	// Creation is key/value options matching the PVE API parameters — the
 	// same names you would pass to `qm create`. This is the write-side
 	// counterpart to the VirtualMachineConfig struct you get back on reads.
 	diskStorageName := envOr("PROXMOX_DISK_STORAGE", "local-lvm")
-	fmt.Printf("Creating VM %d (%s)\n", templateVMID, templateName)
-	task, err := node.NewVirtualMachine(ctx, templateVMID,
+	fmt.Printf("Creating VM %d (%s)\n", vmid, templateName)
+	task, err := node.NewVirtualMachine(ctx, vmid,
 		proxmox.VirtualMachineOption{Name: "name", Value: templateName},
 		proxmox.VirtualMachineOption{Name: "ostype", Value: "l26"},
 		proxmox.VirtualMachineOption{Name: "memory", Value: 2048},
@@ -109,7 +118,16 @@ func main() {
 	must(err, "node.NewVirtualMachine")
 	must(task.Wait(ctx, time.Second, 5*time.Minute), "create task")
 
-	vm, err := node.VirtualMachine(ctx, templateVMID)
+	// The create task itself carries the new VMID: task.ID is the UPID's id
+	// field, which for a qmcreate task is the VMID. We already know it here,
+	// but a caller holding only the *Task can recover it like this.
+	createdID, err := strconv.Atoi(task.ID)
+	must(err, "parse task.ID")
+	if createdID != vmid {
+		log.Fatalf("task.ID %d does not match requested vmid %d", createdID, vmid)
+	}
+
+	vm, err := node.VirtualMachine(ctx, createdID)
 	must(err, "node.VirtualMachine")
 
 	// --- Cloud-init defaults ------------------------------------------------
@@ -141,11 +159,14 @@ func main() {
 	must(err, "vm.ConvertToTemplate")
 	must(tmplTask.Wait(ctx, time.Second, 2*time.Minute), "template task")
 
-	fmt.Printf("\nTemplate %d (%s) ready. Clone it with:\n\n", templateVMID, templateName)
-	fmt.Printf("    template, _ := node.VirtualMachine(ctx, %d)\n", templateVMID)
+	fmt.Printf("\nTemplate %d (%s) ready. Clone it with:\n\n", createdID, templateName)
+	fmt.Printf("    template, err := node.VirtualMachine(ctx, %d)\n", createdID)
+	fmt.Printf("    if err != nil { ... }\n")
 	fmt.Printf("    newid, task, err := template.Clone(ctx, &proxmox.VirtualMachineCloneOptions{\n")
 	fmt.Printf("        Name: \"instance-1\", // NewID 0 = next free VMID from the cluster\n")
 	fmt.Printf("    })\n")
+	fmt.Printf("    if err != nil { ... }\n")
+	fmt.Printf("    if err := task.Wait(ctx, time.Second, 5*time.Minute); err != nil { ... }\n")
 }
 
 func hasVolume(content []*proxmox.StorageContent, volid string) bool {
