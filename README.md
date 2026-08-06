@@ -159,6 +159,46 @@ _, _ = ctrl.Delete(ctx)
 
 See `AGENTS.md` (Required: pick the right shape for new endpoints) for the full inventory of instance types.
 
+### Create a VM and build a template
+
+Creating or editing a VM goes through `VirtualMachineOption` key/value pairs, whose names are the raw qemu parameter names from the [PVE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu) — the same names `qm create` takes. **`VirtualMachineConfig` is the read side**: `GET /config` unmarshals into it (that's why its fields use tolerant types like `StringOrInt` — PVE returns the same field as a number or a quoted string depending on version), and the library never sends it to the API. Don't populate it to create a VM.
+
+```go
+node, _ := client.Node(ctx, "pve1")
+
+task, err := node.NewVirtualMachine(ctx, 9000,
+    proxmox.VirtualMachineOption{Name: "name", Value: "ubuntu-template"},
+    proxmox.VirtualMachineOption{Name: "memory", Value: 2048},
+    proxmox.VirtualMachineOption{Name: "cores", Value: 2},
+    proxmox.VirtualMachineOption{Name: "scsihw", Value: "virtio-scsi-single"},
+    proxmox.VirtualMachineOption{Name: "scsi0", Value: "local-lvm:0,import-from=local:import/noble-server-cloudimg-amd64.qcow2"},
+    proxmox.VirtualMachineOption{Name: "ide2", Value: "local-lvm:cloudinit"},
+    proxmox.VirtualMachineOption{Name: "net0", Value: "virtio,bridge=vmbr0"},
+    proxmox.VirtualMachineOption{Name: "boot", Value: "order=scsi0"},
+)
+if err != nil {
+    panic(err)
+}
+if err := task.Wait(ctx, time.Second, 5*time.Minute); err != nil {
+    panic(err)
+}
+
+vm, _ := node.VirtualMachine(ctx, 9000)
+
+// Post-create edits use the same options: Config is an async POST returning
+// a *Task, ConfigSync is a synchronous PUT.
+_ = vm.ConfigSync(ctx,
+    proxmox.VirtualMachineOption{Name: "ciuser", Value: "ubuntu"},
+    proxmox.VirtualMachineOption{Name: "ipconfig0", Value: "ip=dhcp"},
+    // sshkeys needs PVE's exact urlencoding — see EncodeSSHKeys.
+    proxmox.VirtualMachineOption{Name: "sshkeys", Value: proxmox.EncodeSSHKeys(pubkey)},
+)
+
+task, _ = vm.ConvertToTemplate(ctx)
+```
+
+The full runnable flow — cloud-image download via `Storage.DownloadURL`, disk import, cloud-init, resize, template, clone — lives in [`examples/vm-template`](./examples/vm-template/).
+
 ### Permission / capability discovery via `Subdirs`
 
 PVE's directory-index GETs are ACL-filtered: the response only lists the sub-resources the calling token is permitted to read. Use them to probe what an API token can do without try-and-403 against every endpoint:
@@ -300,6 +340,7 @@ The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`T
 
 ### More examples
 
+- [`examples/vm-template`](./examples/vm-template/) — build a qemu template from a cloud image: download, disk import, cloud-init, resize, convert.
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
 - [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
 

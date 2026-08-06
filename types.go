@@ -976,11 +976,24 @@ type RRDData struct {
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
 // Refer to https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config for a list of valid values
 type VirtualMachineOptions []*VirtualMachineOption
+
+// VirtualMachineOption is the write side of VM configuration: Name is a raw
+// qemu parameter name from the PVE API viewer (the same names `qm create`
+// takes, e.g. "memory", "scsi0", "net0") and Value is whatever that parameter
+// accepts. Pass these to Node.NewVirtualMachine, VirtualMachine.Config, or
+// VirtualMachine.ConfigSync. See examples/vm-template for a full flow.
 type VirtualMachineOption struct {
 	Name  string
 	Value interface{}
 }
 
+// VirtualMachineConfig is the read side of a VM's configuration: GET
+// /nodes/{node}/qemu/{vmid}/config unmarshals into it (surfaced as
+// VirtualMachine.VirtualMachineConfig), and the library never sends this
+// struct to the API. Its tolerant field types (StringOrInt, StringOrUint64,
+// IntOrBool, ...) exist because PVE returns the same field as a JSON number
+// or a quoted string depending on version and endpoint. To create a VM or
+// change its config, use VirtualMachineOption key/values instead.
 type VirtualMachineConfig struct {
 	// PVE Metadata
 	Digest      string `json:"digest"`
