@@ -4,15 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -171,6 +177,104 @@ func TestClient_VNCWebSocket_APITokenUnsupported(t *testing.T) {
 	assert.Nil(t, errs)
 	assert.Nil(t, closer)
 	assert.ErrorIs(t, err, ErrAPITokenWebSocketUnsupported)
+}
+
+// vncEchoServer upgrades an incoming request to a websocket using the "binary"
+// subprotocol that Proxmox's vncwebsocket handler requires, then hands the
+// connection to handle. It returns the test server and a ws:// URL for it.
+func vncTestServer(t *testing.T, handle func(conn *websocket.Conn)) (*httptest.Server, string) {
+	t.Helper()
+	upgrader := websocket.Upgrader{Subprotocols: []string{"binary"}}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		handle(conn)
+	}))
+	return server, "ws" + strings.TrimPrefix(server.URL, "http")
+}
+
+// TestClient_VNCWebSocket_NotifiesOnPeerDisconnect covers issue #344: when the
+// VM stops, Proxmox drops the websocket. The consumer only learns about this
+// through the recv/errs channels, so a peer disconnect must surface as either
+// an error on errs or a closed recv channel. Before the fix the read loop
+// swallowed the abnormal-closure error and returned silently, so the consumer
+// blocked forever and the frontend session was never torn down.
+func TestClient_VNCWebSocket_NotifiesOnPeerDisconnect(t *testing.T) {
+	server, wsURL := vncTestServer(t, func(conn *websocket.Conn) {
+		// Simulate the VM stopping: Proxmox drops the socket with a TCP RST.
+		if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
+			_ = tcpConn.SetLinger(0)
+		}
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.VNCWebSocket(wsURL, &VNC{})
+	require.NoError(t, err)
+	defer func() { _ = closer() }()
+
+	// Drain whichever channel fires first; a peer disconnect must reach one of
+	// them. Reading errs here also lets closer() drain cleanly on the buggy
+	// code path instead of deadlocking the writer goroutine.
+	notified := make(chan struct{})
+	go func() {
+		select {
+		case <-errs:
+		case <-recv:
+		}
+		close(notified)
+	}()
+
+	select {
+	case <-notified:
+	case <-time.After(2 * time.Second):
+		t.Fatal("consumer was not notified when the peer disconnected (issue #344)")
+	}
+}
+
+// TestClient_VNCWebSocket_CloseAfterPeerDisconnect is kernel-sanders' test for
+// the VNC crash: after the peer disconnects, calling the closer must shut down
+// cleanly and close recv/errs exactly once. Before the fix closer() raced the
+// worker goroutines (a fixed time.Sleep instead of a barrier) and could send on
+// an already-closed channel, panicking the process.
+func TestClient_VNCWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
+	serverResult := make(chan error, 1)
+	server, wsURL := vncTestServer(t, func(conn *websocket.Conn) {
+		tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn)
+		if !ok {
+			serverResult <- fmt.Errorf("unexpected connection type %T", conn.UnderlyingConn())
+			return
+		}
+		if err := tcpConn.SetLinger(0); err != nil {
+			serverResult <- err
+			return
+		}
+		serverResult <- tcpConn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.VNCWebSocket(wsURL, &VNC{})
+	require.NoError(t, err)
+
+	select {
+	case err := <-serverResult:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for peer disconnect")
+	}
+
+	// Give the read loop a moment to observe the dropped connection, then close.
+	time.Sleep(50 * time.Millisecond)
+	require.NoError(t, closer())
+
+	_, recvOpen := <-recv
+	assert.False(t, recvOpen)
+	_, errsOpen := <-errs
+	assert.False(t, errsOpen)
 }
 
 func TestClient_Version7(t *testing.T) {

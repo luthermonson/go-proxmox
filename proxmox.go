@@ -710,17 +710,39 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 	errs := make(chan error)
 	done := make(chan struct{})
 
-	closer := func() error {
-		close(done)
-		time.Sleep(1 * time.Second)
-		close(send)
-		close(recv)
-		close(errs)
+	var (
+		closeOnce sync.Once
+		closeErr  error
+		workers   sync.WaitGroup
+	)
 
-		return conn.Close()
+	// sendError delivers an error to the consumer without blocking once the
+	// connection is being torn down, so a worker can always exit.
+	sendError := func(err error) {
+		select {
+		case errs <- err:
+		case <-done:
+		}
 	}
 
+	// closer is idempotent (safe to call twice, e.g. an explicit close plus a
+	// deferred one) and waits for both workers to exit before closing the
+	// channels, so nothing can send on a closed channel.
+	closer := func() error {
+		closeOnce.Do(func() {
+			close(done)
+			closeErr = conn.Close()
+			workers.Wait()
+			close(recv)
+			close(errs)
+		})
+		return closeErr
+	}
+
+	workers.Add(2)
+
 	go func() {
+		defer workers.Done()
 		for {
 			select {
 			case <-done:
@@ -728,31 +750,39 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 			default:
 				_, msg, err := conn.ReadMessage()
 				if err != nil {
+					// closer() closed the connection locally; nothing to report.
 					if strings.Contains(err.Error(), "use of closed network connection") {
 						return
 					}
-					if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						return
-					}
-					errs <- err
+					// Any other read error means the peer (Proxmox) went away —
+					// e.g. the VM stopped. Surface it so the consumer can tear
+					// down the session instead of blocking forever (issue #344).
+					sendError(err)
+					return
 				}
-				recv <- msg
+				select {
+				case recv <- msg:
+				case <-done:
+					return
+				}
 			}
 		}
 	}()
 
 	go func() {
+		defer workers.Done()
 		for {
 			select {
 			case <-done:
-				if err := conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					errs <- err
-				}
 				return
-			case msg := <-send:
+			case msg, ok := <-send:
+				if !ok {
+					return
+				}
 				c.log.Debugf("sending: %s", msg)
 				if err := conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
-					errs <- err
+					sendError(err)
+					return
 				}
 			}
 		}
