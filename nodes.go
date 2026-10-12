@@ -13,6 +13,9 @@ func (c *Client) Nodes(ctx context.Context) (ns NodeStatuses, err error) {
 	return ns, c.Get(ctx, "/nodes", &ns)
 }
 
+// Node returns the named node after fetching its status
+// (GET /nodes/{node}/status). Use NodeRef instead when you only want to call
+// methods on the node and don't need its status fields.
 func (c *Client) Node(ctx context.Context, name string) (*Node, error) {
 	node := &Node{
 		Name:   name,
@@ -27,6 +30,15 @@ func (c *Client) Node(ctx context.Context, name string) (*Node, error) {
 	return node, nil
 }
 
+// NodeRef returns a handle to the named node without making any API call.
+// Every *Node method works on the handle, because they all address the node
+// by name alone. The status fields (CPU, Memory, Uptime, PVEVersion, ...)
+// stay zero until you call Status. The name is not checked: if no such node
+// exists, the first real call fails instead.
+func (c *Client) NodeRef(name string) *Node {
+	return &Node{client: c, Name: name}
+}
+
 func (n *Node) New(c *Client, name string) *Node {
 	node := &Node{
 		Name:   name,
@@ -36,6 +48,8 @@ func (n *Node) New(c *Client, name string) *Node {
 	return node
 }
 
+// Status fetches GET /nodes/{node}/status into the node's fields. It is the
+// refresh for a handle from NodeRef.
 func (n *Node) Status(ctx context.Context) error {
 	return n.client.Get(ctx, fmt.Sprintf("/nodes/%s/status", n.Name), n)
 }
@@ -93,6 +107,9 @@ func (n *Node) NewVirtualMachine(ctx context.Context, vmid int, options ...Virtu
 	return NewTask(upid, n.client), err
 }
 
+// VirtualMachine returns the VM after fetching its status and its config
+// (GET status/current, then GET config). Use VMRef instead when you only
+// want to act on the VM.
 func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, error) {
 	vm := &VirtualMachine{
 		client: n.client,
@@ -110,6 +127,32 @@ func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, e
 	return vm, nil
 }
 
+// VMRef returns a handle to the VM with the given VMID on this node, without
+// making any API call. It suits callers that already know where the VM lives
+// and only want to act on it: Stop on a ref is one POST, where VirtualMachine
+// followed by Stop is two GETs and a POST.
+//
+// Action methods (Start, Stop, Shutdown, Reboot, Migrate, Config, Delete,
+// ...) need only the node and VMID and work as-is. The methods that
+// read-modify-write the current config (AddTag, RemoveTag, CloudInit,
+// UnmountCloudInitISO, and the cloud-init cleanup inside Delete) fetch the
+// config themselves when the handle doesn't have it yet. The pure accessors
+// (IsRunning, IsStopped, IsPaused, IsHibernated, HasTag) take no context and
+// so cannot fetch: they report false until you call Ping. The VMID is not
+// checked; a missing VM surfaces on the first real call.
+func (n *Node) VMRef(vmid int) *VirtualMachine {
+	return &VirtualMachine{client: n.client, Node: n.Name, VMID: StringOrUint64(vmid)}
+}
+
+// ContainerRef returns a handle to the LXC container with the given VMID on
+// this node, without making any API call. It is the container counterpart of
+// VMRef and the same rules apply: actions work as-is, AddTag and RemoveTag
+// fetch the config when it is missing, and HasTag reports false until you
+// call Ping.
+func (n *Node) ContainerRef(vmid int) *Container {
+	return &Container{client: n.client, Node: n.Name, VMID: StringOrUint64(vmid)}
+}
+
 func (n *Node) Containers(ctx context.Context) (c Containers, err error) {
 	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc", n.Name), &c); err != nil {
 		return
@@ -123,6 +166,9 @@ func (n *Node) Containers(ctx context.Context) (c Containers, err error) {
 	return
 }
 
+// Container returns the container after fetching its status and its config
+// (GET status/current, then GET config). Use ContainerRef instead when you
+// only want to act on the container.
 func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
 	c := &Container{
 		client: n.client,
