@@ -68,6 +68,17 @@ Public helpers `Get`, `GetWithParams`, `Post`, `Put`, `Delete`, `Upload`, and
 `ErrNotAuthorized`, `ErrTimeout`, `ErrNoop`, `ErrSessionExists`) have matching
 `Is*` predicates — use those rather than string matching.
 
+Every non-2xx response becomes an `*APIError` (`errors.go`), built in
+`handleResponse` (and in `Req` for 401/403). It carries the status code,
+PVE's `message` and per-parameter `errors`, and matches `ErrNotFound`,
+`ErrNotAuthorized`, `ErrForbidden`, `ErrBadRequest`, `ErrRateLimited` and
+`ErrNodeUnreachable` through its `Is` method. PVE reports most missing
+resources as a 500, so `ErrNotFound` also matches on message text; the
+patterns live in the `notFoundPatterns` table with their upstream sources.
+Add a pattern there (with a source and a `TestMatchesNotFound` case) rather
+than string-matching in a resource method. Keep `Error()` starting with the
+status line — callers, including `WaitForAgent`, match on it.
+
 Two websocket helpers (`TermWebSocket`, `VNCWebSocket`) upgrade `https://` →
 `wss://` and return `(send, recv, errs, closer, err)` channels for the
 xterm.js / VNC protocols Proxmox exposes.
