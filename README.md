@@ -159,6 +159,37 @@ _, _ = ctrl.Delete(ctx)
 
 See `AGENTS.md` (Required: pick the right shape for new endpoints) for the full inventory of instance types.
 
+### Acting on a node, VM or container without fetching it first
+
+`client.Node` and `node.VirtualMachine` fetch before they return: the node's status, then the VM's status and config. That is three GETs before a `vm.Stop`. When you already know where the VM lives and only want to act on it, build a ref instead. A ref makes no request until you call a method:
+
+```go
+// Fetch: 3 GETs, then the POST. Use it when you're going to read the VM.
+node, err := client.Node(ctx, "pve1")
+vm, err := node.VirtualMachine(ctx, 100)
+fmt.Println(vm.Status, vm.VirtualMachineConfig.Memory)
+
+// Ref: no requests to build it, so Stop is the POST alone.
+ref := client.NodeRef("pve1").VMRef(100)
+task, err := ref.Stop(ctx)
+
+// A ref has only the node and VMID. Ping fills its status and config.
+err = ref.Ping(ctx)
+fmt.Println(ref.IsRunning())
+
+// LXC is the same.
+ct := client.NodeRef("pve1").ContainerRef(101)
+task, err = ct.Start(ctx)
+```
+
+Refs return the ordinary `*Node`, `*VirtualMachine` and `*Container` types, so every method is available:
+
+- **Actions** (`Start`, `Stop`, `Shutdown`, `Reboot`, `Migrate`, `Config`, `Clone`, snapshots, firewall, agent, ...) need only the node and VMID, and send exactly the one request they always did.
+- **Config read-modify-write** (`AddTag`, `RemoveTag`, `CloudInit`, `UnmountCloudInitISO`, and the cloud-init ISO cleanup inside `VirtualMachine.Delete`) fetch the config themselves when the handle doesn't have it, so existing tags are kept rather than overwritten.
+- **Accessors** (`IsRunning`, `IsStopped`, `IsPaused`, `IsHibernated`, `HasTag`) take no context and can't fetch. On a ref they report `false` until `Ping` has run.
+
+The node and VMID aren't checked when the ref is built; a VM that doesn't exist fails on the first real call. Refresh a node ref with `node.Status(ctx)`. See [`examples/vm-refs`](./examples/vm-refs/) for a runnable version.
+
 ### Create a VM and build a template
 
 Creating or editing a VM goes through `VirtualMachineOption` key/value pairs, whose names are the raw qemu parameter names from the [PVE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu) — the same names `qm create` takes. **`VirtualMachineConfig` is the read side**: `GET /config` unmarshals into it (that's why its fields use tolerant types like `StringOrInt` — PVE returns the same field as a number or a quoted string depending on version), and the library never sends it to the API. Don't populate it to create a VM.
@@ -373,6 +404,7 @@ The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`T
 ### More examples
 
 - [`examples/vm-template`](./examples/vm-template/) — build a qemu template from a cloud image: download, disk import, cloud-init, resize, convert.
+- [`examples/vm-refs`](./examples/vm-refs/) — act on a VM through a zero-request ref, next to the fetch pattern, and when to use which.
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
 - [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
 
