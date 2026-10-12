@@ -427,7 +427,8 @@ func TestClient_handleResponse(t *testing.T) {
 
 	// bad json
 	resp := &http.Response{
-		Body: io.NopCloser(strings.NewReader("{\"data\":{\"test\": \"data\"}")),
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader("{\"data\":{\"test\": \"data\"}")),
 	}
 	testData := map[string]string{}
 	err := client.handleResponse(resp, &testData)
@@ -437,7 +438,8 @@ func TestClient_handleResponse(t *testing.T) {
 
 	// good json
 	resp = &http.Response{
-		Body: io.NopCloser(strings.NewReader("{\"data\":{\"test\": \"data\"}}")),
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader("{\"data\":{\"test\": \"data\"}}")),
 	}
 	testData = map[string]string{}
 	assert.Nil(t, client.handleResponse(resp, &testData))
