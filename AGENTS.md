@@ -114,6 +114,18 @@ level; the next user request retries via the existing lazy path. Callers
 who need auth errors surfaced at startup should call `CreateSession`
 directly.
 
+**Transport wrappers.** `finalizeOptions` stacks the RoundTripper wrappers
+as `retry → failover → base transport`: `WithFallbackEndpoints`
+(`failover.go`) is installed first so `WithRetry` ends up outermost, and
+each retry attempt tries every endpoint once. The failover layer rewrites
+only requests addressed to `baseURL`, classifies on the raw
+`*http.Response` / transport error (never on `handleResponse` output), and
+replays non-GET/HEAD/OPTIONS requests only when they failed before the
+headers were written (tracked with `httptrace`). Code that needs the real
+`*http.Transport` under the wrappers (the websocket dialers) must go through
+`unwrapTransport`, and code that dials outside the RoundTripper must use
+`endpointBaseURL()` rather than `baseURL`.
+
 ### Resource model
 
 Resources are plain structs with an unexported `client *Client` field
