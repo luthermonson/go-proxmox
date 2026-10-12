@@ -464,6 +464,12 @@ func TestVirtualMachine_DeleteWithOptions(t *testing.T) {
 	defer mocks.Off()
 	defer gock.Off()
 
+	// The handle has no config, so Delete reads it to check for the
+	// cloud-init tag before deleting.
+	gock.New(TestURI).
+		Get("^/nodes/node1/qemu/998/config$").
+		Reply(200).
+		JSON(`{"data": {"name": "vm-998"}}`)
 	gock.New(TestURI).
 		Delete("^/nodes/node1/qemu/998$").
 		MatchParams(map[string]string{
@@ -1837,23 +1843,21 @@ func TestVirtualMachine_UnmountCloudInitISO_WithTag(t *testing.T) {
 	assert.Nil(t, vm.UnmountCloudInitISO(context.Background(), "ide2"))
 }
 
-// TestVirtualMachine_CloudInit_NodeError exercises the front half of
-// CloudInit: makeCloudInitISO succeeds (real iso written to TempDir, then
-// removed via the defer), then client.Node() fails. Covers the opts loop,
-// makeCloudInitISO success path, defer registration, and the
-// node-not-found return branch.
-func TestVirtualMachine_CloudInit_NodeError(t *testing.T) {
+// TestVirtualMachine_CloudInit_ConfigError covers CloudInit on a handle with
+// no config (a VMRef): the config is read first, because the boot order is
+// built from it, and a failure there returns before any ISO is built or
+// uploaded.
+func TestVirtualMachine_CloudInit_ConfigError(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	// VMID 601 + node "missing" — no /nodes/missing/status mock so
-	// client.Node fails.
-	gock.New(mockConfig.URI).
-		Get("^/nodes/missing/status$").
-		Reply(500)
+	cfgReq := gock.New(mockConfig.URI).
+		Get("^/nodes/missing/qemu/601/config$")
+	cfgReq.Reply(500)
 	vm := &VirtualMachine{client: mockClient(), Node: "missing", VMID: 601}
 	err := vm.CloudInit(context.Background(), "ide2", "", "", "", "",
 		WithCloudInitStorage("local"))
 	assert.Error(t, err)
+	assert.True(t, cfgReq.Mock.Done(), "expected the config GET to be the failing call")
 }
 
 // TestVirtualMachine_CloudInit_MakeISOError exercises the
@@ -1871,10 +1875,16 @@ func TestVirtualMachine_CloudInit_StorageError(t *testing.T) {
 		Persist().
 		Get("^/nodes/node1/storage/ghost$").
 		Reply(500)
-	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 602}
+	vm := &VirtualMachine{
+		client:               mockClient(),
+		Node:                 "node1",
+		VMID:                 602,
+		VirtualMachineConfig: &VirtualMachineConfig{},
+	}
 	err := vm.CloudInit(context.Background(), "ide2", "", "", "", "",
 		WithCloudInitStorage("ghost"))
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `cloud-init storage "ghost"`)
 }
 
 // TestVirtualMachine_Ping_StatusError exercises Ping's first error branch
@@ -1890,21 +1900,14 @@ func TestVirtualMachine_Ping_StatusError(t *testing.T) {
 }
 
 // TestVirtualMachine_DeleteCloudInitISO_StoragesError exercises the
-// node.Storages()-returns-error branch. The node lookup uses node1 (which
-// is mocked) but we override the /storage list to 500 with a one-shot mock
-// that takes precedence over the persisted fixture.
+// node.Storages()-returns-error branch. The node "lonely" has no /storage
+// fixture, so a one-shot 500 is what Storages() sees.
 func TestVirtualMachine_DeleteCloudInitISO_StoragesError(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	// Use a different node name that has a /status mock but no /storage
-	// mock, forcing Storages() to surface gock's no-match.
-	gock.New(mockConfig.URI).
-		Get("^/nodes/lonely/status$").
-		Reply(200).
-		JSON(`{"data": {"name": "lonely", "status": "online"}}`)
-	gock.New(mockConfig.URI).
-		Get("^/nodes/lonely/storage$").
-		Reply(500)
+	storageReq := gock.New(mockConfig.URI).
+		Get("^/nodes/lonely/storage$")
+	storageReq.Reply(500)
 	vm := &VirtualMachine{
 		client: mockClient(),
 		Node:   "lonely",
@@ -1915,25 +1918,23 @@ func TestVirtualMachine_DeleteCloudInitISO_StoragesError(t *testing.T) {
 	}
 	_, err := vm.deleteCloudInitISO(context.Background())
 	assert.Error(t, err)
+	assert.True(t, storageReq.Mock.Done(), "expected the storage list to be the failing call")
 }
 
-// TestVirtualMachine_DeleteCloudInitISO_NodeError exercises the
-// client.Node()-returns-error branch.
-func TestVirtualMachine_DeleteCloudInitISO_NodeError(t *testing.T) {
+// TestVirtualMachine_DeleteCloudInitISO_ConfigError covers the cleanup on a
+// handle with no config (a VMRef): the config is read to look for the
+// cloud-init tag, and a failure there is returned rather than skipping the
+// cleanup.
+func TestVirtualMachine_DeleteCloudInitISO_ConfigError(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	// VM points at a node that doesn't have a status mock — client.Node()
-	// fetches /nodes/{name}/status to construct the *Node.
 	gock.New(mockConfig.URI).
-		Get("^/nodes/missing/status$").
+		Get("^/nodes/missing/qemu/501/config$").
 		Reply(500)
 	vm := &VirtualMachine{
 		client: mockClient(),
 		Node:   "missing",
 		VMID:   501,
-		VirtualMachineConfig: &VirtualMachineConfig{
-			Tags: MakeTag(TagCloudInit),
-		},
 	}
 	_, err := vm.deleteCloudInitISO(context.Background())
 	assert.Error(t, err)

@@ -462,6 +462,24 @@ func containers() {
     }
 }`)
 
+	// GET /nodes/node1/lxc/100/config — the second half of Ping (LXC 100).
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/lxc/100/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "arch": "amd64",
+        "cores": 2,
+        "hostname": "ct-test-1",
+        "memory": 2048,
+        "ostype": "debian",
+        "rootfs": "local-lvm:vm-100-disk-0,size=10G",
+        "tags": "prod;web",
+        "digest": "fedcba0987654321"
+    }
+}`)
+
 	// POST /nodes/node1/lxc/100/termproxy
 	gock.New(config.C.URI).
 		Post("^/nodes/node1/lxc/100/termproxy$").

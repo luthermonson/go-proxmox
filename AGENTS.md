@@ -126,6 +126,16 @@ node.VirtualMachine(ctx, vmid) → *VirtualMachine
 vm.Config(ctx, opts...) → *Task
 ```
 
+`client.Node` and `node.VirtualMachine`/`node.Container` fetch status (and
+config) before returning. `client.NodeRef(name)`, `node.VMRef(vmid)` and
+`node.ContainerRef(vmid)` build the same types with no API call, for callers
+that only want to act. Any method on `*VirtualMachine`/`*Container` must
+therefore work on a handle that has only `client`, `Node` and `VMID` set:
+either use nothing else, fetch what it needs itself (`ensureConfig`), or, if
+it takes no context, document that it reports false/zero until `Ping` has
+run. Never branch on a zero `Status`, `Lock` or nil config as if it were
+real data.
+
 Mutating endpoints typically return a `*Task` (built from a Proxmox UPID
 string). `Task.Wait`, `Task.WaitFor`, `Task.WaitForCompleteStatus`, and
 `Task.Watch` poll `/nodes/<node>/tasks/<upid>/status` and `…/log`. UPID
