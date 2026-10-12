@@ -44,8 +44,12 @@ func IsTimeout(err error) bool {
 	return errors.Is(err, ErrTimeout)
 }
 
+// ErrNotFound is matched by an *APIError for a 404, and for the PVE 500/400
+// messages that say a resource does not exist (see notFoundPatterns in
+// errors.go).
 var ErrNotFound = errors.New("unable to find the item you are looking for")
 
+// IsNotFound reports whether err means the requested resource does not exist.
 func IsNotFound(err error) bool {
 	return errors.Is(err, ErrNotFound)
 }
@@ -259,7 +263,7 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 	if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
 		if path == (c.baseURL + "/access/ticket") {
 			// received an unauthorized while trying to create a session
-			return ErrNotAuthorized
+			return readAPIError(res)
 		}
 
 		if c.credentials != nil {
@@ -267,13 +271,14 @@ func (c *Client) Req(ctx context.Context, method, path string, data []byte, v in
 			err = c.CreateSession(ctx)
 			if err != nil {
 				if errors.Is(err, ErrSessionExists) {
-					return ErrNotAuthorized
+					return readAPIError(res)
 				}
 				return err
 			}
 			return c.Req(ctx, method, path, data, v)
 		}
-		return ErrNotAuthorized
+		// *APIError matches ErrNotAuthorized for 401 and 403.
+		return readAPIError(res)
 	}
 
 	return c.handleResponse(res, v)
@@ -443,10 +448,24 @@ func (c *Client) authHeaders(header *http.Header) {
 	}
 }
 
+// readAPIError reads the body of a non-2xx response into an *APIError. A body
+// read failure only loses the detail; the status still classifies the error.
+func readAPIError(res *http.Response) *APIError {
+	body, _ := io.ReadAll(io.LimitReader(res.Body, maxErrorBodySize))
+	return newAPIError(res, body)
+}
+
+// maxErrorBodySize caps how much of an error response is read. PVE error
+// bodies are small JSON envelopes; the cap guards against a misbehaving
+// reverse proxy returning a large page.
+const maxErrorBodySize = 1 << 20
+
 func (c *Client) handleResponse(res *http.Response, v interface{}) error {
-	if res.StatusCode == http.StatusInternalServerError ||
-		res.StatusCode == http.StatusNotImplemented {
-		return errors.New(res.Status)
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		apiErr := readAPIError(res)
+		c.log.Debugf("RECV: %d - %s", res.StatusCode, res.Status)
+		c.log.Debugf("ERROR: %s", apiErr.Error())
+		return apiErr
 	}
 
 	body, err := io.ReadAll(res.Body)
@@ -461,19 +480,6 @@ func (c *Client) handleResponse(res *http.Response, v interface{}) error {
 			// don't show tokens out of the logs
 			c.log.Debugf("BODY: %s", string(body))
 		}
-	}
-
-	if res.StatusCode == http.StatusBadRequest {
-		var errorskey map[string]json.RawMessage
-		if err := json.Unmarshal(body, &errorskey); err != nil {
-			return err
-		}
-
-		if body, ok := errorskey["errors"]; ok {
-			return fmt.Errorf("bad request: %s - %s", res.Status, body)
-		}
-
-		return fmt.Errorf("bad request: %s - %s", res.Status, string(body))
 	}
 
 	// if nil passed don't bother to do any unmarshalling

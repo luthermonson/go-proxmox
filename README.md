@@ -370,6 +370,45 @@ client := proxmox.NewClient(url,
 
 The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`TermWebSocket`, `VNCWebSocket`) are exempt — the dialer doesn't surface a `*http.Request` the chain could mutate.
 
+### Error handling
+
+Every non-2xx response comes back as a `*proxmox.APIError` carrying the status code, PVE's message, and the per-parameter `errors` map from the response body:
+
+```go
+var apiErr *proxmox.APIError
+if errors.As(err, &apiErr) {
+    log.Printf("%s %s -> %d: %s %v",
+        apiErr.Method, apiErr.Path, apiErr.StatusCode, apiErr.Message, apiErr.Errors)
+}
+```
+
+Classify errors with `errors.Is` or the matching helper rather than matching on `err.Error()`:
+
+| Sentinel | Helper | Matches |
+|---|---|---|
+| `ErrNotFound` | `IsNotFound` | `404`, plus the PVE `500`/`400` messages that mean a resource doesn't exist (`Configuration file '...' does not exist`, `storage 'x' does not exist`, `no such user`, `no such job`, `No such storage.`, ...) |
+| `ErrNotAuthorized` | `IsNotAuthorized` | `401` and `403` |
+| `ErrForbidden` | `IsForbidden` | `403` only |
+| `ErrBadRequest` | `IsBadRequest` | `400`, e.g. `Parameter verification failed.`; details are in `APIError.Errors` |
+| `ErrRateLimited` | `IsRateLimited` | `429`; `APIError.RetryAfter` holds the `Retry-After` hint |
+| `ErrNodeUnreachable` | `IsNodeUnreachable` | `595` / `596`, which pveproxy returns when it can't reach the target cluster node |
+
+```go
+vm, err := node.VirtualMachine(ctx, 100)
+switch {
+case proxmox.IsNotFound(err):
+    // create it
+case proxmox.IsNodeUnreachable(err):
+    // try another node
+case err != nil:
+    return err
+}
+```
+
+PVE reports most missing resources as a generic `500` rather than a `404`, so `ErrNotFound` is partly matched on the message. The patterns are deliberately conservative and listed with their upstream sources in `errors.go`. For anything they don't cover, check `APIError.StatusCode` and `APIError.Message` directly.
+
+`Error()` keeps the text these errors had before `APIError` existed: it starts with the HTTP status line (`500 QEMU guest agent is not running`), 400s keep the `bad request: <status> - <errors>` form, and 401/403 keep the `not authorized to access endpoint` prefix. See [`migration/v0.9.0.md`](./migration/v0.9.0.md) for what changed.
+
 ### More examples
 
 - [`examples/vm-template`](./examples/vm-template/) — build a qemu template from a cloud image: download, disk import, cloud-init, resize, convert.
@@ -382,6 +421,7 @@ Per-release migration guides live in [`migration/`](./migration/). Each file des
 
 - [`migration/v0.6.0.md`](./migration/v0.6.0.md) — upgrading from v0.5.x
 - [`migration/v0.7.0.md`](./migration/v0.7.0.md) — upgrading from v0.6.0 (the major cleanup release)
+- [`migration/v0.9.0.md`](./migration/v0.9.0.md) — typed API errors (`*APIError`); non-2xx responses that used to be ignored now return errors
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 
