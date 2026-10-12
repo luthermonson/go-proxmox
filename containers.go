@@ -45,8 +45,44 @@ func (c *Container) Delete(ctx context.Context, params *ContainerDeleteOptions) 
 	return NewTask(upid, c.client), nil
 }
 
+// Ping refreshes the container from the API: it fetches status/current and
+// config and replaces the handle's status fields and ContainerConfig with
+// what they return. Use it to fill a handle from ContainerRef, or to re-read
+// a container fetched earlier. It matches VirtualMachine.Ping.
+//
+// Both responses are decoded into fresh values and copied over only after
+// both requests succeed, so fields PVE stops sending are cleared rather than
+// left stale, and a failed Ping leaves the handle as it was.
 func (c *Container) Ping(ctx context.Context) error {
-	return c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", c.Node, c.VMID), &c)
+	fresh := &Container{}
+	if err := c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", c.Node, c.VMID), fresh); err != nil {
+		return err
+	}
+	cfg := &ContainerConfig{}
+	if err := c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/config", c.Node, c.VMID), cfg); err != nil {
+		return err
+	}
+	fresh.client = c.client
+	fresh.Node = c.Node
+	fresh.VMID = c.VMID
+	fresh.ContainerConfig = cfg
+	*c = *fresh
+	return nil
+}
+
+// ensureConfig fetches ContainerConfig when the handle doesn't have one yet,
+// as on a handle from ContainerRef. It never re-fetches a config that is
+// already present.
+func (c *Container) ensureConfig(ctx context.Context) error {
+	if c.ContainerConfig != nil {
+		return nil
+	}
+	cfg := &ContainerConfig{}
+	if err := c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/config", c.Node, c.VMID), cfg); err != nil {
+		return err
+	}
+	c.ContainerConfig = cfg
+	return nil
 }
 
 // Config sets ContainerOptions for Container
@@ -386,7 +422,10 @@ func (c *Container) UpdateFirewallOptions(ctx context.Context, options *Firewall
 
 // Tag Management Helpers
 
-// HasTag returns if a Tag is present in TagSlice
+// HasTag returns if a Tag is present in TagSlice. It reads the config already
+// on the handle and makes no API call, so on a handle from ContainerRef it
+// reports false until Ping has run. AddTag and RemoveTag fetch the config
+// themselves and don't need that.
 func (c *Container) HasTag(value string) bool {
 	if c.ContainerConfig == nil {
 		return false
@@ -411,8 +450,13 @@ func (c *Container) HasTag(value string) bool {
 
 // AddTag appends the passed value to TagsSlice and updates Tags via c.Config
 // If accurate state is important, then reassign the value of Container after the task
-// has completed.
+// has completed. When the handle has no config yet (a ContainerRef), it is
+// fetched first so the existing tags are kept rather than overwritten.
 func (c *Container) AddTag(ctx context.Context, value string) (*Task, error) {
+	if err := c.ensureConfig(ctx); err != nil {
+		return nil, err
+	}
+
 	if c.HasTag(value) {
 		return nil, ErrNoop
 	}
@@ -433,8 +477,14 @@ func (c *Container) AddTag(ctx context.Context, value string) (*Task, error) {
 
 // RemoveTag removes the passed value from TagsSlice and updates Tags via c.Config
 // If accurate state is important, then reassign the value of Container after the task
-// has completed.
+// has completed. When the handle has no config yet (a ContainerRef), it is
+// fetched first; otherwise an unfetched handle would always look tag-less
+// and the call would report ErrNoop without removing anything.
 func (c *Container) RemoveTag(ctx context.Context, value string) (*Task, error) {
+	if err := c.ensureConfig(ctx); err != nil {
+		return nil, err
+	}
+
 	if !c.HasTag(value) {
 		return nil, ErrNoop
 	}
@@ -460,8 +510,13 @@ func (c *Container) RemoveTag(ctx context.Context, value string) (*Task, error) 
 	})
 }
 
-// SplitTags sets ContainerConfig TagsSlice my splitting the value of ContainerConfig.Tags with TagSeparator
+// SplitTags sets ContainerConfig TagsSlice my splitting the value of ContainerConfig.Tags with TagSeparator.
+// It does nothing when the handle has no config (a ContainerRef that hasn't
+// been fetched).
 func (c *Container) SplitTags() {
+	if c.ContainerConfig == nil {
+		return
+	}
 	c.ContainerConfig.TagsSlice = strings.Split(c.ContainerConfig.Tags, TagSeperator)
 }
 

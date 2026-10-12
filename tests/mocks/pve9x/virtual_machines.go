@@ -887,6 +887,21 @@ func virtualMachines() {
     "data": "UPID:node1:0000000B:0000000B:0000000B:qmresume:100:root@pam:"
 }`)
 
+	// GET /nodes/{node}/qemu/{vmid}/config - VM 999 has no config on the
+	// handle in TestVirtualMachine_Delete, so Delete reads it (no cloud-init
+	// tag, so no ISO cleanup) before the DELETE.
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/qemu/999/config$").
+		Reply(200).
+		JSON(`{
+    "data": {
+        "name": "vm-to-delete",
+        "memory": 512,
+        "digest": "0123456789abcdef"
+    }
+}`)
+
 	// DELETE /nodes/{node}/qemu/{vmid} - Delete VM
 	gock.New(config.C.URI).
 		Delete("^/nodes/node1/qemu/999$").
