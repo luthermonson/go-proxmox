@@ -129,7 +129,10 @@ vm.Config(ctx, opts...) → *Task
 Mutating endpoints typically return a `*Task` (built from a Proxmox UPID
 string). `Task.Wait`, `Task.WaitFor`, `Task.WaitForCompleteStatus`, and
 `Task.Watch` poll `/nodes/<node>/tasks/<upid>/status` and `…/log`. UPID
-parsing happens in `NewTask` (`tasks.go`).
+parsing happens in `NewTask` (`tasks.go`). The waits return a
+`*TaskFailedError` when the task finishes with any exit status other than
+`OK` / `WARNINGS: n`, so internal callers should just propagate the `Wait`
+error rather than re-checking `task.IsFailed`.
 
 `VirtualMachineOption` (`virtual_machine_config.go`) and similar option types
 are name/value pairs flattened into the request body — this is how the

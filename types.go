@@ -1531,9 +1531,13 @@ type Task struct {
 	IsRunning    bool
 	IsFailed     bool
 	IsSuccessful bool
-	StartTime    time.Time     `json:"-"`
-	EndTime      time.Time     `json:"-"`
-	Duration     time.Duration `json:"-"`
+	// Warnings is the n from an ExitStatus of "WARNINGS: n": the task
+	// succeeded (IsSuccessful, and Wait returns nil) but logged warnings.
+	// Zero for every other exit status. Set by Ping/Wait, never decoded.
+	Warnings  int           `json:"-"`
+	StartTime time.Time     `json:"-"`
+	EndTime   time.Time     `json:"-"`
+	Duration  time.Duration `json:"-"`
 }
 
 func (t *Task) UnmarshalJSON(b []byte) error {

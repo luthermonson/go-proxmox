@@ -382,6 +382,7 @@ Per-release migration guides live in [`migration/`](./migration/). Each file des
 
 - [`migration/v0.6.0.md`](./migration/v0.6.0.md) — upgrading from v0.5.x
 - [`migration/v0.7.0.md`](./migration/v0.7.0.md) — upgrading from v0.6.0 (the major cleanup release)
+- [`migration/v0.9.0.md`](./migration/v0.9.0.md) — task waits report failed tasks as errors
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 
