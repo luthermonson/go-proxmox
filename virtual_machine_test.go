@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 )
 
 func TestVirtualMachine_Ping(t *testing.T) {
@@ -1958,4 +1959,47 @@ func TestVirtualMachine_UnmountCloudInitISO_ConfigError(t *testing.T) {
 	}
 	err := vm.UnmountCloudInitISO(context.Background(), "ide2")
 	assert.Error(t, err)
+}
+
+// TestVirtualMachine_CloudInit_WaitsForTag checks that CloudInit waits for the
+// task adding the cloud-init tag before it attaches the ISO.
+func TestVirtualMachine_CloudInit_WaitsForTag(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := &VirtualMachine{
+		client:               mockClient(),
+		Node:                 "cinode",
+		VMID:                 504,
+		VirtualMachineConfig: &VirtualMachineConfig{Boot: "order=scsi0"},
+	}
+	require.NoError(t, vm.CloudInit(context.Background(), "ide2", "#cloud-config", "instance-id: 504", "", ""))
+
+	var calls []string
+	for _, r := range capture.Requests {
+		call := "wait"
+		if r.Body["tags"] != nil {
+			call = "tag"
+		} else if r.Body["ide2"] != nil {
+			call = "attach"
+		}
+		if len(calls) == 0 || calls[len(calls)-1] != call {
+			calls = append(calls, call)
+		}
+	}
+	assert.Equal(t, []string{"tag", "wait", "attach", "wait"}, calls)
+}
+
+func TestVirtualMachine_CloudInit_TagTaskError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	vm := &VirtualMachine{
+		client:               mockClient(),
+		Node:                 "cinode",
+		VMID:                 505,
+		VirtualMachineConfig: &VirtualMachineConfig{Boot: "order=scsi0"},
+	}
+	assert.Error(t, vm.CloudInit(context.Background(), "ide2", "#cloud-config", "instance-id: 505", "", ""))
+	for _, r := range capture.Requests {
+		assert.Nil(t, r.Body["ide2"], "the ISO was attached although the tag task failed")
+	}
 }
