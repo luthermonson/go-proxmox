@@ -242,7 +242,13 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	_, err = v.AddTag(ctx, MakeTag(TagCloudInit))
+	// Let the tag change finish before the next config change: Proxmox VE can
+	// fail to start a task while an earlier one ends.
+	// https://bugzilla.proxmox.com/show_bug.cgi?id=8124
+	task, err = v.AddTag(ctx, MakeTag(TagCloudInit))
+	if err == nil {
+		err = task.WaitFor(ctx, 2)
+	}
 	if err != nil && !IsErrNoop(err) {
 		return err
 	}
