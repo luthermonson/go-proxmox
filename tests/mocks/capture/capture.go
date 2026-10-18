@@ -1,10 +1,11 @@
 // Package capture wires gock matchers that record details of intercepted
 // requests so tests can assert on the body of multipart uploads (which gock
-// can't match natively).
+// can't match natively) and on the order of calls.
 package capture
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -29,9 +30,45 @@ type Upload struct {
 // hit. Reset() clears it. Tests should read it after the call under test.
 var LastUpload *Upload
 
+// Request is a request recorded by RequestMatcher.
+type Request struct {
+	Method string
+	Path   string
+	// Body is the request's JSON body, nil when it has none.
+	Body map[string]any
+}
+
+// Requests lists the requests RequestMatcher saw, in order. Reset() clears it.
+var Requests []Request
+
 // Reset clears any captured state. Called from mocks.On so prior tests
 // don't bleed into subsequent ones.
-func Reset() { LastUpload = nil }
+func Reset() {
+	LastUpload = nil
+	Requests = nil
+}
+
+// RequestMatcher returns a gock matcher that appends each request to
+// Requests. Like UploadMatcher it always reports a match.
+func RequestMatcher() gock.MatchFunc {
+	return func(req *http.Request, _ *gock.Request) (bool, error) {
+		r := Request{Method: req.Method, Path: req.URL.Path}
+		if req.Body != nil {
+			raw, err := io.ReadAll(req.Body)
+			if err != nil {
+				return false, err
+			}
+			req.Body = io.NopCloser(bytes.NewReader(raw))
+			if len(raw) > 0 {
+				if err := json.Unmarshal(raw, &r.Body); err != nil {
+					return false, err
+				}
+			}
+		}
+		Requests = append(Requests, r)
+		return true, nil
+	}
+}
 
 // UploadMatcher returns a gock matcher that drains the request body, parses
 // it as multipart/form-data, and stores the result in LastUpload. It always

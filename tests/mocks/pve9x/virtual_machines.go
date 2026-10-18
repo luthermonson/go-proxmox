@@ -2,6 +2,7 @@ package pve9x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
@@ -1594,4 +1595,42 @@ func virtualMachines() {
 		Get("^/nodes/cinode/tasks/UPID:cinode:0000D001:0000D001:0000D001:imgdel:cidata:root@pam:/status$").
 		Reply(200).
 		JSON(`{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "imgdel", "id": "cidata", "user": "root@pam", "upid": "UPID:cinode:0000D001:0000D001:0000D001:imgdel:cidata:root@pam:"}}`)
+
+	// ----- CloudInit scaffolding (cinode + vmid 504 and 505) -----
+	// Uploads to the cidata storage above. Config changes and task polls are
+	// recorded by capture.RequestMatcher so tests can check that CloudInit
+	// waits for the tag task before attaching the ISO. On vmid 505 the
+	// config task's status can't be read.
+	gock.New(config.C.URI).
+		Post("^/nodes/cinode/storage/cidata/upload$").
+		Reply(200).
+		JSON(`{"data": "UPID:cinode:0000D002:0000D002:0000D002:imgcopy:upload:root@pam:"}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/tasks/UPID:cinode:0000D002:0000D002:0000D002:imgcopy:upload:root@pam:/status$").
+		Reply(200).
+		JSON(`{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "imgcopy", "id": "upload", "user": "root@pam", "upid": "UPID:cinode:0000D002:0000D002:0000D002:imgcopy:upload:root@pam:"}}`)
+	gock.New(config.C.URI).
+		Persist().
+		Post("^/nodes/cinode/qemu/504/config$").
+		AddMatcher(capture.RequestMatcher()).
+		Reply(200).
+		JSON(`{"data": "UPID:cinode:0000D003:0000D003:0000D003:qmconfig:504:root@pam:"}`)
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/cinode/tasks/UPID:cinode:0000D003:0000D003:0000D003:qmconfig:504:root@pam:/status$").
+		AddMatcher(capture.RequestMatcher()).
+		Reply(200).
+		JSON(`{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "qmconfig", "id": "504", "user": "root@pam", "upid": "UPID:cinode:0000D003:0000D003:0000D003:qmconfig:504:root@pam:"}}`)
+	// Registered twice, so an ISO attach after the failed wait is still recorded.
+	for range 2 {
+		gock.New(config.C.URI).
+			Post("^/nodes/cinode/qemu/505/config$").
+			AddMatcher(capture.RequestMatcher()).
+			Reply(200).
+			JSON(`{"data": "UPID:cinode:0000D004:0000D004:0000D004:qmconfig:505:root@pam:"}`)
+	}
+	gock.New(config.C.URI).
+		Get("^/nodes/cinode/tasks/UPID:cinode:0000D004:0000D004:0000D004:qmconfig:505:root@pam:/status$").
+		Reply(500)
 }
