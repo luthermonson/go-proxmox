@@ -23,6 +23,9 @@ type Upload struct {
 	Filename string
 	// Body is the contents of the uploaded file.
 	Body string
+	// Parts lists the form name of every part in the order it was sent,
+	// the file part included.
+	Parts []string
 }
 
 // LastUpload is populated by UploadMatcher each time the upload endpoint is
@@ -65,6 +68,7 @@ func UploadMatcher() gock.MatchFunc {
 			if err != nil {
 				return false, err
 			}
+			captured.Parts = append(captured.Parts, part.FormName())
 			if part.FileName() != "" {
 				captured.Filename = part.FileName()
 				captured.Body = string(data)
