@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/backend/file"
@@ -1875,6 +1876,82 @@ func TestVirtualMachine_CloudInit_StorageError(t *testing.T) {
 	err := vm.CloudInit(context.Background(), "ide2", "", "", "", "",
 		WithCloudInitStorage("ghost"))
 	assert.Error(t, err)
+}
+
+const (
+	cloudInitAttachStatus  = "^/nodes/cinode/tasks/UPID:cinode:0000D006:0000D006:0000D006:qmconfig:506:root@pam:/status$"
+	cloudInitAttachRunning = `{"data": {"status": "running", "node": "cinode", "type": "qmconfig", "id": "506", "user": "root@pam", "upid": "UPID:cinode:0000D006:0000D006:0000D006:qmconfig:506:root@pam:"}}`
+	cloudInitAttachStopped = `{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "qmconfig", "id": "506", "user": "root@pam", "upid": "UPID:cinode:0000D006:0000D006:0000D006:qmconfig:506:root@pam:"}}`
+)
+
+// mockCloudInitTasks registers the upload and config calls CloudInit makes for
+// vmid 506 on cinode. Tests register the status of the task attaching the ISO.
+func mockCloudInitTasks() {
+	gock.New(mockConfig.URI).
+		Post("^/nodes/cinode/storage/cidata/upload$").
+		Reply(200).
+		JSON(`{"data": "UPID:cinode:0000D005:0000D005:0000D005:imgcopy:upload:root@pam:"}`)
+	gock.New(mockConfig.URI).
+		Persist().
+		Get("^/nodes/cinode/tasks/UPID:cinode:0000D005:0000D005:0000D005:imgcopy:upload:root@pam:/status$").
+		Reply(200).
+		JSON(`{"data": {"status": "stopped", "exitstatus": "OK", "node": "cinode", "type": "imgcopy", "id": "upload", "user": "root@pam", "upid": "UPID:cinode:0000D005:0000D005:0000D005:imgcopy:upload:root@pam:"}}`)
+	gock.New(mockConfig.URI).
+		Persist().
+		Post("^/nodes/cinode/qemu/506/config$").
+		Reply(200).
+		JSON(`{"data": "UPID:cinode:0000D006:0000D006:0000D006:qmconfig:506:root@pam:"}`)
+}
+
+// TestVirtualMachine_CloudInit_WaitsForSlowTask has the task attaching the ISO
+// run for about three seconds, as when another task holds the VM's config
+// lock, and expects CloudInit to wait for it to end.
+func TestVirtualMachine_CloudInit_WaitsForSlowTask(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	mockCloudInitTasks()
+	for range 4 {
+		gock.New(mockConfig.URI).
+			Get(cloudInitAttachStatus).
+			Reply(200).
+			JSON(cloudInitAttachRunning)
+	}
+	gock.New(mockConfig.URI).
+		Persist().
+		Get(cloudInitAttachStatus).
+		Reply(200).
+		JSON(cloudInitAttachStopped)
+
+	vm := &VirtualMachine{
+		client:               mockClient(),
+		Node:                 "cinode",
+		VMID:                 506,
+		VirtualMachineConfig: &VirtualMachineConfig{Boot: "order=scsi0"},
+	}
+	assert.NoError(t, vm.CloudInit(context.Background(), "ide2", "#cloud-config", "instance-id: 506", "", ""))
+}
+
+// TestVirtualMachine_CloudInit_ContextEndsWait checks that the caller's
+// context still ends the wait for a task that keeps running.
+func TestVirtualMachine_CloudInit_ContextEndsWait(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	mockCloudInitTasks()
+	gock.New(mockConfig.URI).
+		Persist().
+		Get(cloudInitAttachStatus).
+		Reply(200).
+		JSON(cloudInitAttachRunning)
+
+	vm := &VirtualMachine{
+		client:               mockClient(),
+		Node:                 "cinode",
+		VMID:                 506,
+		VirtualMachineConfig: &VirtualMachineConfig{Boot: "order=scsi0"},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, vm.CloudInit(ctx, "ide2", "#cloud-config", "instance-id: 506", "", ""), context.DeadlineExceeded)
 }
 
 // TestVirtualMachine_Ping_StatusError exercises Ping's first error branch
