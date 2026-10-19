@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -203,6 +204,9 @@ func WithCloudInitStorage(name string) CloudInitOption {
 //
 // Pass WithCloudInitStorage("name") to control which storage receives the ISO.
 // Without it, the first enabled iso-capable storage returned by the node is used.
+//
+// CloudInit waits for the upload and the config change to finish; ctx bounds
+// how long it waits.
 func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string, opts ...CloudInitOption) error {
 	var cfg cloudInitConfig
 	for _, opt := range opts {
@@ -237,8 +241,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	// iso should only be < 5mb so wait for it and then mount it
-	if err := task.WaitFor(ctx, 5); err != nil {
+	if err := waitForTask(ctx, task); err != nil {
 		return err
 	}
 
@@ -258,7 +261,14 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	return task.WaitFor(ctx, 2)
+	return waitForTask(ctx, task)
+}
+
+// waitForTask waits until a cloud-init task has ended. These tasks are short
+// but can queue behind other work on a busy node, for example a disk resize
+// holding the VM's config lock, so only ctx bounds the wait.
+func waitForTask(ctx context.Context, task *Task) error {
+	return task.Wait(ctx, DefaultWaitInterval, math.MaxInt64)
 }
 
 // resolveCloudInitStorage picks the *Storage that CloudInit should upload to.
@@ -509,7 +519,7 @@ func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err e
 		if terr != nil {
 			return false, terr
 		}
-		if werr := task.WaitFor(ctx, 5); werr != nil {
+		if werr := waitForTask(ctx, task); werr != nil {
 			return false, werr
 		}
 		return true, nil
