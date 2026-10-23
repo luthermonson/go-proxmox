@@ -280,6 +280,20 @@ func (c *Client) ensureTLSConfig() *tls.Config {
 	return t.TLSClientConfig
 }
 
+// websocketTLSConfig returns the TLS config the websocket dialer should reuse,
+// unwrapping the WithRetry wrapper. Nil when no *http.Transport is reachable
+// (default client, custom RoundTripper such as otelhttp).
+func (c *Client) websocketTLSConfig() *tls.Config {
+	rt := c.httpClient.Transport
+	if r, ok := rt.(*retryRoundTripper); ok {
+		rt = r.base
+	}
+	if t, ok := rt.(*http.Transport); ok {
+		return t.TLSClientConfig
+	}
+	return nil
+}
+
 // WithRequestInterceptor registers a function called on every outgoing HTTP
 // request after the client's auth headers are added and before the request is
 // sent. Use cases: tracing (OpenTelemetry span injection), custom audit

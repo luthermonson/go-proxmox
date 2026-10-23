@@ -508,16 +508,11 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
 
-	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
-		tlsConfig = transport.TLSClientConfig
-	}
 	c.log.Debugf("connecting to websocket: %s", path)
 	dialer := &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 30 * time.Second,
-		TLSClientConfig:  tlsConfig,
+		TLSClientConfig:  c.websocketTLSConfig(),
 		// Proxmox's vncwebsocket handler requires the "binary" subprotocol —
 		// the web UI's xterm.js opens the socket with `new WebSocket(url, "binary")`.
 		// Without it the server closes the upgraded connection immediately,
@@ -674,16 +669,11 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
 	}
 
-	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
-		tlsConfig = transport.TLSClientConfig
-	}
 	c.log.Debugf("connecting to websocket: %s", path)
 	dialer := &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 30 * time.Second,
-		TLSClientConfig:  tlsConfig,
+		TLSClientConfig:  c.websocketTLSConfig(),
 		// Proxmox's vncwebsocket handler requires the "binary" subprotocol —
 		// the web UI's xterm.js opens the socket with `new WebSocket(url, "binary")`.
 		// Without it the server closes the upgraded connection immediately,
