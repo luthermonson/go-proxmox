@@ -277,6 +277,45 @@ func TestClient_VNCWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
 	assert.False(t, errsOpen)
 }
 
+// TestClient_WebSocket_TransportVariants checks the websocket helpers don't
+// assume c.httpClient.Transport is a non-nil *http.Transport.
+func TestClient_WebSocket_TransportVariants(t *testing.T) {
+	server, wsURL := vncTestServer(t, func(conn *websocket.Conn) {
+		defer func() { _ = conn.Close() }()
+		// Ack the term login; VNC sends nothing and blocks here until closed.
+		if _, _, err := conn.ReadMessage(); err != nil {
+			return
+		}
+		_ = conn.WriteMessage(websocket.BinaryMessage, []byte("OK"))
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	})
+	defer server.Close()
+
+	clients := map[string]*Client{
+		"default client": NewClient(server.URL),
+		"WithRetry":      NewClient(server.URL, WithRetry()),
+		"custom RoundTripper": NewClient(server.URL, WithHTTPClient(&http.Client{
+			Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+		})),
+	}
+	for name, client := range clients {
+		t.Run(name+"/term", func(t *testing.T) {
+			_, _, _, closer, err := client.TermWebSocket(wsURL, &Term{})
+			require.NoError(t, err)
+			_ = closer()
+		})
+		t.Run(name+"/vnc", func(t *testing.T) {
+			_, _, _, closer, err := client.VNCWebSocket(wsURL, &VNC{})
+			require.NoError(t, err)
+			_ = closer()
+		})
+	}
+}
+
 func TestClient_Version7(t *testing.T) {
 	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
@@ -462,4 +501,13 @@ func TestClient_handleResponse(t *testing.T) {
 	err = client.handleResponse(resp, &testData)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad request:  - {\"test\":\"data\"}", err.Error())
+}
+
+// TestClient_websocketTLSConfig_UnwrapsRetry ensures TLS options survive the
+// WithRetry wrapper instead of being dropped for websocket dials.
+func TestClient_websocketTLSConfig_UnwrapsRetry(t *testing.T) {
+	client := NewClient("", WithInsecureSkipVerify(), WithRetry())
+	tc := client.websocketTLSConfig()
+	require.NotNil(t, tc)
+	assert.True(t, tc.InsecureSkipVerify)
 }
