@@ -2217,11 +2217,11 @@ type AgentOsInfo struct {
 type AgentExecStatus struct {
 	Exited       int       `json:"exited"`
 	ErrData      string    `json:"err-data"`
-	ErrTruncated bool      `json:"err-truncated"`
+	ErrTruncated IntOrBool `json:"err-truncated"`
 	ExitCode     int       `json:"exitcode"`
 	OutData      string    `json:"out-data"`
 	OutTruncated IntOrBool `json:"out-truncated"`
-	Signal       bool      `json:"signal"`
+	Signal       int       `json:"signal"`
 }
 
 // AgentFileRead is the response from /agent/file-read. PVE returns the file

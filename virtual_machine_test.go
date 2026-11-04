@@ -1410,6 +1410,13 @@ func TestVirtualMachine_AgentExecStatus(t *testing.T) {
 	require.NotNil(t, status)
 	assert.Equal(t, 1, status.Exited)
 	assert.Equal(t, 0, status.ExitCode)
+	assert.Equal(t, "warning\n", status.ErrData)
+	assert.False(t, bool(status.ErrTruncated))
+
+	status, err = vm101().AgentExecStatus(context.Background(), 4321)
+	assert.Nil(t, err)
+	require.NotNil(t, status)
+	assert.Equal(t, 9, status.Signal)
 }
 
 func TestVirtualMachine_WaitForAgentExecExit(t *testing.T) {

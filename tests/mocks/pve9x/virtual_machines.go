@@ -1516,10 +1516,16 @@ func virtualMachines() {
 	// Unlike most agent endpoints AgentExecStatus does NOT wrap in a "result"
 	// envelope — the struct sits directly under "data".
 	gock.New(config.C.URI).
+		Get("^/nodes/node1/qemu/101/agent/exec-status$").
+		MatchParam("pid", "4321").
+		Reply(200).
+		JSON(`{"data": {"exited": 1, "signal": 9}}`)
+
+	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/qemu/101/agent/exec-status$").
 		Reply(200).
-		JSON(`{"data": {"exited": 1, "exitcode": 0, "out-data": "hello\n", "out-truncated": false}}`)
+		JSON(`{"data": {"exited": 1, "exitcode": 0, "out-data": "hello\n", "out-truncated": 0, "err-data": "warning\n", "err-truncated": 0}}`)
 
 	// GET /agent/get-osinfo - AgentOsInfo
 	gock.New(config.C.URI).
