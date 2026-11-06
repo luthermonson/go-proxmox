@@ -17,6 +17,9 @@ import (
 	//mage:import install
 	"github.com/luthermonson/go-proxmox/mage/install"
 
+	//mage:import record
+	_ "github.com/luthermonson/go-proxmox/mage/record"
+
 	//mage:import test
 	"github.com/luthermonson/go-proxmox/mage/test"
 )
