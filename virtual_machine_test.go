@@ -1966,3 +1966,27 @@ func TestVirtualMachine_UnmountCloudInitISO_ConfigError(t *testing.T) {
 	err := vm.UnmountCloudInitISO(context.Background(), "ide2")
 	assert.Error(t, err)
 }
+
+// TestVirtualMachine_DeleteFirewallIPSet_ParamsOnWire checks that force and digest
+// reach PVE as query parameters. Both mocks only match when the parameter is
+// present, so dropping either one fails with "gock: cannot match any request".
+func TestVirtualMachine_DeleteFirewallIPSet_ParamsOnWire(t *testing.T) {
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Delete("^/nodes/node1/qemu/101/firewall/ipset/blocked$").
+		MatchParam("force", "1").
+		Reply(200).
+		JSON(`{"data": null}`)
+	gock.New(TestURI).
+		Delete(`^/nodes/node1/qemu/101/firewall/ipset/blocked/10\.1\.2\.3$`).
+		MatchParam("digest", "abc").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	ctx := context.Background()
+	g := vm101()
+	assert.Nil(t, g.DeleteFirewallIPSetEntry(ctx, "blocked", "10.1.2.3", "abc"))
+	assert.Nil(t, g.DeleteFirewallIPSet(ctx, "blocked", true))
+	assert.True(t, gock.IsDone())
+}
