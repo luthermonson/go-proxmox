@@ -334,6 +334,37 @@ client := proxmox.NewClient(url,
 
 The default predicate retries network errors plus `502` / `503` / `504` / `429`. Only idempotent verbs (`GET`, `PUT`, `DELETE`) and `POST` with a fully-buffered body are eligible — this client always buffers request bodies as `[]byte`, so `POST` is rewindable in practice.
 
+### Multiple endpoints and failover
+
+Every node in a Proxmox cluster serves the whole cluster-wide API and forwards node-specific calls to the node that owns them. A client pointed at one node fails completely while that node is down or rebooting, even though the cluster is fine. `WithFallbackEndpoints` lists the other nodes so the client can carry on through any of them:
+
+```go
+client := proxmox.NewClient("https://pve1:8006/api2/json", // the primary
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRootCAFile("/etc/pve/pve-root-ca.pem"), // the cluster CA verifies every node
+    proxmox.WithFallbackEndpoints(
+        "https://pve2:8006/api2/json",
+        "https://pve3:8006/api2/json",
+    ),
+)
+```
+
+By default the client sends everything to the first healthy endpoint in the order given (the primary, then each fallback) and goes back to the primary once it recovers. `WithEndpointStrategy(proxmox.EndpointRoundRobin)` spreads requests across the healthy endpoints instead. `WithEndpointCooldown(base, max)` sets how long a failing endpoint is skipped (default 30s, doubling per consecutive failure up to 5m). Without `WithFallbackEndpoints` nothing changes.
+
+**What fails over.** Transport errors (DNS, dial, connection refused, TLS handshake, a timeout or reset before a response) and HTTP `502`, `503`, `504`, `595` and `596`. pveproxy uses `595`/`596` when the node you reached can't get through to the node that should serve the request. Those fail the request over without benching the endpoint, because they usually mean the *target* node is down, not the one that answered.
+
+**What never fails over.** Any `4xx`, and any other `5xx` (such as a `500` carrying a Proxmox error message). Those are answers about the request, and another node would give the same answer.
+
+**Writes are never sent twice.** `GET`, `HEAD` and `OPTIONS` fail over freely. `POST`, `PUT`, `DELETE` and `PATCH` fail over only when the request provably never left the client: the connection or TLS handshake failed before the request headers were written. A `POST` that got any response, or that failed after it was written, comes back to the caller as it is, so creating a VM can't create two. (`PUT` and `DELETE` are treated like `POST` because PVE uses them for non-idempotent operations such as relative disk resizes.) Bodies that can't be replayed, such as `UploadReader` with a plain `io.Reader`, go to the current endpoint only.
+
+**With `WithRetry`.** Failover runs inside the retry wrapper: each retry attempt tries every endpoint once, back to back, and the retry backoff applies between rounds. With the defaults that is at most `3 × len(endpoints)` attempts per call. The request context and `WithTimeout` bound the total across all of them. `WithRetry`'s own rules for re-sending a `POST` are unchanged. To make retry as strict as failover about writes, give it a `WithRetryCondition` that checks the method.
+
+**Authentication.** API tokens are valid on every node. Ticket auth (`WithCredentials`, `WithSession`, `WithOTP`) works too: tickets and CSRF tokens are signed with keys shared across the cluster in `/etc/pve`, and the client sends the ticket as an explicit `Cookie` header rather than through a cookie jar, so no cookie domain is involved. The one-time OTP is used once on whichever node handles the login, and later re-logins refresh with the ticket. Client certificates and the other TLS options apply to every endpoint. Leave `tls.Config.ServerName` unset on a custom transport, since it would be sent to all of them.
+
+**Pinned calls.** `TermWebSocket` and `VNCWebSocket` dial the currently preferred endpoint once and never move a live session. The `termproxy`/`vncproxy` ticket can be used through any node, because pveproxy forwards `/nodes/{node}/…/vncwebsocket` to the owning node. Requests addressed by absolute URL to a host other than the primary are never redirected, so `client.Get(ctx, "https://pve2:8006/api2/json/…", &v)` pins a call to one node. `SpiceProxy` returns a host-bound `proxy` address, but PVE picks the node the VM runs on, not the node that answered, so failover doesn't change it.
+
+Failovers are logged at warn level, recoveries at info, through `WithLogger`. See [`examples/failover`](./examples/failover/).
+
 ### Request interceptors
 
 Run a function on every outgoing request after the auth headers are populated and before the request is sent. Useful for tracing, correlation IDs, custom audit headers, request logging:
@@ -375,6 +406,7 @@ The chain fires from `Req`, `Upload`, and `UploadReader`. Websocket upgrades (`T
 - [`examples/vm-template`](./examples/vm-template/) — build a qemu template from a cloud image: download, disk import, cloud-init, resize, convert.
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
 - [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
+- [`examples/failover`](./examples/failover/) — one client across several cluster nodes; reboot a node and watch it fail over and back.
 
 ### Upgrading between releases
 

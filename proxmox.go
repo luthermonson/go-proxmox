@@ -122,6 +122,13 @@ type Client struct {
 	tlsMods      []func(*tls.Config)
 	retryPolicy  *retryPolicy
 	proxyFunc    func(*http.Request) (*url.URL, error)
+
+	// Multi-endpoint failover; see failover.go.
+	fallbackEndpoints   []string
+	endpointStrategy    EndpointStrategy
+	endpointCooldown    time.Duration
+	endpointMaxCooldown time.Duration
+	failover            *failoverRoundTripper
 }
 
 // runInterceptors invokes the registered request interceptors in registration
@@ -197,6 +204,9 @@ func (c *Client) finalizeOptions() {
 		}
 	}
 
+	// Failover goes on first so the retry wrapper ends up outermost: each
+	// retry attempt then tries every endpoint before backing off.
+	c.installFailoverWrapper()
 	c.installRetryWrapper()
 
 	if c.eagerAuth && c.credentials != nil && c.token == "" {
@@ -505,12 +515,11 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
 	}
 	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
+		path = strings.Replace(c.endpointBaseURL(), "https://", "wss://", 1) + path
 	}
 
 	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
+	if transport := unwrapTransport(c.httpClient.Transport); transport != nil {
 		tlsConfig = transport.TLSClientConfig
 	}
 	c.log.Debugf("connecting to websocket: %s", path)
@@ -671,12 +680,11 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
 	}
 	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
+		path = strings.Replace(c.endpointBaseURL(), "https://", "wss://", 1) + path
 	}
 
 	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
+	if transport := unwrapTransport(c.httpClient.Transport); transport != nil {
 		tlsConfig = transport.TLSClientConfig
 	}
 	c.log.Debugf("connecting to websocket: %s", path)
