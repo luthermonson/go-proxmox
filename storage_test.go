@@ -574,6 +574,28 @@ func TestStorage_UploadWithHash(t *testing.T) {
 	require.NotNil(t, task)
 }
 
+func TestStorage_UploadWithHash_FieldOrder(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+
+	tmp, err := os.CreateTemp("", "upload-hash-*.iso")
+	require.NoError(t, err)
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	_, err = tmp.WriteString("fake iso data")
+	require.NoError(t, err)
+	require.NoError(t, tmp.Close())
+
+	// pveproxy parses the fields in this order and rejects any other. Map
+	// iteration is random, so repeat the upload to catch a lucky order.
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "local"}
+	for range 20 {
+		_, err = storage.UploadWithHash("iso", tmp.Name(), nil, "deadbeef", "sha256")
+		require.NoError(t, err)
+		require.NotNil(t, capture.LastUpload)
+		require.Equal(t, []string{"content", "checksum-algorithm", "checksum", "filename"}, capture.LastUpload.Parts)
+	}
+}
+
 func TestStorage_DownloadURLWithHash(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

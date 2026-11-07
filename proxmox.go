@@ -8,11 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -389,7 +391,20 @@ func (c *Client) UploadReader(path string, fields map[string]string, filename st
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 
-	for name, val := range fields {
+	// pveproxy parses these fields in this order ahead of the file part and
+	// rejects the upload when they arrive in any other.
+	names := []string{"content", "checksum-algorithm", "checksum"}
+	for _, name := range slices.Sorted(maps.Keys(fields)) {
+		if !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+
+	for _, name := range names {
+		val, ok := fields[name]
+		if !ok {
+			continue
+		}
 		if err := w.WriteField(name, val); err != nil {
 			return err
 		}
