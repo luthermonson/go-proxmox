@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -766,7 +767,11 @@ func (v *VirtualMachine) WaitForAgent(ctx context.Context, seconds int) error {
 		if err == nil {
 			return nil
 		}
-		if !strings.Contains(err.Error(), "500 QEMU guest agent is not running") {
+		// Match on the typed error, not the text: behind an HTTP/2 proxy the
+		// status line has no reason phrase, so the old string match broke.
+		apiErr, ok := AsAPIError(err)
+		if !ok || apiErr.StatusCode != http.StatusInternalServerError ||
+			!strings.Contains(apiErr.Message, "QEMU guest agent is not running") {
 			return err
 		}
 
