@@ -791,13 +791,15 @@ func (v *VirtualMachine) AgentExec(ctx context.Context, command []string, inputD
 			"input-data": inputData,
 		},
 		&tmpdata)
+	if err != nil {
+		return 0, err
+	}
 
-	p := tmpdata["pid"]
-	if p == nil {
+	p, ok := tmpdata["pid"].(float64)
+	if !ok {
 		return 0, fmt.Errorf("no pid returned from agent exec command")
 	}
-	pid = int(p.(float64))
-	return
+	return int(p), nil
 }
 
 func (v *VirtualMachine) AgentExecStatus(ctx context.Context, pid int) (status *AgentExecStatus, err error) {

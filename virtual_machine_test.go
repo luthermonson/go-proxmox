@@ -2035,3 +2035,41 @@ func TestVirtualMachine_CloudInit_TagTaskError(t *testing.T) {
 		assert.Nil(t, r.Body["ide2"], "the ISO was attached although the tag task failed")
 	}
 }
+
+// TestVirtualMachine_AgentExec_APIError checks that the PVE error of a failed
+// exec reaches the caller instead of being replaced by "no pid returned".
+func TestVirtualMachine_AgentExec_APIError(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/qemu/503/agent/exec$").
+		Reply(500).
+		SetHeader("Content-Type", "application/json").
+		BodyString(`{"data":null,"message":"QEMU guest agent is not running"}`)
+
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 503}
+	_, err := vm.AgentExec(context.Background(), []string{"uptime"}, "")
+	assert.Error(t, err)
+
+	apiErr, ok := AsAPIError(err)
+	if assert.True(t, ok, "expected an *APIError, got %v", err) {
+		assert.Equal(t, 500, apiErr.StatusCode)
+		assert.Contains(t, apiErr.Message, "QEMU guest agent is not running")
+	}
+}
+
+// TestVirtualMachine_AgentExec_UnexpectedPid covers a pid that is not a number.
+func TestVirtualMachine_AgentExec_UnexpectedPid(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	gock.New(mockConfig.URI).
+		Post("^/nodes/node1/qemu/503/agent/exec$").
+		Reply(200).
+		JSON(`{"data": {"pid": "12"}}`)
+
+	vm := &VirtualMachine{client: mockClient(), Node: "node1", VMID: 503}
+	assert.NotPanics(t, func() {
+		_, err := vm.AgentExec(context.Background(), []string{"uptime"}, "")
+		assert.Error(t, err)
+	})
+}
