@@ -39,6 +39,8 @@ func (c *Client) NodeRef(name string) *Node {
 	return &Node{client: c, Name: name}
 }
 
+// Deprecated: use Client.NodeRef, which builds the same request-free handle
+// with a clearer call shape.
 func (n *Node) New(c *Client, name string) *Node {
 	node := &Node{
 		Name:   name,
@@ -108,7 +110,7 @@ func (n *Node) NewVirtualMachine(ctx context.Context, vmid int, options ...Virtu
 }
 
 // VirtualMachine returns the VM after fetching its status and its config
-// (GET status/current, then GET config). Use VMRef instead when you only
+// (GET status/current, then GET config). Use VirtualMachineRef instead when you only
 // want to act on the VM.
 func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, error) {
 	vm := &VirtualMachine{
@@ -127,7 +129,7 @@ func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, e
 	return vm, nil
 }
 
-// VMRef returns a handle to the VM with the given VMID on this node, without
+// VirtualMachineRef returns a handle to the VM with the given VMID on this node, without
 // making any API call. It suits callers that already know where the VM lives
 // and only want to act on it: Stop on a ref is one POST, where VirtualMachine
 // followed by Stop is two GETs and a POST.
@@ -140,13 +142,13 @@ func (n *Node) VirtualMachine(ctx context.Context, vmid int) (*VirtualMachine, e
 // (IsRunning, IsStopped, IsPaused, IsHibernated, HasTag) take no context and
 // so cannot fetch: they report false until you call Ping. The VMID is not
 // checked; a missing VM surfaces on the first real call.
-func (n *Node) VMRef(vmid int) *VirtualMachine {
+func (n *Node) VirtualMachineRef(vmid int) *VirtualMachine {
 	return &VirtualMachine{client: n.client, Node: n.Name, VMID: StringOrUint64(vmid)}
 }
 
 // ContainerRef returns a handle to the LXC container with the given VMID on
 // this node, without making any API call. It is the container counterpart of
-// VMRef and the same rules apply: actions work as-is, AddTag and RemoveTag
+// VirtualMachineRef and the same rules apply: actions work as-is, AddTag and RemoveTag
 // fetch the config when it is missing, and HasTag reports false until you
 // call Ping.
 func (n *Node) ContainerRef(vmid int) *Container {

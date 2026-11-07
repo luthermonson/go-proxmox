@@ -92,7 +92,7 @@ func TestRefs_MakeNoRequests(t *testing.T) {
 	client, rec := newRefsClient(t)
 
 	node := client.NodeRef("node1")
-	vm := node.VMRef(101)
+	vm := node.VirtualMachineRef(101)
 	ct := node.ContainerRef(100)
 
 	assert.Empty(t, rec.calls(), "constructing refs must not touch the API")
@@ -119,7 +119,7 @@ func TestRefs_MakeNoRequests(t *testing.T) {
 // false (never a misleading true) until Ping has run.
 func TestRefs_AccessorsOnUnfetchedRef(t *testing.T) {
 	client, rec := newRefsClient(t)
-	vm := client.NodeRef("node1").VMRef(101)
+	vm := client.NodeRef("node1").VirtualMachineRef(101)
 	ct := client.NodeRef("node1").ContainerRef(100)
 
 	assert.False(t, vm.IsRunning())
@@ -143,7 +143,7 @@ func TestRefs_AccessorsOnUnfetchedRef(t *testing.T) {
 	assert.Empty(t, rec.calls())
 }
 
-func TestVMRef_ActionsAreOneRequest(t *testing.T) {
+func TestVirtualMachineRef_ActionsAreOneRequest(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []struct {
@@ -188,7 +188,7 @@ func TestVMRef_ActionsAreOneRequest(t *testing.T) {
 			gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/agent/get-host-name$").Persist().Reply(200).
 				JSON(`{"data": {"result": {"host-name": "vm101"}}}`)
 
-			vm := client.NodeRef("node1").VMRef(101)
+			vm := client.NodeRef("node1").VirtualMachineRef(101)
 			require.NoError(t, tc.call(vm))
 			assert.Equal(t, []string{tc.want}, rec.calls())
 		})
@@ -254,9 +254,9 @@ func TestNodeRef_MethodsAreOneRequest(t *testing.T) {
 	assert.Same(t, client, vms[0].client)
 }
 
-// TestVMRef_Delete covers the one action that reads the config first: the
+// TestVirtualMachineRef_Delete covers the one action that reads the config first: the
 // cloud-init cleanup has to see the tag, and a ref doesn't have it.
-func TestVMRef_Delete(t *testing.T) {
+func TestVirtualMachineRef_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("no cloud-init tag", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestVMRef_Delete(t *testing.T) {
 			JSON(`{"data": {"name": "vm101", "tags": "prod"}}`)
 		gock.New(refsTestURI).Delete("^/nodes/node1/qemu/101$").Reply(200).JSON(upid("qmdestroy", "101"))
 
-		task, err := client.NodeRef("node1").VMRef(101).Delete(ctx, nil)
+		task, err := client.NodeRef("node1").VirtualMachineRef(101).Delete(ctx, nil)
 		require.NoError(t, err)
 		assert.Equal(t, "qmdestroy", task.Type)
 		assert.Equal(t, []string{
@@ -284,7 +284,7 @@ func TestVMRef_Delete(t *testing.T) {
 			JSON(`{"data": [{"storage": "local-lvm", "enabled": 1, "content": "images,rootdir"}]}`)
 		gock.New(refsTestURI).Delete("^/nodes/node1/qemu/101$").Reply(200).JSON(upid("qmdestroy", "101"))
 
-		_, err := client.NodeRef("node1").VMRef(101).Delete(ctx, nil)
+		_, err := client.NodeRef("node1").VirtualMachineRef(101).Delete(ctx, nil)
 		require.NoError(t, err)
 		assert.Equal(t, []string{
 			"GET /nodes/node1/qemu/101/config",
@@ -297,7 +297,7 @@ func TestVMRef_Delete(t *testing.T) {
 		client, rec := newRefsClient(t)
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(500)
 
-		_, err := client.NodeRef("node1").VMRef(101).Delete(ctx, nil)
+		_, err := client.NodeRef("node1").VirtualMachineRef(101).Delete(ctx, nil)
 		require.Error(t, err)
 		assert.Equal(t, []string{"GET /nodes/node1/qemu/101/config"}, rec.calls())
 	})
@@ -306,7 +306,7 @@ func TestVMRef_Delete(t *testing.T) {
 		client, rec := newRefsClient(t)
 		gock.New(refsTestURI).Delete("^/nodes/node1/qemu/101$").Reply(200).JSON(upid("qmdestroy", "101"))
 
-		vm := client.NodeRef("node1").VMRef(101)
+		vm := client.NodeRef("node1").VirtualMachineRef(101)
 		vm.VirtualMachineConfig = &VirtualMachineConfig{Tags: "prod"}
 		_, err := vm.Delete(ctx, nil)
 		require.NoError(t, err)
@@ -314,7 +314,7 @@ func TestVMRef_Delete(t *testing.T) {
 	})
 }
 
-func TestVMRef_Tags(t *testing.T) {
+func TestVirtualMachineRef_Tags(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("AddTag keeps existing tags", func(t *testing.T) {
@@ -323,7 +323,7 @@ func TestVMRef_Tags(t *testing.T) {
 			JSON(`{"data": {"tags": "alpha;beta"}}`)
 		gock.New(refsTestURI).Post("^/nodes/node1/qemu/101/config$").Reply(200).JSON(upid("qmconfig", "101"))
 
-		vm := client.NodeRef("node1").VMRef(101)
+		vm := client.NodeRef("node1").VirtualMachineRef(101)
 		_, err := vm.AddTag(ctx, "gamma")
 		require.NoError(t, err)
 		reqs := rec.requests()
@@ -339,7 +339,7 @@ func TestVMRef_Tags(t *testing.T) {
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(200).
 			JSON(`{"data": {"tags": "alpha;beta"}}`)
 
-		_, err := client.NodeRef("node1").VMRef(101).AddTag(ctx, "beta")
+		_, err := client.NodeRef("node1").VirtualMachineRef(101).AddTag(ctx, "beta")
 		assert.True(t, IsErrNoop(err))
 		assert.Equal(t, []string{"GET /nodes/node1/qemu/101/config"}, rec.calls())
 	})
@@ -350,7 +350,7 @@ func TestVMRef_Tags(t *testing.T) {
 			JSON(`{"data": {"tags": "alpha;beta"}}`)
 		gock.New(refsTestURI).Post("^/nodes/node1/qemu/101/config$").Reply(200).JSON(upid("qmconfig", "101"))
 
-		_, err := client.NodeRef("node1").VMRef(101).RemoveTag(ctx, "alpha")
+		_, err := client.NodeRef("node1").VirtualMachineRef(101).RemoveTag(ctx, "alpha")
 		require.NoError(t, err)
 		reqs := rec.requests()
 		require.Len(t, reqs, 2)
@@ -361,7 +361,7 @@ func TestVMRef_Tags(t *testing.T) {
 		client, _ := newRefsClient(t)
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(500)
 
-		_, err := client.NodeRef("node1").VMRef(101).AddTag(ctx, "x")
+		_, err := client.NodeRef("node1").VirtualMachineRef(101).AddTag(ctx, "x")
 		assert.Error(t, err)
 		assert.False(t, IsErrNoop(err))
 	})
@@ -371,7 +371,7 @@ func TestVMRef_Tags(t *testing.T) {
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(200).
 			JSON(`{"data": {"tags": "prod"}}`)
 
-		require.NoError(t, client.NodeRef("node1").VMRef(101).UnmountCloudInitISO(ctx, "ide2"))
+		require.NoError(t, client.NodeRef("node1").VirtualMachineRef(101).UnmountCloudInitISO(ctx, "ide2"))
 		assert.Equal(t, []string{"GET /nodes/node1/qemu/101/config"}, rec.calls())
 	})
 
@@ -382,7 +382,7 @@ func TestVMRef_Tags(t *testing.T) {
 		gock.New(refsTestURI).Post("^/nodes/node1/qemu/101/config$").Reply(200).JSON(upid("qmconfig", "101"))
 		gock.New(refsTestURI).Get("^/nodes/node1/storage$").Reply(200).JSON(`{"data": []}`)
 
-		require.NoError(t, client.NodeRef("node1").VMRef(101).UnmountCloudInitISO(ctx, "ide2"))
+		require.NoError(t, client.NodeRef("node1").VirtualMachineRef(101).UnmountCloudInitISO(ctx, "ide2"))
 		assert.Equal(t, []string{
 			"GET /nodes/node1/qemu/101/config",
 			"POST /nodes/node1/qemu/101/config",
@@ -434,7 +434,7 @@ func TestContainerRef_Tags(t *testing.T) {
 	})
 }
 
-func TestVMRef_Ping(t *testing.T) {
+func TestVirtualMachineRef_Ping(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("fills status and config", func(t *testing.T) {
@@ -444,7 +444,7 @@ func TestVMRef_Ping(t *testing.T) {
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(200).
 			JSON(`{"data": {"name": "vm101", "memory": 2048, "tags": "prod"}}`)
 
-		vm := client.NodeRef("node1").VMRef(101)
+		vm := client.NodeRef("node1").VirtualMachineRef(101)
 		require.NoError(t, vm.Ping(ctx))
 		assert.Equal(t, []string{
 			"GET /nodes/node1/qemu/101/status/current",
@@ -471,7 +471,7 @@ func TestVMRef_Ping(t *testing.T) {
 			JSON(`{"data": {"vmid": 101, "status": "stopped"}}`)
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(200).JSON(`{"data": {}}`)
 
-		vm := client.NodeRef("node1").VMRef(101)
+		vm := client.NodeRef("node1").VirtualMachineRef(101)
 		require.NoError(t, vm.Ping(ctx))
 		assert.True(t, vm.IsHibernated())
 		require.NoError(t, vm.Ping(ctx))
@@ -486,7 +486,7 @@ func TestVMRef_Ping(t *testing.T) {
 			JSON(`{"data": {"vmid": 101, "status": "running"}}`)
 		gock.New(refsTestURI).Get("^/nodes/node1/qemu/101/config$").Reply(500)
 
-		vm := client.NodeRef("node1").VMRef(101)
+		vm := client.NodeRef("node1").VirtualMachineRef(101)
 		require.Error(t, vm.Ping(ctx))
 		assert.Empty(t, vm.Status)
 		assert.Nil(t, vm.VirtualMachineConfig)
@@ -556,7 +556,7 @@ func TestRefs_FetchAPIsUnchanged(t *testing.T) {
 	rec.reset()
 
 	// The same stop through refs is the POST alone.
-	_, err = client.NodeRef("node1").VMRef(101).Stop(ctx)
+	_, err = client.NodeRef("node1").VirtualMachineRef(101).Stop(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"POST /nodes/node1/qemu/101/status/stop"}, rec.calls())
 }

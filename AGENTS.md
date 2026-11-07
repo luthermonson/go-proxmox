@@ -127,7 +127,7 @@ vm.Config(ctx, opts...) → *Task
 ```
 
 `client.Node` and `node.VirtualMachine`/`node.Container` fetch status (and
-config) before returning. `client.NodeRef(name)`, `node.VMRef(vmid)` and
+config) before returning. `client.NodeRef(name)`, `node.VirtualMachineRef(vmid)` and
 `node.ContainerRef(vmid)` build the same types with no API call, for callers
 that only want to act. Any method on `*VirtualMachine`/`*Container` must
 therefore work on a handle that has only `client`, `Node` and `VMID` set:

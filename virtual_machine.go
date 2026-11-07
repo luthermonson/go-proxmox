@@ -29,6 +29,8 @@ const (
 // DefaultAgentWaitInterval is the polling interval when waiting for agent exec commands
 var DefaultAgentWaitInterval = 100 * time.Millisecond
 
+// Deprecated: use Node.VirtualMachineRef (via Client.NodeRef), which returns
+// the same request-free handle instead of mutating an existing one.
 func (v *VirtualMachine) New(c *Client, nodeName string, vmid int) {
 	v.client = c
 	v.Node = nodeName
@@ -37,7 +39,7 @@ func (v *VirtualMachine) New(c *Client, nodeName string, vmid int) {
 
 // Ping refreshes the VM from the API: it fetches status/current and config
 // and replaces the handle's status fields and VirtualMachineConfig with what
-// they return. Use it to fill a handle from VMRef, or to re-read a VM fetched
+// they return. Use it to fill a handle from VirtualMachineRef, or to re-read a VM fetched
 // earlier.
 //
 // The two responses are decoded into fresh values and copied over only after
@@ -62,7 +64,7 @@ func (v *VirtualMachine) Ping(ctx context.Context) error {
 }
 
 // ensureConfig fetches VirtualMachineConfig when the handle doesn't have one
-// yet, as on a handle from VMRef. It never re-fetches a config that is
+// yet, as on a handle from VirtualMachineRef. It never re-fetches a config that is
 // already present.
 func (v *VirtualMachine) ensureConfig(ctx context.Context) error {
 	if v.VirtualMachineConfig != nil {
@@ -141,7 +143,7 @@ func (v *VirtualMachine) VNCProxy(ctx context.Context, config *VNCConfig) (vnc *
 
 // HasTag reports whether the VM's config carries the tag. It reads the
 // config already on the handle and makes no API call, so on a handle from
-// VMRef it reports false until Ping has run. AddTag and RemoveTag fetch the
+// VirtualMachineRef it reports false until Ping has run. AddTag and RemoveTag fetch the
 // config themselves and don't need that.
 func (v *VirtualMachine) HasTag(value string) bool {
 	if v.VirtualMachineConfig == nil {
@@ -166,7 +168,7 @@ func (v *VirtualMachine) HasTag(value string) bool {
 }
 
 // AddTag adds the tag to the VM's config and writes the full tag list back.
-// When the handle has no config yet (a VMRef), it fetches it first so the
+// When the handle has no config yet (a VirtualMachineRef), it fetches it first so the
 // existing tags are kept rather than overwritten.
 func (v *VirtualMachine) AddTag(ctx context.Context, value string) (*Task, error) {
 	if err := v.ensureConfig(ctx); err != nil {
@@ -191,7 +193,7 @@ func (v *VirtualMachine) AddTag(ctx context.Context, value string) (*Task, error
 }
 
 // RemoveTag removes the tag from the VM's config and writes the remaining
-// tags back. When the handle has no config yet (a VMRef), it fetches it
+// tags back. When the handle has no config yet (a VirtualMachineRef), it fetches it
 // first; otherwise an unfetched handle would always look tag-less and the
 // call would report ErrNoop without removing anything.
 func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, error) {
@@ -224,7 +226,7 @@ func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, er
 }
 
 // SplitTags fills VirtualMachineConfig.TagsSlice from Tags. It does nothing
-// when the handle has no config (a VMRef that hasn't been fetched).
+// when the handle has no config (a VirtualMachineRef that hasn't been fetched).
 func (v *VirtualMachine) SplitTags() {
 	if v.VirtualMachineConfig == nil {
 		return
@@ -262,7 +264,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		opt(&cfg)
 	}
 
-	// The boot order below is built from the current config, so a VMRef
+	// The boot order below is built from the current config, so a VirtualMachineRef
 	// needs it fetched before anything is uploaded.
 	if err := v.ensureConfig(ctx); err != nil {
 		return err
@@ -434,7 +436,7 @@ func (v *VirtualMachine) SpiceProxy(ctx context.Context) (spice *SpiceProxy, err
 }
 
 // IsRunning reports whether the last fetched status is running. It reads
-// fields on the handle and makes no API call: on a VMRef that hasn't been
+// fields on the handle and makes no API call: on a VirtualMachineRef that hasn't been
 // fetched it reports false, so call Ping first.
 func (v *VirtualMachine) IsRunning() bool {
 	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
@@ -450,7 +452,7 @@ func (v *VirtualMachine) Start(ctx context.Context) (task *Task, err error) {
 }
 
 // IsStopped reports whether the last fetched status is stopped (and not
-// hibernated). Like IsRunning it reports false on a VMRef until Ping has
+// hibernated). Like IsRunning it reports false on a VirtualMachineRef until Ping has
 // run; an unfetched VM is neither running nor stopped.
 func (v *VirtualMachine) IsStopped() bool {
 	return v.Status == StatusVirtualMachineStopped && (v.Lock != "suspended")
@@ -484,7 +486,7 @@ func (v *VirtualMachine) Stop(ctx context.Context) (task *Task, err error) {
 }
 
 // IsPaused reports whether the last fetched status is paused. It reports
-// false on a VMRef until Ping has run.
+// false on a VirtualMachineRef until Ping has run.
 func (v *VirtualMachine) IsPaused() bool {
 	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == StatusVirtualMachinePaused
 }
@@ -499,7 +501,7 @@ func (v *VirtualMachine) Pause(ctx context.Context) (task *Task, err error) {
 }
 
 // IsHibernated reports whether the last fetched status is hibernated
-// (stopped with the suspended lock). It reports false on a VMRef until Ping
+// (stopped with the suspended lock). It reports false on a VirtualMachineRef until Ping
 // has run.
 func (v *VirtualMachine) IsHibernated() bool {
 	return v.Status == StatusVirtualMachineStopped && v.Lock == "suspended"
@@ -534,7 +536,7 @@ func (v *VirtualMachine) Reboot(ctx context.Context) (task *Task, err error) {
 
 // Delete destroys the VM. If the VM carries the cloud-init tag, the ISO that
 // CloudInit uploaded is deleted first. Reading that tag needs the config, so
-// on a handle without one (a VMRef, or a VM from the VirtualMachines list)
+// on a handle without one (a VirtualMachineRef, or a VM from the VirtualMachines list)
 // Delete fetches it first: one GET before the DELETE.
 func (v *VirtualMachine) Delete(ctx context.Context, options *VirtualMachineDeleteOptions) (task *Task, err error) {
 	if ok, err := v.deleteCloudInitISO(ctx); err != nil || !ok {
@@ -557,7 +559,7 @@ func (v *VirtualMachine) Delete(ctx context.Context, options *VirtualMachineDele
 // with WithCloudInitStorage targeting a non-default storage.
 //
 // Whether there is an ISO to clean up is read from the cloud-init tag, so a
-// handle without a config (a VMRef) fetches it first. Skipping that would
+// handle without a config (a VirtualMachineRef) fetches it first. Skipping that would
 // silently leak the ISO on every Delete through a ref.
 func (v *VirtualMachine) deleteCloudInitISO(ctx context.Context) (ok bool, err error) {
 	if err := v.ensureConfig(ctx); err != nil {
@@ -1083,7 +1085,7 @@ func (v *VirtualMachine) ConvertToTemplate(ctx context.Context) (task *Task, err
 }
 
 // UnmountCloudInitISO detaches and deletes the ISO that CloudInit attached,
-// if the VM carries the cloud-init tag. A handle without a config (a VMRef)
+// if the VM carries the cloud-init tag. A handle without a config (a VirtualMachineRef)
 // fetches it first to read the tag.
 func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string) error {
 	if err := v.ensureConfig(ctx); err != nil {

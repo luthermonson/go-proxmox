@@ -1852,7 +1852,7 @@ func TestVirtualMachine_UnmountCloudInitISO_WithTag(t *testing.T) {
 }
 
 // TestVirtualMachine_CloudInit_ConfigError covers CloudInit on a handle with
-// no config (a VMRef): the config is read first, because the boot order is
+// no config (a VirtualMachineRef): the config is read first, because the boot order is
 // built from it, and a failure there returns before any ISO is built or
 // uploaded.
 func TestVirtualMachine_CloudInit_ConfigError(t *testing.T) {
@@ -1930,7 +1930,7 @@ func TestVirtualMachine_DeleteCloudInitISO_StoragesError(t *testing.T) {
 }
 
 // TestVirtualMachine_DeleteCloudInitISO_ConfigError covers the cleanup on a
-// handle with no config (a VMRef): the config is read to look for the
+// handle with no config (a VirtualMachineRef): the config is read to look for the
 // cloud-init tag, and a failure there is returned rather than skipping the
 // cleanup.
 func TestVirtualMachine_DeleteCloudInitISO_ConfigError(t *testing.T) {

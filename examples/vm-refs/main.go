@@ -4,7 +4,7 @@
 // status and the VM config before returning. Use it when you want to read
 // that data.
 //
-// Ref: client.NodeRef and node.VMRef build the handle locally with no API
+// Ref: client.NodeRef and node.VirtualMachineRef build the handle locally with no API
 // call. Use it when you already know the node and VMID and only want to act:
 // vm.Stop on a ref is a single POST. Call vm.Ping to fill a ref with status
 // and config when you do need them.
@@ -20,10 +20,8 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -48,9 +46,7 @@ func main() {
 
 	client := proxmox.NewClient(envOr("PROXMOX_URL", "https://localhost:8006/api2/json"),
 		proxmox.WithAPIToken(mustEnv("PROXMOX_TOKENID"), mustEnv("PROXMOX_SECRET")),
-		proxmox.WithHTTPClient(&http.Client{
-			Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-		}),
+		proxmox.WithInsecureSkipVerify(),
 	)
 
 	if action == "status" {
@@ -65,7 +61,7 @@ func main() {
 	// cluster.Resources call) can drive hundreds of them this way without
 	// three GETs per VM, and a config read that fails (for example while
 	// another task holds the VM's lock) can't block a stop.
-	vm := client.NodeRef(nodeName).VMRef(vmid)
+	vm := client.NodeRef(nodeName).VirtualMachineRef(vmid)
 
 	var task *proxmox.Task
 	switch action {

@@ -4,7 +4,7 @@ There are two ways to get a handle on a VM, and they cost different amounts:
 
 | | Fetch | Ref |
 |---|---|---|
-| Build the handle | `client.Node(ctx, name)` then `node.VirtualMachine(ctx, vmid)` | `client.NodeRef(name).VMRef(vmid)` |
+| Build the handle | `client.Node(ctx, name)` then `node.VirtualMachine(ctx, vmid)` | `client.NodeRef(name).VirtualMachineRef(vmid)` |
 | Requests to build it | 3 GETs (node status, VM status, VM config) | none |
 | `vm.Stop(ctx)` afterwards | 1 POST | 1 POST |
 | `vm.Status`, `vm.Name`, `vm.VirtualMachineConfig` | filled | empty until `vm.Ping(ctx)` |

@@ -170,7 +170,7 @@ vm, err := node.VirtualMachine(ctx, 100)
 fmt.Println(vm.Status, vm.VirtualMachineConfig.Memory)
 
 // Ref: no requests to build it, so Stop is the POST alone.
-ref := client.NodeRef("pve1").VMRef(100)
+ref := client.NodeRef("pve1").VirtualMachineRef(100)
 task, err := ref.Stop(ctx)
 
 // A ref has only the node and VMID. Ping fills its status and config.
