@@ -166,4 +166,67 @@ func tasks() {
 		Get("^/nodes/node1/tasks/UPID:node1:000000AA:000000AA:000000AA:emptylog:AA:root@pam:/log$").
 		Reply(200).
 		JSON(`{"data":[]}`)
+
+	// status — task that succeeded with warnings. PVE reports this as a
+	// stopped task whose exitstatus is "WARNINGS: <n>".
+	gock.New(config.C.URI).
+		Persist().
+		Get("^/nodes/node1/tasks/UPID:node1:00000004:00000004:00000004:test:warnings:root@pam:/status$").
+		Reply(200).
+		JSON(`{"data":{"status":"stopped","exitstatus":"WARNINGS: 2","upid":"UPID:node1:00000004:00000004:00000004:test:warnings:root@pam:","type":"test","id":"warnings","user":"root@pam","node":"node1","starttime":1693252591,"endtime":1693252600}}`)
+
+	// --- "no such task" fallback fixtures ----------------------------------
+	// Node taskhist has its own task index so these don't collide with the
+	// persisted ^/nodes/node1/tasks$ list in node_loose.go. Each status
+	// endpoint answers the way PVE does once a task's status file is gone:
+	// a 400 parameter error {"upid":"no such task"}.
+	for _, upid := range []string{
+		"UPID:taskhist:0000A001:0000A001:65000000:qmshutdown:100:root@pam:",
+		"UPID:taskhist:0000A002:0000A002:65000010:qmstart:100:root@pam:",
+		"UPID:taskhist:0000A003:0000A003:65000020:qmstart:101:root@pam:",
+	} {
+		gock.New(config.C.URI).
+			Persist().
+			Get("^/nodes/taskhist/tasks/" + upid + "/status$").
+			Reply(400).
+			JSON(`{"data":null,"errors":{"upid":"no such task"}}`)
+	}
+	// The node task index still has the first two (one failed, one OK); the
+	// third has aged out of the history too. One mock per looked-up task,
+	// each pinning the exact filters statusFromHistory must send (typefilter
+	// and vmid from the UPID, since = start time - 1); a lookup with wrong
+	// or missing filters matches nothing and the test fails.
+	for _, params := range []map[string]string{
+		{"typefilter": "qmshutdown", "vmid": "100", "since": "1694498815"},
+		{"typefilter": "qmstart", "vmid": "100", "since": "1694498831"},
+		{"typefilter": "qmstart", "vmid": "101", "since": "1694498847"},
+	} {
+		m := gock.New(config.C.URI).
+			Persist().
+			Get("^/nodes/taskhist/tasks$").
+			MatchParam("source", "all").
+			MatchParam("limit", "500")
+		for k, v := range params {
+			m.MatchParam(k, v)
+		}
+		m.Reply(200).
+			JSON(taskhistIndexJSON)
+	}
 }
+
+// taskhistIndexJSON is the node task index the taskhist fixtures reply with;
+// statusFromHistory picks its task out of the list by UPID.
+const taskhistIndexJSON = `{"data":[
+			{
+				"upid":"UPID:taskhist:0000A001:0000A001:65000000:qmshutdown:100:root@pam:",
+				"node":"taskhist","pid":40961,"pstart":40961,"starttime":1694498816,
+				"endtime":1694498996,"type":"qmshutdown","id":"100","user":"root@pam",
+				"status":"VM quit/powerdown failed - got timeout"
+			},
+			{
+				"upid":"UPID:taskhist:0000A002:0000A002:65000010:qmstart:100:root@pam:",
+				"node":"taskhist","pid":40962,"pstart":40962,"starttime":1694498832,
+				"endtime":1694498840,"type":"qmstart","id":"100","user":"root@pam",
+				"status":"OK"
+			}
+		]}`
