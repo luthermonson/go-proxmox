@@ -261,7 +261,7 @@ func newAPIError(res *http.Response, body []byte) *APIError {
 		// up to maxErrorBodySize; keep Error() printable by capping what
 		// goes into the text. The JSON branch below overwrites this with
 		// the parsed detail.
-		detail:     truncateDetail(string(body)),
+		detail: truncateDetail(string(body)),
 	}
 	if res.Request != nil {
 		e.Method = res.Request.Method
