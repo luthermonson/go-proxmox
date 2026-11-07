@@ -307,7 +307,13 @@ func (c *Container) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCre
 }
 
 func (c *Container) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
-	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name), map[string]interface{}{"force": force})
+	// PVE refuses to delete a non-empty ipset unless force=1 is on the query
+	// string; Delete has no params argument, so build the query here.
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s", c.Node, c.VMID, name)
+	if force {
+		path += "?force=1"
+	}
+	return c.client.Delete(ctx, path, nil)
 }
 
 func (c *Container) GetFirewallIPSetEntries(ctx context.Context, name string) (entries []*FirewallIPSetEntry, err error) {
@@ -319,9 +325,11 @@ func (c *Container) NewFirewallIPSetEntry(ctx context.Context, name string, entr
 }
 
 func (c *Container) DeleteFirewallIPSetEntry(ctx context.Context, name string, cidr string, digest string) error {
-	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr), map[string]interface{}{
-		"digest": digest,
-	})
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/firewall/ipset/%s/%s", c.Node, c.VMID, name, cidr)
+	if digest != "" {
+		path += "?" + url.Values{"digest": {digest}}.Encode()
+	}
+	return c.client.Delete(ctx, path, nil)
 }
 
 func (c *Container) GetFirewallIPSetEntry(ctx context.Context, name string, cidr string) (entry *FirewallIPSetEntry, err error) {

@@ -144,9 +144,7 @@ func TestContainerDelete(t *testing.T) {
 // ContainerDeleteOptions{Force: true} actually puts force=1 on the wire as a
 // query parameter to DELETE /nodes/{node}/lxc/{vmid}. The gock mock only
 // matches when the parameter is present, so a regression where the option is
-// silently dropped (as DeleteFirewallIPSet currently does, by passing the map
-// as the response target instead of via DeleteWithParams) makes this test fail
-// with "cannot match any request".
+// silently dropped makes this test fail with "cannot match any request".
 func TestContainerDelete_ForceParam(t *testing.T) {
 	defer gock.Off()
 
@@ -1080,4 +1078,28 @@ func TestContainer_FirewallOptions(t *testing.T) {
 		PolicyIn:  "ACCEPT",
 		PolicyOut: "ACCEPT",
 	}))
+}
+
+// TestContainer_DeleteFirewallIPSet_ParamsOnWire checks that force and digest
+// reach PVE as query parameters. Both mocks only match when the parameter is
+// present, so dropping either one fails with "gock: cannot match any request".
+func TestContainer_DeleteFirewallIPSet_ParamsOnWire(t *testing.T) {
+	defer gock.Off()
+
+	gock.New(TestURI).
+		Delete("^/nodes/node1/lxc/100/firewall/ipset/blocked$").
+		MatchParam("force", "1").
+		Reply(200).
+		JSON(`{"data": null}`)
+	gock.New(TestURI).
+		Delete(`^/nodes/node1/lxc/100/firewall/ipset/blocked/10\.0\.0\.1$`).
+		MatchParam("digest", "abc").
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	ctx := context.Background()
+	g := ct100()
+	assert.Nil(t, g.DeleteFirewallIPSetEntry(ctx, "blocked", "10.0.0.1", "abc"))
+	assert.Nil(t, g.DeleteFirewallIPSet(ctx, "blocked", true))
+	assert.True(t, gock.IsDone())
 }
