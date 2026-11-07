@@ -192,13 +192,31 @@ func tasks() {
 			JSON(`{"data":null,"errors":{"upid":"no such task"}}`)
 	}
 	// The node task index still has the first two (one failed, one OK); the
-	// third has aged out of the history too.
-	gock.New(config.C.URI).
-		Persist().
-		Get("^/nodes/taskhist/tasks$").
-		MatchParam("source", "all").
-		Reply(200).
-		JSON(`{"data":[
+	// third has aged out of the history too. One mock per looked-up task,
+	// each pinning the exact filters statusFromHistory must send (typefilter
+	// and vmid from the UPID, since = start time - 1); a lookup with wrong
+	// or missing filters matches nothing and the test fails.
+	for _, params := range []map[string]string{
+		{"typefilter": "qmshutdown", "vmid": "100", "since": "1694498815"},
+		{"typefilter": "qmstart", "vmid": "100", "since": "1694498831"},
+		{"typefilter": "qmstart", "vmid": "101", "since": "1694498847"},
+	} {
+		m := gock.New(config.C.URI).
+			Persist().
+			Get("^/nodes/taskhist/tasks$").
+			MatchParam("source", "all").
+			MatchParam("limit", "500")
+		for k, v := range params {
+			m.MatchParam(k, v)
+		}
+		m.Reply(200).
+			JSON(taskhistIndexJSON)
+	}
+}
+
+// taskhistIndexJSON is the node task index the taskhist fixtures reply with;
+// statusFromHistory picks its task out of the list by UPID.
+const taskhistIndexJSON = `{"data":[
 			{
 				"upid":"UPID:taskhist:0000A001:0000A001:65000000:qmshutdown:100:root@pam:",
 				"node":"taskhist","pid":40961,"pstart":40961,"starttime":1694498816,
@@ -211,5 +229,4 @@ func tasks() {
 				"endtime":1694498840,"type":"qmstart","id":"100","user":"root@pam",
 				"status":"OK"
 			}
-		]}`)
-}
+		]}`

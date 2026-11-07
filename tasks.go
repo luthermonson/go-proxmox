@@ -395,12 +395,21 @@ func (t *Task) Wait(ctx context.Context, interval, max time.Duration) error {
 	if interval <= 0 {
 		interval = DefaultWaitInterval
 	}
+	if interval <= 0 {
+		// DefaultWaitInterval is an exported variable; keep a sane floor so
+		// a caller zeroing it doesn't make Wait spin.
+		interval = time.Second
+	}
 	t.client.log.Debugf("waiting for %s, checking every %fs for %fs", t.UPID, interval.Seconds(), max.Seconds())
 
 	timeout := time.NewTimer(max)
 	defer timeout.Stop()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	// A timer reset after each poll, not a ticker: a ticker keeps a tick
+	// queued while a slow status request is in flight, which would make the
+	// next poll start immediately. Resetting after the poll guarantees a
+	// full interval of quiet between polls.
+	poll := time.NewTimer(interval)
+	defer poll.Stop()
 
 	for {
 		done, err := t.poll(ctx)
@@ -413,13 +422,14 @@ func (t *Task) Wait(ctx context.Context, interval, max time.Duration) error {
 		}
 
 		t.client.log.Debugf("waiting on task %s, next check in %fs", t.UPID, interval.Seconds())
+		poll.Reset(interval)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timeout.C:
 			t.client.log.Debugf("timed out waiting for task %s for %fs", t.UPID, max.Seconds())
 			return ErrTimeout
-		case <-ticker.C:
+		case <-poll.C:
 		}
 	}
 }
@@ -436,8 +446,10 @@ func (t *Task) WaitForCompleteStatus(ctx context.Context, timesNum int, steps ..
 	}
 	timeout := time.NewTimer(time.Duration(step*timesNum) * time.Second)
 	defer timeout.Stop()
-	ticker := time.NewTicker(time.Duration(step) * time.Second)
-	defer ticker.Stop()
+	// Same post-poll timer as Wait: guarantee a full step of quiet between
+	// polls even when a status request is slower than the step.
+	poll := time.NewTimer(time.Duration(step) * time.Second)
+	defer poll.Stop()
 
 	for {
 		var done bool
@@ -454,12 +466,13 @@ func (t *Task) WaitForCompleteStatus(ctx context.Context, timesNum int, steps ..
 			return
 		}
 
+		poll.Reset(time.Duration(step) * time.Second)
 		select {
 		case <-ctx.Done():
 			return status, completed, ctx.Err()
 		case <-timeout.C:
 			return
-		case <-ticker.C:
+		case <-poll.C:
 		}
 	}
 }
