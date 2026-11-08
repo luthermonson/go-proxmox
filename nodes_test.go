@@ -184,6 +184,18 @@ func TestNode_VzTmpl(t *testing.T) {
 	assert.NotNil(t, template)
 	assert.Equal(t, "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst", template.VolID)
 
+	// The handle must be usable for Delete, which needs client, node and
+	// storage; before, they were left empty and Delete panicked.
+	assert.Equal(t, "node1", template.Node)
+	assert.Equal(t, "local", template.Storage)
+	gock.New(TestURI).
+		Delete(`^/nodes/node1/storage/local/content/local:vztmpl/ubuntu-22\.04-standard_22\.04-1_amd64\.tar\.zst$`).
+		Reply(200).
+		JSON(`{"data":"UPID:node1:00001234:00005678:65A4B5C6:imgdel:local:root@pam:"}`)
+	task, err := template.Delete(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, task)
+
 	// Test non-existent template
 	template, err = node.VzTmpl(ctx, "nonexistent.tar.zst", "local")
 	assert.NotNil(t, err)
