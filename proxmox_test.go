@@ -419,6 +419,40 @@ func TestDataParserForURL(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDataParserForURL_Numbers(t *testing.T) {
+	out, err := dataParserForURL(struct {
+		Since int64   `json:"since"`
+		VMID  int     `json:"vmid"`
+		Ratio float64 `json:"ratio"`
+	}{Since: 1700000000, VMID: 1000000, Ratio: 0.5})
+	require.NoError(t, err)
+	assert.Equal(t, "ratio=0.5&since=1700000000&vmid=1000000", out)
+}
+
+func TestDataParserForURL_SkipsNull(t *testing.T) {
+	out, err := dataParserForURL(struct {
+		Node  *string `json:"node"`
+		Force int     `json:"force"`
+	}{Force: 1})
+	require.NoError(t, err)
+	assert.Equal(t, "force=1", out)
+}
+
+func TestClient_GetWithParams_LargeInteger(t *testing.T) {
+	defer gock.Off()
+	gock.New(TestURI).
+		Get("^/cluster/tasks$").
+		MatchParam("since", "^1700000000$").
+		Reply(200).
+		JSON(`{"data": []}`)
+
+	var tasks []*Task
+	err := mockClient().GetWithParams(context.Background(), "/cluster/tasks",
+		map[string]int64{"since": 1700000000}, &tasks)
+	require.NoError(t, err)
+	assert.True(t, gock.IsDone())
+}
+
 func TestClient_handleResponse(t *testing.T) {
 	// todo test if logs exclude /access/ticket requests
 	// todo test data key vs no data key
