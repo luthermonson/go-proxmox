@@ -281,6 +281,12 @@ func (s *Storage) Backup(ctx context.Context, name string) (backup *Backup, err 
 	backup.client = s.client
 	backup.Node = s.Node
 	backup.Storage = s.Name
+	if backup.VolID == "" {
+		// Like ISO and VzTmpl: PVE leaves volid out of this response, and
+		// rebuilding it from the path's base name in Delete loses the
+		// directory part of names such as PBS's "vm/100/<timestamp>".
+		backup.VolID = fmt.Sprintf("%s:backup/%s", backup.Storage, name)
+	}
 	return
 }
 
