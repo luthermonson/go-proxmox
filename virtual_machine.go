@@ -996,7 +996,9 @@ func (v *VirtualMachine) Snapshot(name string) *VirtualMachineSnapshot {
 // /qemu/{vmid}/snapshot/{name}/config. PVE only lets you change the
 // description through this endpoint.
 type VirtualMachineSnapshotUpdateOptions struct {
-	Description string `json:"description,omitempty"`
+	// Description is always sent: PVE leaves the description untouched when
+	// the field is missing, so an empty value is how it gets cleared.
+	Description string `json:"description"`
 }
 
 // Rollback rolls the VM back to this snapshot. Returns the worker task.
