@@ -602,17 +602,52 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 	recv := make(chan []byte)
 	errs := make(chan error)
 	done := make(chan struct{})
-	ticker := time.NewTicker(30 * time.Second)
 	resize := make(chan size)
+	ticker := time.NewTicker(30 * time.Second)
 
+	var (
+		closeOnce sync.Once
+		closeErr  error
+		workers   sync.WaitGroup
+	)
+
+	// sendError delivers an error to the consumer without blocking once the
+	// connection is being torn down, so a worker can always exit instead of
+	// parking on an errs send that no one will ever read.
+	sendError := func(err error) {
+		select {
+		case errs <- err:
+		case <-done:
+		}
+	}
+
+	// closer is idempotent (safe to call twice, e.g. an explicit close plus a
+	// deferred one) and waits for every worker goroutine to exit before closing
+	// the channels they send on, so nothing can ever send on a closed channel.
+	closer := func() error {
+		closeOnce.Do(func() {
+			close(done)
+			ticker.Stop()
+			closeErr = conn.Close()
+			workers.Wait()
+			close(recv)
+			close(errs)
+		})
+		return closeErr
+	}
+
+	workers.Add(3)
+
+	// terminal-size monitor
 	go func(tsize size) {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+		defer workers.Done()
+		t := time.NewTicker(1 * time.Second)
+		defer t.Stop()
 		for {
 			select {
 			case <-done:
 				return
-			case <-ticker.C:
+			case <-t.C:
 				resized := size{
 					height: goterm.Height(),
 					width:  goterm.Width(),
@@ -620,24 +655,19 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 				if tsize.height != resized.height ||
 					tsize.width != resized.width {
 					tsize = resized
-					resize <- resized
+					select {
+					case resize <- resized:
+					case <-done:
+						return
+					}
 				}
 			}
 		}
 	}(tsize)
 
-	closer := func() error {
-		close(done)
-		time.Sleep(1 * time.Second)
-		close(send)
-		close(recv)
-		close(errs)
-		ticker.Stop()
-
-		return conn.Close()
-	}
-
+	// reader
 	go func() {
+		defer workers.Done()
 		for {
 			select {
 			case <-done:
@@ -645,42 +675,60 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 			default:
 				_, msg, err := conn.ReadMessage()
 				if err != nil {
+					// closer() closed the connection locally; nothing to report.
 					if strings.Contains(err.Error(), "use of closed network connection") {
 						return
 					}
+					// An expected close (going away / abnormal) is a quiet exit.
 					if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 						return
 					}
-					errs <- err
+					// The peer went away unexpectedly — surface it so the
+					// consumer can tear the session down instead of blocking
+					// forever (issue #344), then exit.
+					sendError(err)
+					return
 				}
-				recv <- msg
+				select {
+				case recv <- msg:
+				case <-done:
+					return
+				}
 			}
 		}
 	}()
 
+	// writer
 	go func() {
+		defer workers.Done()
 		for {
 			select {
 			case <-done:
-				if err := conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					errs <- err
-				}
+				// Best-effort close frame; the connection may already be closed
+				// by closer(), in which case the write simply errors and we exit.
+				_ = conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			case <-ticker.C:
 				c.log.Debugf("sending wss keep alive")
 				if err := conn.WriteMessage(websocket.BinaryMessage, []byte("2")); err != nil {
-					errs <- err
+					sendError(err)
+					return
 				}
 			case resized := <-resize:
 				c.log.Debugf("resizing terminal window: cols=%d rows=%d", resized.width, resized.height)
 				if err := conn.WriteMessage(websocket.BinaryMessage, []byte(fmt.Sprintf("1:%d:%d:", resized.width, resized.height))); err != nil {
-					errs <- err
+					sendError(err)
+					return
 				}
-			case msg := <-send:
+			case msg, ok := <-send:
+				if !ok {
+					return
+				}
 				c.log.Debugf("sending: %s", msg)
-				send := append([]byte(fmt.Sprintf("0:%d:", len(msg))), msg...)
-				if err := conn.WriteMessage(websocket.BinaryMessage, send); err != nil {
-					errs <- err
+				frame := append([]byte(fmt.Sprintf("0:%d:", len(msg))), msg...)
+				if err := conn.WriteMessage(websocket.BinaryMessage, frame); err != nil {
+					sendError(err)
+					return
 				}
 			}
 		}
