@@ -132,9 +132,14 @@ type Client struct {
 	// Multi-endpoint failover. fallbackEndpoints holds the raw URLs added via
 	// WithAdditionalEndpoints (in option order); failover is the installed
 	// RoundTripper, nil unless at least one usable fallback endpoint exists.
+	// The endpoint* fields are the circuit-breaker tunables set via
+	// WithEndpointFailureThreshold / WithEndpointCooldown (zero = default).
 	// See failover.go.
-	fallbackEndpoints []string
-	failover          *failoverRoundTripper
+	fallbackEndpoints        []string
+	failover                 *failoverRoundTripper
+	endpointFailureThreshold int
+	endpointCooldownBase     time.Duration
+	endpointCooldownMax      time.Duration
 }
 
 // runInterceptors invokes the registered request interceptors in registration

@@ -384,10 +384,21 @@ Failover is deliberately conservative:
 
 - It triggers **only** on transport/connection-level failures (DNS, dial, connection refused, TLS handshake, a timeout or reset before any response) — i.e. the node is unreachable.
 - It **never** triggers on a well-formed HTTP response, including any `4xx` or `5xx`. Those are real answers from a reachable node; another node would answer the same, and replaying a write after a node already processed it could apply the side effect twice. (Transient `5xx` retries against the *same* node remain `WithRetry`'s job; the two options compose, with failover sitting inside the retry wrapper.)
-- `GET` / `HEAD` / `OPTIONS` fail over even after the request reached a node. `POST` / `PUT` / `DELETE` / `PATCH` fail over **only** when the request provably never left the client (the connection failed before any request bytes were written), so a create/start/delete is never executed twice.
+- A **pure connection-establishment failure** (DNS, dial, connection refused, TLS handshake) proves the request never left the client, so it fails over for **any** method — including `POST` / `PUT` / `DELETE`. Only an **ambiguous** failure — a timeout or reset *after* the request headers were written, where the server may already have acted — is restricted to the idempotent methods `GET` / `HEAD` / `OPTIONS`; a write that may have been delivered is returned to the caller as-is so a create/start/delete is never executed twice.
 - The context bounds the whole request across every endpoint tried; cancellation stops failover immediately.
 
-After a request succeeds against an endpoint, that endpoint becomes the current one for subsequent requests (sticky last-good); a brand-new client always starts on the primary. Backward compatibility is total — without `WithAdditionalEndpoints`, the client talks to the single `NewClient` URL exactly as before.
+**Circuit breaker.** An endpoint that fails at the transport layer repeatedly is benched and skipped *without being dialed* while another endpoint is healthy, so a dead node is not re-probed on every request. The bench engages only after a sustained-failure threshold (default **3 consecutive failures**), so a single transient blip never penalizes a healthy node; the cooldown starts at **10s** and doubles per further consecutive failure up to **180s**, and the endpoint is re-probed once the window expires (a success clears the state). This is evaluated lazily on the request path — no background goroutine. Tune it with `WithEndpointFailureThreshold(n)` and `WithEndpointCooldown(base, max)`:
+
+```go
+client := proxmox.NewClient("https://pve1:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithAdditionalEndpoints("https://pve2:8006/api2/json", "https://pve3:8006/api2/json"),
+    proxmox.WithEndpointFailureThreshold(5),              // bench after 5 strikes
+    proxmox.WithEndpointCooldown(5*time.Second, 2*time.Minute),
+)
+```
+
+After a request succeeds against an endpoint, that endpoint becomes the current one for subsequent requests (sticky last-good); a brand-new client always starts on the primary. The current endpoint and the per-endpoint health are **shared across all goroutines** using the client, so concurrent callers cooperate — once one request has benched a dead node, the others skip it instead of each rediscovering it. Backward compatibility is total — without `WithAdditionalEndpoints`, the client talks to the single `NewClient` URL exactly as before.
 
 ### Request interceptors
 
