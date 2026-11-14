@@ -1,9 +1,11 @@
 package proxmox
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -279,30 +281,74 @@ func (f *failoverRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 		// connection failed before WroteHeaders fired, the request provably
 		// never reached a server and is safe to replay on another endpoint
 		// regardless of method.
-		var wroteHeaders atomic.Bool
+		var wroteHeaders, gotConn atomic.Bool
 		trace := &httptrace.ClientTrace{
+			GotConn:      func(httptrace.GotConnInfo) { gotConn.Store(true) },
 			WroteHeaders: func() { wroteHeaders.Store(true) },
 		}
 		attempt = attempt.WithContext(httptrace.WithClientTrace(attempt.Context(), trace))
 
 		res, err = f.base.RoundTrip(attempt)
 		if err == nil {
-			// A reachable node answered (any status). Restore res.Request to
-			// the original so handleResponse's /access/ticket URL comparison
-			// and log redaction still see the primary base URL. Clear this
-			// endpoint's failure state and make it the current one.
-			if res != nil {
-				res.Request = req
+			// A reachable node answered. A gateway-class status means this
+			// entry node could not itself serve or forward the request (a bad
+			// gateway, or Proxmox's 595/596 "can't reach the target node"), so
+			// another endpoint may still succeed.
+			retry, bench, reason := classifyStatus(res)
+			if !retry {
+				// A genuine answer (any non-gateway status, including 4xx/500).
+				// Restore res.Request to the original so handleResponse's
+				// /access/ticket URL comparison and log redaction still see the
+				// primary base URL. Clear this endpoint's failure state and make
+				// it the current one.
+				if res != nil {
+					res.Request = req
+				}
+				f.markOK(idx)
+				f.markCurrent(idx)
+				return res, nil
 			}
-			f.markOK(idx)
-			f.markCurrent(idx)
-			return res, nil
+			// A 502/503/504 implicates the endpoint itself, so feed the breaker;
+			// 595/596 mean this entry node couldn't reach the target node, so
+			// fail over without penalising an otherwise-healthy entry node.
+			if bench {
+				f.markFailed(idx, fmt.Errorf("endpoint returned %s", reason))
+			}
+			// The request reached a server and it responded, so a non-idempotent
+			// call may already have taken effect; only safe methods may be
+			// replayed on another node.
+			if !safe {
+				if res != nil {
+					res.Request = req
+				}
+				return res, nil
+			}
+			// Discard the gateway response before trying the next node so the
+			// connection can return to the pool, and present the failure as an
+			// error so the retry loop (and a final return) treats it uniformly.
+			drainResponse(res)
+			res, err = nil, fmt.Errorf("proxmox endpoint %s returned %s", f.endpoints[idx].base, reason)
+			if pos < len(order)-1 {
+				f.log.Warnf("proxmox endpoint %s returned %s; failing over to %s",
+					f.endpoints[idx].base, reason, f.endpoints[order[pos+1]].base)
+			} else {
+				f.log.Debugf("proxmox endpoint %s returned %s; no endpoints left to try",
+					f.endpoints[idx].base, reason)
+			}
+			continue
 		}
 
-		// Honor caller cancellation immediately — never fail over a
-		// user-requested cancel/deadline.
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+		// The caller's context ended during the attempt. A user-requested cancel
+		// is honored without touching endpoint health, but a deadline that
+		// expired before we ever established a connection provably implicates
+		// this endpoint (a black-holed node): bench it so a caller deadline
+		// shorter than the dial timeout can't pin every future request to the
+		// dead endpoint forever.
+		if cerr := ctx.Err(); cerr != nil {
+			if errors.Is(cerr, context.DeadlineExceeded) && !gotConn.Load() {
+				f.markFailed(idx, fmt.Errorf("no connection before the context deadline: %w", err))
+			}
+			return nil, cerr
 		}
 
 		// Record the transport failure in the shared breaker state so this and
@@ -472,6 +518,33 @@ func isSafeMethod(method string) bool {
 		return true
 	}
 	return false
+}
+
+// Proxmox-specific gateway status codes returned by pveproxy when the entry
+// node you connected to could not reach the node that owns the resource. They
+// mean "try a different entry node", not "this node is unhealthy".
+const (
+	statusPVEConnectError = 595 // pveproxy: connection to the target node failed
+	statusPVEProxyError   = 596 // pveproxy: proxy handshake to the target node failed
+)
+
+// classifyStatus decides whether a response that arrived without a transport
+// error is in fact a gateway-class failure that should fail over to another
+// endpoint, and whether that endpoint should be benched for it. A 502/503/504
+// implicates the entry node itself (bench it); Proxmox's 595/596 mean the entry
+// node could not reach the *target* node, so fail over without benching the
+// entry node. Every other status (2xx/3xx/4xx, and 500) is a real answer.
+func classifyStatus(res *http.Response) (retry, bench bool, reason string) {
+	if res == nil {
+		return false, false, ""
+	}
+	switch res.StatusCode {
+	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return true, true, res.Status
+	case statusPVEConnectError, statusPVEProxyError:
+		return true, false, res.Status
+	}
+	return false, false, ""
 }
 
 // isConnectError reports whether err is a pure connection-establishment

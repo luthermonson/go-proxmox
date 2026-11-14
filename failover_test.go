@@ -448,3 +448,115 @@ func TestFailover_HeadersWrittenPostNotReplayed(t *testing.T) {
 	assert.Equal(t, int64(1), primaryHits.Load(), "primary received the POST once")
 	assert.Equal(t, int64(0), fallbackHits.Load(), "a maybe-delivered POST must NOT be replayed")
 }
+
+// TestClassifyStatus locks the gateway-failover classification: 502/503/504 are
+// retryable and bench the endpoint, Proxmox's 595/596 are retryable without
+// benching (the entry node is fine; the target node isn't), and every other
+// status — including 500 — is a genuine answer that must not fail over.
+func TestClassifyStatus(t *testing.T) {
+	for code, want := range map[int][2]bool{
+		200: {false, false}, 400: {false, false}, 401: {false, false}, 404: {false, false},
+		429: {false, false}, 500: {false, false}, 501: {false, false},
+		502: {true, true}, 503: {true, true}, 504: {true, true},
+		595: {true, false}, 596: {true, false},
+	} {
+		retry, bench, _ := classifyStatus(&http.Response{StatusCode: code, Status: fmt.Sprint(code)})
+		assert.Equal(t, want, [2]bool{retry, bench}, "status %d", code)
+	}
+	retry, bench, _ := classifyStatus(nil)
+	assert.False(t, retry)
+	assert.False(t, bench)
+}
+
+// TestFailover_GatewayStatusesFailOver verifies a GET fails over to a healthy
+// node when the primary answers with a gateway-class status, and that the
+// bench decision matches the status: 502/503/504 bench the entry node, 595/596
+// do not.
+func TestFailover_GatewayStatusesFailOver(t *testing.T) {
+	for _, code := range []int{595, 596, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout} {
+		t.Run(fmt.Sprint(code), func(t *testing.T) {
+			var primaryHits, fallbackHits atomic.Int64
+			primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				primaryHits.Add(1)
+				w.WriteHeader(code)
+				_, _ = io.WriteString(w, `{"data":null}`)
+			}))
+			t.Cleanup(primary.Close)
+			fallback := countingVersionServer(t, &fallbackHits)
+
+			client := NewClient(primary.URL, WithAdditionalEndpoints(fallback.URL), WithEndpointFailureThreshold(1))
+
+			_, err := client.Version(context.Background())
+			require.NoError(t, err, "a gateway status must fail over to the healthy node")
+			assert.Equal(t, int64(1), primaryHits.Load(), "primary answered once")
+			assert.Equal(t, int64(1), fallbackHits.Load(), "fallback served the request")
+
+			// 595/596 implicate the target node, not the entry node, so the
+			// entry node is left healthy; 502/503/504 implicate it and bench it
+			// (threshold 1 benches on the single failure here).
+			healthy := client.failover.endpoints[0].healthy(time.Now())
+			assert.Equal(t, code >= 595, healthy, "status %d bench expectation", code)
+		})
+	}
+}
+
+// TestFailover_GatewayStatusPostNotReplayed verifies a non-idempotent POST that
+// draws a gateway status is NOT replayed on another node — the server may have
+// acted — and the status surfaces to the caller as an error.
+func TestFailover_GatewayStatusPostNotReplayed(t *testing.T) {
+	var fallbackHits atomic.Int64
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = io.WriteString(w, `{"data":null}`)
+	}))
+	t.Cleanup(primary.Close)
+	fallback := countingVersionServer(t, &fallbackHits)
+
+	client := NewClient(primary.URL, WithAdditionalEndpoints(fallback.URL), WithEndpointFailureThreshold(1))
+
+	err := client.Req(context.Background(), http.MethodPost, "/cluster/foo", []byte(`{"a":1}`), nil)
+	require.Error(t, err, "a gateway status on a POST must surface, not succeed via replay")
+	assert.Equal(t, int64(0), fallbackHits.Load(), "a maybe-acted POST must NOT be replayed")
+}
+
+// TestFailover_DeadlineWhileConnectingBenchesPrimary is the regression test for
+// the deadline-while-connecting black hole. The primary's address swallows the
+// TCP SYN, so a caller deadline shorter than the dial timeout expires before
+// any connection is established. The attempt must bench the primary (it never
+// connected within the caller's budget) so the next call starts on the healthy
+// fallback instead of hanging on the dead primary forever.
+func TestFailover_DeadlineWhileConnectingBenchesPrimary(t *testing.T) {
+	var fallbackHits atomic.Int64
+	fallback := countingVersionServer(t, &fallbackHits)
+
+	primary := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	primaryAddr := primary.Listener.Addr().String()
+	t.Cleanup(primary.Close)
+
+	tr := &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if addr == primaryAddr {
+			<-ctx.Done() // a black-holed host: the SYN is never answered
+			return nil, ctx.Err()
+		}
+		return (&net.Dialer{}).DialContext(ctx, network, addr)
+	}}
+	t.Cleanup(tr.CloseIdleConnections)
+
+	client := NewClient(primary.URL,
+		WithHTTPClient(&http.Client{Transport: tr}),
+		WithAdditionalEndpoints(fallback.URL),
+		WithEndpointFailureThreshold(1),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := client.Get(ctx, "/version", nil)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Equal(t, int64(0), fallbackHits.Load(), "the caller's own deadline must not silently fail over")
+
+	// The primary is now benched, so the next call must skip it (not hang on
+	// the black hole) and be served by the fallback.
+	_, err = client.Version(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), fallbackHits.Load())
+}
