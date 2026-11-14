@@ -266,6 +266,14 @@ func (n *Node) Storages(ctx context.Context) (storages Storages, err error) {
 	return
 }
 
+// Storage returns the named storage after fetching its status
+// (GET /nodes/{node}/storage/{storage}/status).
+//
+// Deprecated: use Node.StorageRef, which builds a request-free handle. Every
+// *Storage method addresses the storage by node and name in the URL and works
+// on a bare ref, so this fetch is only needed when you want the status fields
+// (Enabled, Content, Avail, Total, ...) up front; call (*Storage).Ping on a
+// ref to fill them.
 func (n *Node) Storage(ctx context.Context, name string) (storage *Storage, err error) {
 	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/status", n.Name, name), &storage)
 	if err != nil {
@@ -277,6 +285,19 @@ func (n *Node) Storage(ctx context.Context, name string) (storage *Storage, err 
 	storage.Name = name
 
 	return
+}
+
+// StorageRef returns a handle to the named storage on this node without making
+// any API call, mirroring VirtualMachineRef. Every *Storage method addresses
+// the storage by node and name in the URL, so they all work on the bare
+// handle with no extra request: client.NodeRef("ducks").StorageRef("local").
+// GetContent(ctx) is a single GET, with nothing spent on traversal.
+//
+// The status fields (Enabled, Content, Avail, Total, ...) stay zero until you
+// call Ping, the refresh for a handle from StorageRef. The name is not
+// checked: if no such storage exists, the first real call fails instead.
+func (n *Node) StorageRef(name string) *Storage {
+	return &Storage{client: n.client, Node: n.Name, Name: name}
 }
 
 func (n *Node) StorageDownloadURL(ctx context.Context, options *StorageDownloadURLOptions) (ret string, err error) {

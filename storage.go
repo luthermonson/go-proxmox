@@ -361,6 +361,29 @@ func (s *Storage) ImportMetadata(ctx context.Context, volume string) (*ImportMet
 	return &meta, nil
 }
 
+// Ping refreshes the handle's status fields (Enabled, Content, Active, Avail,
+// Used, Total, ...) in place from GET /nodes/{node}/storage/{storage}/status.
+// It is the refresh for a handle from Node.StorageRef, mirroring
+// (*VirtualMachine).Ping and (*Container).Ping.
+//
+// (Storage).Status is a different call: it returns a separate *StorageStatus
+// from the directory-index path and does not touch the handle. Ping is for
+// filling a ref.
+//
+// The identifying fields (client, Node, Name) are preserved across the
+// round-trip, and a failed refresh leaves the handle unchanged.
+func (s *Storage) Ping(ctx context.Context) error {
+	fresh := &Storage{}
+	if err := s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/status", s.Node, s.Name), fresh); err != nil {
+		return err
+	}
+	fresh.client = s.client
+	fresh.Node = s.Node
+	fresh.Name = s.Name
+	*s = *fresh
+	return nil
+}
+
 // Identity returns the storage's stable id + plugin type. PBS storages
 // surface a content-addressed datastore id here for namespace tracking;
 // other plugins typically return the storage name as the id.
