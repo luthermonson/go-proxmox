@@ -110,10 +110,10 @@ func TestNode_Storages(t *testing.T) {
 }
 
 func TestNode_Storage(t *testing.T) {
-	_, err := td.node.Storage(context.TODO(), "doesnt-exist")
+	_, err := td.node.Storage(context.TODO(), "doesnt-exist") //nolint:staticcheck // intentionally exercises the deprecated Node.Storage path
 	assert.Contains(t, err.Error(), "No such storage.")
 
-	storage, err := td.node.Storage(context.TODO(), td.nodeStorage)
+	storage, err := td.node.Storage(context.TODO(), td.nodeStorage) //nolint:staticcheck // intentionally exercises the deprecated Node.Storage path
 	assert.Nil(t, err)
 	assert.Equal(t, td.nodeStorage, storage.Name)
 }

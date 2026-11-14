@@ -73,8 +73,8 @@ func init() {
 		panic(err)
 	}
 
-	td.storage, err = td.node.Storage(ctx, td.nodeStorage)
-	if err != nil {
+	td.storage = td.node.StorageRef(td.nodeStorage)
+	if err = td.storage.Ping(ctx); err != nil {
 		panic(err)
 	}
 }
