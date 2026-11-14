@@ -576,10 +576,16 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 	// it sends back the same thing you just sent so catch it drop it
 	_, msg, err := conn.ReadMessage()
 	if err != nil || string(msg) != "OK" {
-		if err := conn.Close(); err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("error closing websocket: %s", err.Error())
+		if cerr := conn.Close(); cerr != nil {
+			return nil, nil, nil, nil, fmt.Errorf("error closing websocket: %s", cerr.Error())
 		}
-		return nil, nil, nil, nil, fmt.Errorf("unable to establish websocket: %s", err.Error())
+		// err is nil when the server completed the read but replied with
+		// something other than "OK"; report the unexpected payload instead of
+		// dereferencing a nil error.
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("unable to establish websocket: %w", err)
+		}
+		return nil, nil, nil, nil, fmt.Errorf("unable to establish websocket: unexpected handshake reply %q", msg)
 	}
 
 	type size struct {
