@@ -365,6 +365,42 @@ client := proxmox.NewClient(url,
 
 The default predicate retries network errors plus `502` / `503` / `504` / `429`. Only idempotent verbs (`GET`, `PUT`, `DELETE`) and `POST` with a fully-buffered body are eligible — this client always buffers request bodies as `[]byte`, so `POST` is rewindable in practice.
 
+### Multiple endpoints and failover
+
+A single `NewClient` URL is a single point of failure: if that one node is down, the client is dead even when the rest of a quorate cluster is healthy. Because every node serves the whole cluster-wide API and auth tickets / tokens are cluster-wide, you can give the client other nodes to fail over to with `WithAdditionalEndpoints`. The `NewClient` URL stays the primary; the extra URLs are tried, in order, when the current endpoint is unreachable or returns a gateway-class error:
+
+```go
+client := proxmox.NewClient("https://pve1:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRootCAFile("/etc/pve/cluster-ca.pem"), // one CA verifies every node
+    proxmox.WithAdditionalEndpoints(
+        "https://pve2:8006/api2/json",
+        "https://pve3:8006/api2/json",
+    ),
+)
+```
+
+Failover is deliberately conservative — it triggers only when the node you reached can't serve the request, never on an answer it genuinely gave:
+
+- It triggers on transport/connection-level failures (DNS, dial, connection refused, TLS handshake, a timeout or reset before any response) — the node is unreachable — **and** on a *gateway-class* HTTP status that means the entry node itself couldn't serve the request: Proxmox's `595` / `596` (pveproxy answered, but it can't reach the *target* node that owns the resource) and a `502` / `503` / `504`.
+- It does **not** trigger on any other HTTP response. A `4xx`, a `500`, or an ordinary `2xx`/`3xx` is a real answer from a reachable node; another node would answer the same, so failing over would only duplicate work. (Transient `5xx` retries against the *same* node remain `WithRetry`'s job; the two options compose, with failover sitting inside the retry wrapper.)
+- **Benching reflects blame.** A `502` / `503` / `504` implicates the entry node, so it feeds the circuit breaker (below). A `595` / `596` means the *target* node is unreachable, not the entry node, so the entry node is **not** benched for it — only skipped for this request.
+- **Idempotency gates replay.** A pure connection-establishment failure (DNS, dial, connection refused, TLS handshake) proves the request never left the client, so it fails over for **any** method — including `POST` / `PUT` / `DELETE`. An **ambiguous** outcome — a timeout or reset *after* the request headers were written, or any gateway-class status (the server received the request and may already have acted) — is restricted to the idempotent methods `GET` / `HEAD` / `OPTIONS`; a write that may have been delivered is returned to the caller as-is so a create/start/delete is never executed twice.
+- The context bounds the whole request across every endpoint tried: a cancellation stops failover immediately, and a deadline that expires *before any endpoint even connects* benches that endpoint, so the next call starts elsewhere instead of hanging on a black-holed node forever.
+
+**Circuit breaker.** An endpoint that fails at the transport layer repeatedly is benched and skipped *without being dialed* while another endpoint is healthy, so a dead node is not re-probed on every request. The bench engages only after a sustained-failure threshold (default **3 consecutive failures**), so a single transient blip never penalizes a healthy node; the cooldown starts at **10s** and doubles per further consecutive failure up to **180s**, and the endpoint is re-probed once the window expires (a success clears the state). This is evaluated lazily on the request path — no background goroutine. Tune it with `WithEndpointFailureThreshold(n)` and `WithEndpointCooldown(base, max)`:
+
+```go
+client := proxmox.NewClient("https://pve1:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithAdditionalEndpoints("https://pve2:8006/api2/json", "https://pve3:8006/api2/json"),
+    proxmox.WithEndpointFailureThreshold(5),              // bench after 5 strikes
+    proxmox.WithEndpointCooldown(5*time.Second, 2*time.Minute),
+)
+```
+
+After a request succeeds against an endpoint, that endpoint becomes the current one for subsequent requests (sticky last-good); a brand-new client always starts on the primary. The current endpoint and the per-endpoint health are **shared across all goroutines** using the client, so concurrent callers cooperate — once one request has benched a dead node, the others skip it instead of each rediscovering it. Backward compatibility is total — without `WithAdditionalEndpoints`, the client talks to the single `NewClient` URL exactly as before.
+
 ### Request interceptors
 
 Run a function on every outgoing request after the auth headers are populated and before the request is sent. Useful for tracing, correlation IDs, custom audit headers, request logging:
