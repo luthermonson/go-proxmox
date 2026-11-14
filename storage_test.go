@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
@@ -676,6 +677,30 @@ func TestStorage_Backup(t *testing.T) {
 	task, err := b.Delete(context.Background())
 	require.NoError(t, err)
 	require.NotNil(t, task)
+}
+
+func TestStorage_Backup_VolIDFromName(t *testing.T) {
+	defer gock.Off()
+	// PVE answers GET .../content/{volume} without a volid. A PBS backup
+	// name has a directory part that Delete must keep.
+	gock.New(TestURI).
+		Get(`^/nodes/node1/storage/pbs/content/pbs:backup/vm/100/2024-01-15T03:00:00Z$`).
+		Reply(200).
+		JSON(`{"data":{"format":"pbs-vm","size":1024,"used":1024,"path":"backup@pbs@10.0.0.5:store1:vm/100/2024-01-15T03:00:00Z"}}`)
+	gock.New(TestURI).
+		Delete(`^/nodes/node1/storage/pbs/content/pbs:backup/vm/100/2024-01-15T03:00:00Z$`).
+		Reply(200).
+		JSON(`{"data":"UPID:node1:00001234:00005678:65A4B5C6:imgdel:pbs:root@pam:"}`)
+
+	storage := &Storage{client: mockClient(), Node: "node1", Name: "pbs"}
+	b, err := storage.Backup(context.Background(), "vm/100/2024-01-15T03:00:00Z")
+	require.NoError(t, err)
+	assert.Equal(t, "pbs:backup/vm/100/2024-01-15T03:00:00Z", b.VolID)
+
+	task, err := b.Delete(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.True(t, gock.IsDone())
 }
 
 func TestStorage_DeleteVolume_FromPath(t *testing.T) {
