@@ -31,8 +31,9 @@ const (
 // WithAdditionalEndpoints registers one or more extra API base URLs for the
 // same Proxmox cluster, e.g. "https://pve2:8006/api2/json". It is additive:
 // the URL passed to NewClient stays the primary endpoint, and the URLs given
-// here are failover targets tried, in the order supplied, only when the
-// current endpoint is unreachable. Repeated calls append. Without this option
+// here are failover targets tried, in the order supplied, when the current
+// endpoint is unreachable or returns a gateway-class error. Repeated calls
+// append. Without this option
 // the client talks to the single NewClient URL exactly as it did before, so
 // the option is fully backward compatible.
 //
@@ -45,31 +46,39 @@ const (
 //
 // Failover is deliberately conservative:
 //
-//   - It is triggered ONLY by transport/connection-level failures: DNS
-//     resolution failure, dial failure, connection refused, TLS handshake
-//     failure, or a timeout/reset before a response is received — i.e. the
-//     node is unreachable. This mirrors the err != nil branch of
-//     defaultRetryCondition in retry.go.
-//   - It is NEVER triggered by a well-formed HTTP response from a reachable
-//     node, including any 4xx or 5xx status. Those are real answers about the
-//     request; another node would give the same answer, and replaying a write
-//     after a node has already processed it could apply the side effect twice.
+//   - It is triggered by transport/connection-level failures (DNS resolution
+//     failure, dial failure, connection refused, TLS handshake failure, or a
+//     timeout/reset before a response is received — i.e. the node is
+//     unreachable), AND by a gateway-class HTTP status that means the entry
+//     node could not itself serve the request: a 502/503/504, or Proxmox's
+//     595/596, which pveproxy returns when it answered but could not reach the
+//     target node that owns the resource.
+//   - It is NOT triggered by any other HTTP response. A 4xx, a 500, or an
+//     ordinary 2xx/3xx is a real answer from a reachable node; another node
+//     would give the same answer, so failing over would only duplicate work.
 //     (Transient 5xx retries against the same node remain the job of WithRetry.)
+//   - Benching reflects blame: a 502/503/504 implicates the entry node and
+//     feeds the circuit breaker; a 595/596 implicates the target node, not the
+//     entry node, so the entry node is skipped for the request but not benched.
 //   - A pure connection-establishment failure (DNS, dial, connection refused,
 //     TLS handshake) proves the request never left the client, so it fails
-//     over for ANY method, including POST/PUT/DELETE. A failure that happened
-//     after request headers were written (a mid-flight timeout or reset, where
-//     the server may already have acted) fails over only for the idempotent
-//     methods GET/HEAD/OPTIONS; a write that may have been delivered is
-//     returned to the caller as-is so a create/start/delete is never executed
-//     twice. "Idempotent" here is intentionally narrower than retry.go's
-//     isIdempotent, because Proxmox PUT/DELETE calls are not reliably
-//     idempotent (a relative disk resize, a delete that spawns a task).
+//     over for ANY method, including POST/PUT/DELETE. An ambiguous outcome —
+//     a failure after request headers were written (a mid-flight timeout or
+//     reset), or any gateway-class status (the server received the request and
+//     may already have acted) — fails over only for the idempotent methods
+//     GET/HEAD/OPTIONS; a write that may have been delivered is returned to the
+//     caller as-is so a create/start/delete is never executed twice.
+//     "Idempotent" here is intentionally narrower than retry.go's isIdempotent,
+//     because Proxmox PUT/DELETE calls are not reliably idempotent (a relative
+//     disk resize, a delete that spawns a task).
 //   - A request whose body cannot be replayed (no GetBody — e.g. UploadReader
 //     with a streaming io.Reader) is sent to the current endpoint only and
 //     does not fail over.
 //   - Context cancellation and deadlines stop failover immediately; the
-//     caller's context bounds the whole request across every endpoint tried.
+//     caller's context bounds the whole request across every endpoint tried. A
+//     deadline that expires before an endpoint even connects benches that
+//     endpoint, so the next call starts elsewhere instead of hanging on a
+//     black-holed node.
 //
 // Circuit breaker: an endpoint that fails at the transport layer
 // WithEndpointFailureThreshold times in a row (default 3) is benched for a
@@ -227,8 +236,9 @@ type endpoint struct {
 
 // failoverRoundTripper redirects requests addressed to the primary base URL to
 // the current endpoint, moves on to the next healthy endpoint when an attempt
-// fails at the transport level in a way that is safe to replay elsewhere, and
-// benches an endpoint that keeps failing so it is skipped fast. All of its
+// fails at the transport level, or returns a gateway-class status, in a way
+// that is safe to replay elsewhere, and benches an endpoint that keeps failing
+// so it is skipped fast. All of its
 // mutable state (the sticky current cursor and the per-endpoint health) is
 // shared across goroutines so concurrent callers cooperate.
 type failoverRoundTripper struct {
