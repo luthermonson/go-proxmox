@@ -16,7 +16,7 @@ jobs:
         with:
           go-version: "1.25"
       - name: Continuous Integration
-        uses: magefile/mage-action@a3d5bb52942181c125118a2be4b4664c3337aef6 # v2.4.1
+        uses: magefile/mage-action@a662bd8c29d8106879588cfff83b2faf6e6f59db # v4.0.0
         with:
           version: latest
           args: ci
