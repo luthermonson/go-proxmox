@@ -190,6 +190,23 @@ Refs return the ordinary `*Node`, `*VirtualMachine` and `*Container` types, so e
 
 The node and VMID aren't checked when the ref is built; a VM that doesn't exist fails on the first real call. Refresh a node ref with `node.Status(ctx)`. See [`examples/vm-refs`](./examples/vm-refs/) for a runnable version.
 
+#### Storage refs and finding a guest by VMID
+
+Storage has a ref too, and two finders resolve a VMID to its node when you don't know where a guest lives:
+
+```go
+// No request to build it; GetContent is the only GET.
+storage := client.NodeRef("pve1").StorageRef("local")
+content, err := storage.GetContent(ctx)
+err = storage.Ping(ctx) // fills Enabled, Avail, Total, ... when you want them
+
+// One GET /cluster/resources, then a ref bound to the owning node.
+vm, err := client.FindVirtualMachine(ctx, 100)
+ct, err := client.FindContainer(ctx, 200)
+```
+
+`/cluster/resources` can lag by a few seconds, so a guest created or migrated a moment ago may resolve to a stale node. `Node.Storage` is deprecated in favour of `StorageRef`; see the [v0.9.0 migration guide](./migration/v0.9.0.md) and the [CHANGELOG](./CHANGELOG.md).
+
 ### Create a VM and build a template
 
 Creating or editing a VM goes through `VirtualMachineOption` key/value pairs, whose names are the raw qemu parameter names from the [PVE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu) — the same names `qm create` takes. **`VirtualMachineConfig` is the read side**: `GET /config` unmarshals into it (that's why its fields use tolerant types like `StringOrInt` — PVE returns the same field as a number or a quoted string depending on version), and the library never sends it to the API. Don't populate it to create a VM.
@@ -480,16 +497,17 @@ PVE reports most missing resources as a generic `500` rather than a `404`, so `E
 
 - [`examples/vm-template`](./examples/vm-template/) — build a qemu template from a cloud image: download, disk import, cloud-init, resize, convert.
 - [`examples/vm-refs`](./examples/vm-refs/) — act on a VM through a zero-request ref, next to the fetch pattern, and when to use which.
+- [`examples/failover`](./examples/failover/) — keep a client working when the node it was pointed at goes down: `WithAdditionalEndpoints` and the circuit breaker.
 - [`examples/sdn`](./examples/sdn/) — full SDN walkthrough: create a zone, vnet, subnet, controller, dry-run / apply / rollback.
 - [`examples/term-and-vnc`](./examples/term-and-vnc/) — websocket terminal and VNC proxy via a small Gin server.
 
 ### Upgrading between releases
 
-Per-release migration guides live in [`migration/`](./migration/). Each file describes the source-level changes when upgrading FROM the named release.
+Release notes are in the [CHANGELOG](./CHANGELOG.md). Per-release migration guides live in [`migration/`](./migration/). Each file describes the source-level changes when upgrading FROM the named release.
 
 - [`migration/v0.6.0.md`](./migration/v0.6.0.md) — upgrading from v0.5.x
 - [`migration/v0.7.0.md`](./migration/v0.7.0.md) — upgrading from v0.6.0 (the major cleanup release)
-- [`migration/v0.9.0.md`](./migration/v0.9.0.md) — task waits report failed tasks as errors; typed API errors (`*APIError`); non-2xx responses that used to be ignored now return errors
+- [`migration/v0.9.0.md`](./migration/v0.9.0.md) — task waits report failed tasks as errors; typed API errors (`*APIError`); non-2xx responses that used to be ignored now return errors; `AgentExecStatus` field types; `Node.Storage` and the `New` constructors deprecated in favour of refs
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 
