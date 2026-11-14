@@ -311,16 +311,24 @@ func dataParserForURL(d interface{}) (string, error) {
 		return "", err
 	}
 
+	// UseNumber keeps numbers as the digits json.Marshal wrote. Decoding into
+	// float64 and printing with %v turns 1700000000 into "1.7e+09", which PVE
+	// rejects for integer parameters.
 	var m map[string]interface{}
-	err = json.Unmarshal(jsonBytes, &m)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(jsonBytes))
+	dec.UseNumber()
+	if err := dec.Decode(&m); err != nil {
 		return "", err
 	}
 
 	values := url.Values{}
 	for key, value := range m {
-		strValue := fmt.Sprintf("%v", value)
-		values.Set(key, strValue)
+		if value == nil {
+			// A null field (nil pointer without omitempty) has no value to
+			// send; %v would send the literal "<nil>".
+			continue
+		}
+		values.Set(key, fmt.Sprintf("%v", value))
 	}
 
 	return values.Encode(), nil
