@@ -626,6 +626,23 @@ func TestContainerSnapshot_UpdateConfig(t *testing.T) {
 	}))
 }
 
+// PVE only touches the description when the field is present, so clearing it
+// must send an empty description rather than an empty body.
+func TestContainerSnapshot_UpdateConfig_ClearsDescription(t *testing.T) {
+	defer gock.Off()
+	gock.New(TestURI).
+		Put("^/nodes/node1/lxc/100/snapshot/snapshot1/config$").
+		JSON(map[string]string{"description": ""}).
+		Times(2).
+		Reply(200).
+		JSON(`{"data": null}`)
+
+	ctx := context.Background()
+	assert.Nil(t, ct100().Snapshot("snapshot1").UpdateConfig(ctx, nil))
+	assert.Nil(t, ct100().Snapshot("snapshot1").UpdateConfig(ctx, &ContainerSnapshotUpdateOptions{}))
+	assert.True(t, gock.IsDone())
+}
+
 func ct100() *Container {
 	return &Container{client: mockClient(), Node: "node1", VMID: 100}
 }

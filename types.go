@@ -1480,7 +1480,9 @@ type FirewallRef struct {
 // ContainerSnapshotUpdateOptions is the body for PUT /snapshot/{name}/config.
 // PVE accepts only the description field on this endpoint.
 type ContainerSnapshotUpdateOptions struct {
-	Description string `json:"description,omitempty"`
+	// Description is always sent: PVE leaves the description untouched when
+	// the field is missing, so an empty value is how it gets cleared.
+	Description string `json:"description"`
 }
 
 type VirtualMachineCloneOptions struct {
