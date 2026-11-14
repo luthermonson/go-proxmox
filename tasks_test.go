@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -464,4 +466,96 @@ func TestUPIDStartTime(t *testing.T) {
 
 	_, ok = upidStartTime("garbage")
 	assert.False(t, ok)
+}
+
+// --- Watch streams the whole log, in order -----------------------------------
+
+const upidWatchTail = UPID("UPID:node1:000000BB:000000BB:000000BB:watchtail:100:root@pam:")
+
+func watchStatusJSON(status string) string {
+	return fmt.Sprintf(`{"data":{"status":%q,"exitstatus":"OK","upid":%q,"type":"watchtail","id":"100","user":"root@pam","node":"node1"}}`, status, upidWatchTail)
+}
+
+func watchLogJSON(from, to int) string {
+	rows := make([]string, 0, to-from+1)
+	for n := from; n <= to; n++ {
+		rows = append(rows, fmt.Sprintf(`{"n":%d,"t":"line %d"}`, n, n))
+	}
+	return `{"data":[` + strings.Join(rows, ",") + `]}`
+}
+
+func watchLines(from, to int) []string {
+	lines := make([]string, 0, to-from+1)
+	for n := from; n <= to; n++ {
+		lines = append(lines, fmt.Sprintf("line %d", n))
+	}
+	return lines
+}
+
+func drainWatch(t *testing.T, watch chan string) []string {
+	t.Helper()
+	var lines []string
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case ln, ok := <-watch:
+			if !ok {
+				return lines
+			}
+			lines = append(lines, ln)
+		case <-timeout:
+			t.Fatalf("timed out waiting for watcher to close; got %d lines", len(lines))
+		}
+	}
+}
+
+func TestTask_Watch_LinesInOrder(t *testing.T) {
+	defer gock.Off()
+	logPath := "^/nodes/node1/tasks/" + string(upidWatchTail) + "/log$"
+	gock.New(TestURI).Get("^/nodes/node1/tasks/" + string(upidWatchTail) + "/status$").
+		Reply(200).JSON(watchStatusJSON(TaskStopped))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^0$").
+		Reply(200).JSON(watchLogJSON(1, 40))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^40$").
+		Reply(200).JSON(`{"data":[]}`)
+
+	watch, err := NewTask(upidWatchTail, mockClient()).Watch(context.Background(), 0)
+	require.NoError(t, err)
+	assert.Equal(t, watchLines(1, 40), drainWatch(t, watch))
+	assert.True(t, gock.IsDone())
+}
+
+func TestTask_Watch_SendsLinesWrittenBeforeStop(t *testing.T) {
+	defer gock.Off()
+	statusPath := "^/nodes/node1/tasks/" + string(upidWatchTail) + "/status$"
+	logPath := "^/nodes/node1/tasks/" + string(upidWatchTail) + "/log$"
+	gock.New(TestURI).Get(statusPath).Reply(200).JSON(watchStatusJSON(TaskRunning))
+	gock.New(TestURI).Get(statusPath).Reply(200).JSON(watchStatusJSON(TaskStopped))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^0$").
+		Reply(200).JSON(watchLogJSON(1, 2))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^2$").
+		Reply(200).JSON(`{"data":[]}`)
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^2$").
+		Reply(200).JSON(`{"data":[{"n":3,"t":"line 3"},{"n":4,"t":"TASK OK"}]}`)
+
+	watch, err := NewTask(upidWatchTail, mockClient()).Watch(context.Background(), 0)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"line 1", "line 2", "line 3", "TASK OK"}, drainWatch(t, watch))
+	assert.True(t, gock.IsDone())
+}
+
+func TestTask_Watch_TailContinuesFromStart(t *testing.T) {
+	defer gock.Off()
+	logPath := "^/nodes/node1/tasks/" + string(upidWatchTail) + "/log$"
+	gock.New(TestURI).Get("^/nodes/node1/tasks/" + string(upidWatchTail) + "/status$").
+		Reply(200).JSON(watchStatusJSON(TaskStopped))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^5$").
+		Reply(200).JSON(watchLogJSON(6, 7))
+	gock.New(TestURI).Get(logPath).MatchParam("start", "^7$").
+		Reply(200).JSON(watchLogJSON(8, 8))
+
+	watch, err := NewTask(upidWatchTail, mockClient()).Watch(context.Background(), 5)
+	require.NoError(t, err)
+	assert.Equal(t, watchLines(6, 8), drainWatch(t, watch))
+	assert.True(t, gock.IsDone())
 }

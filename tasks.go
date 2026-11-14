@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +28,9 @@ const (
 	// reads from the node's task index. The query is already narrowed by
 	// start time, type and VMID, so this only matters on very busy nodes.
 	taskHistoryLimit = 500
+
+	// taskLogPageSize is how many log lines Watch asks for per request.
+	taskLogPageSize = 50
 )
 
 var DefaultWaitInterval = 1 * time.Second
@@ -298,7 +303,7 @@ func (t *Task) Log(ctx context.Context, start, limit int) (l Log, err error) {
 func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 	t.client.log.Debugf("starting watcher on %s", t.UPID)
 
-	log, err := t.Log(ctx, start, 50)
+	log, err := t.Log(ctx, start, taskLogPageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +318,7 @@ func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 			return nil, err
 		}
 
-		log, err = t.Log(ctx, start, 50)
+		log, err = t.Log(ctx, start, taskLogPageSize)
 		if err != nil {
 			return nil, err
 		}
@@ -328,15 +333,11 @@ func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 	go func() {
 		defer close(watch)
 		t.client.log.Debugf("logs found for task %s", t.UPID)
-		for _, ln := range log {
-			select {
-			case watch <- ln:
-			case <-ctx.Done():
-				return
-			}
+		if err := sendLines(ctx, watch, log); err != nil {
+			return
 		}
 		t.client.log.Debugf("watching task %s", t.UPID)
-		err := tasktail(ctx, len(log), watch, t)
+		err := tasktail(ctx, start+len(log), watch, t)
 		if err != nil {
 			t.client.log.Errorf("error watching logs: %s", err)
 		}
@@ -346,34 +347,52 @@ func (t *Task) Watch(ctx context.Context, start int) (chan string, error) {
 	return watch, nil
 }
 
+// tasktail streams the task log from start until the task stops. The status
+// is read before the log on every round, so once the task is seen stopped the
+// log read that follows already holds its last lines (e.g. "TASK OK").
 func tasktail(ctx context.Context, start int, watch chan string, task *Task) error {
 	for {
 		task.client.log.Debugf("tailing log for task %s", task.UPID)
 		if err := task.Ping(ctx); err != nil {
 			return err
 		}
+		running := task.Status == TaskRunning
 
-		if task.Status != TaskRunning {
+		for {
+			logs, err := task.Log(ctx, start, taskLogPageSize)
+			if err != nil {
+				return err
+			}
+			if err := sendLines(ctx, watch, logs); err != nil {
+				return err
+			}
+			start += len(logs)
+			if len(logs) < taskLogPageSize {
+				break
+			}
+		}
+
+		if !running {
 			task.client.log.Debugf("task %s is no longer running, closing down watcher", task.UPID)
 			return nil
 		}
-
-		logs, err := task.Log(ctx, start, 50)
-		if err != nil {
-			return err
-		}
-		for _, ln := range logs {
-			select {
-			case watch <- ln:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-		start += len(logs)
 		if err := sleepCtx(ctx, 2*time.Second); err != nil {
 			return err
 		}
 	}
+}
+
+// sendLines sends the log lines to watch in line order. Log is a map, so
+// ranging over it directly would hand the lines out in random order.
+func sendLines(ctx context.Context, watch chan string, log Log) error {
+	for _, n := range slices.Sorted(maps.Keys(log)) {
+		select {
+		case watch <- log[n]:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
 }
 
 // WaitFor is Wait with DefaultWaitInterval and a timeout in seconds.
