@@ -365,6 +365,30 @@ client := proxmox.NewClient(url,
 
 The default predicate retries network errors plus `502` / `503` / `504` / `429`. Only idempotent verbs (`GET`, `PUT`, `DELETE`) and `POST` with a fully-buffered body are eligible — this client always buffers request bodies as `[]byte`, so `POST` is rewindable in practice.
 
+### Multiple endpoints and failover
+
+A single `NewClient` URL is a single point of failure: if that one node is down, the client is dead even when the rest of a quorate cluster is healthy. Because every node serves the whole cluster-wide API and auth tickets / tokens are cluster-wide, you can give the client other nodes to fail over to with `WithAdditionalEndpoints`. The `NewClient` URL stays the primary; the extra URLs are tried, in order, only when the current endpoint is unreachable:
+
+```go
+client := proxmox.NewClient("https://pve1:8006/api2/json",
+    proxmox.WithAPIToken("automation@pve!ci", "<secret>"),
+    proxmox.WithRootCAFile("/etc/pve/cluster-ca.pem"), // one CA verifies every node
+    proxmox.WithAdditionalEndpoints(
+        "https://pve2:8006/api2/json",
+        "https://pve3:8006/api2/json",
+    ),
+)
+```
+
+Failover is deliberately conservative:
+
+- It triggers **only** on transport/connection-level failures (DNS, dial, connection refused, TLS handshake, a timeout or reset before any response) — i.e. the node is unreachable.
+- It **never** triggers on a well-formed HTTP response, including any `4xx` or `5xx`. Those are real answers from a reachable node; another node would answer the same, and replaying a write after a node already processed it could apply the side effect twice. (Transient `5xx` retries against the *same* node remain `WithRetry`'s job; the two options compose, with failover sitting inside the retry wrapper.)
+- `GET` / `HEAD` / `OPTIONS` fail over even after the request reached a node. `POST` / `PUT` / `DELETE` / `PATCH` fail over **only** when the request provably never left the client (the connection failed before any request bytes were written), so a create/start/delete is never executed twice.
+- The context bounds the whole request across every endpoint tried; cancellation stops failover immediately.
+
+After a request succeeds against an endpoint, that endpoint becomes the current one for subsequent requests (sticky last-good); a brand-new client always starts on the primary. Backward compatibility is total — without `WithAdditionalEndpoints`, the client talks to the single `NewClient` URL exactly as before.
+
 ### Request interceptors
 
 Run a function on every outgoing request after the auth headers are populated and before the request is sent. Useful for tracing, correlation IDs, custom audit headers, request logging:

@@ -128,6 +128,13 @@ type Client struct {
 	tlsMods      []func(*tls.Config)
 	retryPolicy  *retryPolicy
 	proxyFunc    func(*http.Request) (*url.URL, error)
+
+	// Multi-endpoint failover. fallbackEndpoints holds the raw URLs added via
+	// WithAdditionalEndpoints (in option order); failover is the installed
+	// RoundTripper, nil unless at least one usable fallback endpoint exists.
+	// See failover.go.
+	fallbackEndpoints []string
+	failover          *failoverRoundTripper
 }
 
 // runInterceptors invokes the registered request interceptors in registration
@@ -203,6 +210,9 @@ func (c *Client) finalizeOptions() {
 		}
 	}
 
+	// Failover wraps the real transport; the retry wrapper then wraps failover,
+	// so retry ends up outermost and each retry round re-sweeps the endpoints.
+	c.installFailoverWrapper()
 	c.installRetryWrapper()
 
 	if c.eagerAuth && c.credentials != nil && c.token == "" {
@@ -526,12 +536,11 @@ func (c *Client) TermWebSocket(path string, term *Term) (chan []byte, chan []byt
 		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
 	}
 	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
+		path = strings.Replace(c.endpointBaseURL(), "https://", "wss://", 1) + path
 	}
 
 	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
+	if transport := unwrapTransport(c.httpClient.Transport); transport != nil {
 		tlsConfig = transport.TLSClientConfig
 	}
 	c.log.Debugf("connecting to websocket: %s", path)
@@ -692,12 +701,11 @@ func (c *Client) VNCWebSocket(path string, vnc *VNC) (chan []byte, chan []byte, 
 		return nil, nil, nil, nil, ErrAPITokenWebSocketUnsupported
 	}
 	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.baseURL, "https://", "wss://", 1) + path
+		path = strings.Replace(c.endpointBaseURL(), "https://", "wss://", 1) + path
 	}
 
 	var tlsConfig *tls.Config
-	transport := c.httpClient.Transport.(*http.Transport)
-	if transport != nil {
+	if transport := unwrapTransport(c.httpClient.Transport); transport != nil {
 		tlsConfig = transport.TLSClientConfig
 	}
 	c.log.Debugf("connecting to websocket: %s", path)
