@@ -277,6 +277,108 @@ func TestClient_VNCWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
 	assert.False(t, errsOpen)
 }
 
+// termTestServer upgrades an incoming request to a websocket using the "binary"
+// subprotocol and performs the Proxmox termproxy handshake: it reads the
+// user:ticket line, replies "OK", and reads the initial terminal-size message.
+// It then hands the live connection to handle, exactly where a real termproxy
+// session would begin streaming.
+func termTestServer(t *testing.T, handle func(conn *websocket.Conn)) (*httptest.Server, string) {
+	t.Helper()
+	upgrader := websocket.Upgrader{Subprotocols: []string{"binary"}}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		// Handshake: TermWebSocket sends "user:ticket\n" and expects "OK" back,
+		// then sends the initial "1:<cols>:<rows>:" resize message.
+		if _, _, err := conn.ReadMessage(); err != nil {
+			return
+		}
+		if err := conn.WriteMessage(websocket.BinaryMessage, []byte("OK")); err != nil {
+			return
+		}
+		if _, _, err := conn.ReadMessage(); err != nil {
+			return
+		}
+		handle(conn)
+	}))
+	return server, "ws" + strings.TrimPrefix(server.URL, "http")
+}
+
+// TestClient_TermWebSocket_CloseAfterPeerDisconnect is the regression test for
+// the terminal websocket's close-lifecycle race. The server sends a close frame
+// with no status code, which the read loop sees as close 1005 — a code
+// IsUnexpectedCloseError treats as unexpected, so the reader tries to report it
+// on errs. Before the fix the closer closed done, slept a fixed interval, then
+// closed send/recv/errs; a reader blocked on an errs send would panic with
+// "send on closed channel" when the closer closed errs out from under it. This
+// is deterministic on Windows/go1.26.5. After the fix the closer waits for the
+// worker goroutines to exit before closing the channels, so the close is clean
+// and recv/errs are closed exactly once.
+func TestClient_TermWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		// Peer sends a bare close frame (no status) → the client read loop
+		// surfaces close 1005 through IsUnexpectedCloseError.
+		_ = conn.WriteMessage(websocket.CloseMessage, []byte{})
+		// Hold the underlying connection open briefly so the client's reader is
+		// parked on its errs send when the closer runs, maximising the race.
+		time.Sleep(250 * time.Millisecond)
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+
+	// Give the read loop a moment to observe the close frame and attempt to
+	// report it, then tear down. On the unfixed code this closer races the
+	// worker and panics the process.
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, closer())
+
+	_, recvOpen := <-recv
+	assert.False(t, recvOpen)
+	_, errsOpen := <-errs
+	assert.False(t, errsOpen)
+}
+
+// TestClient_TermWebSocket_NotifiesOnPeerDisconnect checks the terminal read
+// loop surfaces an unexpected server close (the IsUnexpectedCloseError path)
+// through errs rather than leaving the consumer blocked forever.
+func TestClient_TermWebSocket_NotifiesOnPeerDisconnect(t *testing.T) {
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		// Send an unexpected close frame (internal server error); the client
+		// read loop reports it through errs via IsUnexpectedCloseError.
+		msg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "peer gone")
+		_ = conn.WriteMessage(websocket.CloseMessage, msg)
+		time.Sleep(100 * time.Millisecond)
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+	defer func() { _ = closer() }()
+
+	notified := make(chan struct{})
+	go func() {
+		select {
+		case <-errs:
+		case <-recv:
+		}
+		close(notified)
+	}()
+
+	select {
+	case <-notified:
+	case <-time.After(2 * time.Second):
+		t.Fatal("consumer was not notified when the terminal peer disconnected")
+	}
+}
+
 func TestClient_Version7(t *testing.T) {
 	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
