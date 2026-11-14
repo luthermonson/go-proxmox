@@ -277,6 +277,286 @@ func TestClient_VNCWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
 	assert.False(t, errsOpen)
 }
 
+// termTestServer upgrades an incoming request to a websocket using the "binary"
+// subprotocol and performs the Proxmox termproxy handshake: it reads the
+// user:ticket line, replies "OK", and reads the initial terminal-size message.
+// It then hands the live connection to handle, exactly where a real termproxy
+// session would begin streaming.
+func termTestServer(t *testing.T, handle func(conn *websocket.Conn)) (*httptest.Server, string) {
+	t.Helper()
+	upgrader := websocket.Upgrader{Subprotocols: []string{"binary"}}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		// Handshake: TermWebSocket sends "user:ticket\n" and expects "OK" back,
+		// then sends the initial "1:<cols>:<rows>:" resize message.
+		if _, _, err := conn.ReadMessage(); err != nil {
+			return
+		}
+		if err := conn.WriteMessage(websocket.BinaryMessage, []byte("OK")); err != nil {
+			return
+		}
+		if _, _, err := conn.ReadMessage(); err != nil {
+			return
+		}
+		handle(conn)
+	}))
+	return server, "ws" + strings.TrimPrefix(server.URL, "http")
+}
+
+// TestClient_TermWebSocket_CloseAfterPeerDisconnect is the regression test for
+// the terminal websocket's close-lifecycle race. The server sends a close frame
+// with no status code, which the read loop sees as close 1005 — a code
+// IsUnexpectedCloseError treats as unexpected, so the reader tries to report it
+// on errs. Before the fix the closer closed done, slept a fixed interval, then
+// closed send/recv/errs; a reader blocked on an errs send would panic with
+// "send on closed channel" when the closer closed errs out from under it. This
+// is deterministic on Windows/go1.26.5. After the fix the closer waits for the
+// worker goroutines to exit before closing the channels, so the close is clean
+// and recv/errs are closed exactly once.
+func TestClient_TermWebSocket_CloseAfterPeerDisconnect(t *testing.T) {
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		// Peer sends a bare close frame (no status) → the client read loop
+		// surfaces close 1005 through IsUnexpectedCloseError.
+		_ = conn.WriteMessage(websocket.CloseMessage, []byte{})
+		// Hold the underlying connection open briefly so the client's reader is
+		// parked on its errs send when the closer runs, maximising the race.
+		time.Sleep(250 * time.Millisecond)
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+
+	// Give the read loop a moment to observe the close frame and attempt to
+	// report it, then tear down. On the unfixed code this closer races the
+	// worker and panics the process.
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, closer())
+
+	_, recvOpen := <-recv
+	assert.False(t, recvOpen)
+	_, errsOpen := <-errs
+	assert.False(t, errsOpen)
+}
+
+// TestClient_TermWebSocket_NotifiesOnPeerDisconnect checks the terminal read
+// loop surfaces an unexpected server close (the IsUnexpectedCloseError path)
+// through errs rather than leaving the consumer blocked forever.
+func TestClient_TermWebSocket_NotifiesOnPeerDisconnect(t *testing.T) {
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		// Send an unexpected close frame (internal server error); the client
+		// read loop reports it through errs via IsUnexpectedCloseError.
+		msg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "peer gone")
+		_ = conn.WriteMessage(websocket.CloseMessage, msg)
+		time.Sleep(100 * time.Millisecond)
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+	defer func() { _ = closer() }()
+
+	notified := make(chan struct{})
+	go func() {
+		select {
+		case <-errs:
+		case <-recv:
+		}
+		close(notified)
+	}()
+
+	select {
+	case <-notified:
+	case <-time.After(2 * time.Second):
+		t.Fatal("consumer was not notified when the terminal peer disconnected")
+	}
+}
+
+// TestClient_TermWebSocket_RoundTrip exercises the steady-state data path: the
+// server pushes a frame that must surface on recv, and a write on the send
+// channel must reach the server wrapped in Proxmox's "0:<len>:<msg>" terminal
+// framing. The deferred closer then tears a healthy session down cleanly.
+func TestClient_TermWebSocket_RoundTrip(t *testing.T) {
+	fromClient := make(chan string, 1)
+	release := make(chan struct{})
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		if err := conn.WriteMessage(websocket.BinaryMessage, []byte("hello")); err != nil {
+			return
+		}
+		// TermWebSocket's writer frames outbound data as "0:<len>:<payload>".
+		if _, msg, err := conn.ReadMessage(); err == nil {
+			fromClient <- string(msg)
+		}
+		<-release
+	})
+	defer server.Close()
+	defer close(release)
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	send, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+	defer func() { _ = closer() }()
+
+	select {
+	case msg := <-recv:
+		assert.Equal(t, "hello", string(msg))
+	case e := <-errs:
+		t.Fatalf("unexpected error on recv: %v", e)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for the server message on recv")
+	}
+
+	select {
+	case send <- []byte("ping"):
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out writing to the send channel")
+	}
+
+	select {
+	case got := <-fromClient:
+		assert.Equal(t, "0:4:ping", got)
+	case <-time.After(2 * time.Second):
+		t.Fatal("server never received the framed client message")
+	}
+}
+
+// TestClient_VNCWebSocket_RoundTrip is the VNC analogue of the terminal
+// round-trip. VNC has no termproxy handshake and sends payloads unframed, so a
+// write on send must reach the server verbatim.
+func TestClient_VNCWebSocket_RoundTrip(t *testing.T) {
+	fromClient := make(chan string, 1)
+	release := make(chan struct{})
+	server, wsURL := vncTestServer(t, func(conn *websocket.Conn) {
+		if err := conn.WriteMessage(websocket.BinaryMessage, []byte("frame")); err != nil {
+			return
+		}
+		if _, msg, err := conn.ReadMessage(); err == nil {
+			fromClient <- string(msg)
+		}
+		<-release
+	})
+	defer server.Close()
+	defer close(release)
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	send, recv, errs, closer, err := client.VNCWebSocket(wsURL, &VNC{})
+	require.NoError(t, err)
+	defer func() { _ = closer() }()
+
+	select {
+	case msg := <-recv:
+		assert.Equal(t, "frame", string(msg))
+	case e := <-errs:
+		t.Fatalf("unexpected error on recv: %v", e)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for the server message on recv")
+	}
+
+	select {
+	case send <- []byte("click"):
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out writing to the send channel")
+	}
+
+	select {
+	case got := <-fromClient:
+		assert.Equal(t, "click", got)
+	case <-time.After(2 * time.Second):
+		t.Fatal("server never received the client message")
+	}
+}
+
+// TestClient_TermWebSocket_DialError verifies a failed dial returns the error to
+// the caller rather than nil channels with a nil error.
+func TestClient_TermWebSocket_DialError(t *testing.T) {
+	client := NewClient("http://127.0.0.1:1", WithHTTPClient(&http.Client{Transport: &http.Transport{}}))
+	send, recv, errs, closer, err := client.TermWebSocket("ws://127.0.0.1:1/vncwebsocket", &Term{})
+	require.Error(t, err)
+	assert.Nil(t, send)
+	assert.Nil(t, recv)
+	assert.Nil(t, errs)
+	assert.Nil(t, closer)
+}
+
+// TestClient_VNCWebSocket_DialError is the VNC analogue of the dial-error path.
+func TestClient_VNCWebSocket_DialError(t *testing.T) {
+	client := NewClient("http://127.0.0.1:1", WithHTTPClient(&http.Client{Transport: &http.Transport{}}))
+	send, recv, errs, closer, err := client.VNCWebSocket("ws://127.0.0.1:1/vncwebsocket", &VNC{})
+	require.Error(t, err)
+	assert.Nil(t, send)
+	assert.Nil(t, recv)
+	assert.Nil(t, errs)
+	assert.Nil(t, closer)
+}
+
+// TestClient_TermWebSocket_HandshakeReplyNotOK covers the handshake-rejection
+// path: the server upgrades and reads the user:ticket line but replies with a
+// payload other than "OK". The read succeeds (err == nil), so this is the case
+// that previously dereferenced a nil error and panicked; it must now return a
+// descriptive "unable to establish websocket" error instead.
+func TestClient_TermWebSocket_HandshakeReplyNotOK(t *testing.T) {
+	upgrader := websocket.Upgrader{Subprotocols: []string{"binary"}}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		if _, _, err := conn.ReadMessage(); err != nil { // user:ticket line
+			return
+		}
+		_ = conn.WriteMessage(websocket.BinaryMessage, []byte("ERR: bad ticket"))
+		_ = conn.Close()
+	}))
+	defer server.Close()
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, _, _, _, err := client.TermWebSocket(wsURL, &Term{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unable to establish websocket")
+}
+
+// TestClient_TermWebSocket_QuietExitOnGoingAway checks that an expected close
+// (CloseGoingAway) is swallowed by the read loop rather than surfaced on errs —
+// the complement of the NotifiesOnPeerDisconnect case, which tests an
+// unexpected close. The closer must still tear the session down cleanly.
+func TestClient_TermWebSocket_QuietExitOnGoingAway(t *testing.T) {
+	server, wsURL := termTestServer(t, func(conn *websocket.Conn) {
+		msg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "bye")
+		_ = conn.WriteMessage(websocket.CloseMessage, msg)
+		time.Sleep(100 * time.Millisecond)
+		_ = conn.Close()
+	})
+	defer server.Close()
+
+	client := NewClient(server.URL, WithHTTPClient(server.Client()))
+	_, recv, errs, closer, err := client.TermWebSocket(wsURL, &Term{})
+	require.NoError(t, err)
+
+	// An expected (going-away) close must not surface on errs.
+	select {
+	case e, ok := <-errs:
+		if ok {
+			t.Fatalf("expected a quiet exit on a going-away close, got error: %v", e)
+		}
+	case <-time.After(300 * time.Millisecond):
+		// No error surfaced — correct.
+	}
+
+	require.NoError(t, closer())
+	_, recvOpen := <-recv
+	assert.False(t, recvOpen)
+	_, errsOpen := <-errs
+	assert.False(t, errsOpen)
+}
+
 func TestClient_Version7(t *testing.T) {
 	mocks.ProxmoxVE7x(mockConfig)
 	defer mocks.Off()
