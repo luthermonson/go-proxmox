@@ -232,8 +232,18 @@ func (n *Node) DownloadAppliance(ctx context.Context, template, storage string) 
 	}, &ret)
 }
 
+// VzTmpls lists the container templates on the given storage. Each returned
+// *VzTmpl carries the client, node and storage, so Delete works on it.
 func (n *Node) VzTmpls(ctx context.Context, storage string) (templates VzTmpls, err error) {
-	return templates, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates)
+	if err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content?content=vztmpl", n.Name, storage), &templates); err != nil {
+		return nil, err
+	}
+	for _, t := range templates {
+		t.client = n.client
+		t.Node = n.Name
+		t.Storage = storage
+	}
+	return templates, nil
 }
 
 func (n *Node) VzTmpl(ctx context.Context, template, storage string) (*VzTmpl, error) {
