@@ -22,11 +22,13 @@ func (cl *Cluster) CephFlags(ctx context.Context) (flags []*CephFlag, err error)
 // helper without parsing the full catalog.
 //
 // GET /cluster/ceph/flags/{flag}
-func (cl *Cluster) CephFlag(ctx context.Context, flag string) (value string, err error) {
+func (cl *Cluster) CephFlag(ctx context.Context, flag string) (value bool, err error) {
 	if flag == "" {
 		err = errors.New("ceph flag: name is required")
 		return
 	}
+	// The endpoint returns a bare JSON boolean; decoding it into a string
+	// (the previous return type) always failed.
 	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/ceph/flags/%s", flag), &value)
 	return
 }

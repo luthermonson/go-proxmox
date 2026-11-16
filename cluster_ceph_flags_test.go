@@ -27,7 +27,7 @@ func TestCluster_CephFlag(t *testing.T) {
 
 	v, err := cluster.CephFlag(context.Background(), "noout")
 	assert.Nil(t, err)
-	assert.NotEmpty(t, v)
+	assert.True(t, v)
 
 	_, err = cluster.CephFlag(context.Background(), "")
 	assert.Error(t, err)

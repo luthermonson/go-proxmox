@@ -11,11 +11,19 @@ import (
 // /nodes/{node}/qemu/{vmid}/firewall/*. Existing rules/ipset/options helpers
 // remain in virtual_machine.go.
 
-// Firewall fetches the directory-rooted firewall record (aliases + ipset +
-// rules + options) for the VM in one call. Cheaper than four round-trips
-// when you just need a snapshot.
-func (v *VirtualMachine) Firewall(ctx context.Context) (firewall *Firewall, err error) {
-	return firewall, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall", v.Node, v.VMID), &firewall)
+// FirewallSubdirs enumerates the children of
+// /nodes/{node}/qemu/{vmid}/firewall ("rules", "aliases", "ipset", "options",
+// "log", "refs"). The endpoint is a directory index — PVE returns an array of
+// child-link objects, not a single firewall record — so it is wrapped with
+// the diridx shape, mirroring (*Node).FirewallSubdirs. (It replaces the old
+// Firewall method, which decoded that array into a *Firewall struct and could
+// never succeed.)
+func (v *VirtualMachine) FirewallSubdirs(ctx context.Context) ([]string, error) {
+	return v.firewallDiridx(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall", v.Node, v.VMID))
+}
+
+func (v *VirtualMachine) firewallDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, v.client, path)
 }
 
 // FirewallLog returns the per-VM firewall log entries. start/limit page the

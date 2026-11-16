@@ -310,8 +310,19 @@ func (s *ContainerSnapshot) SubResources(ctx context.Context) (entries []*Contai
 	return
 }
 
-func (c *Container) Firewall(ctx context.Context) (firewall *Firewall, err error) {
-	return firewall, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall", c.Node, c.VMID), &firewall)
+// FirewallSubdirs enumerates the children of
+// /nodes/{node}/lxc/{vmid}/firewall ("rules", "aliases", "ipset", "options",
+// "log", "refs"). The endpoint is a directory index — PVE returns an array of
+// child-link objects, not a single firewall record — so it is wrapped with
+// the diridx shape, mirroring (*Node).FirewallSubdirs. (It replaces the old
+// Firewall method, which decoded that array into a *Firewall struct and could
+// never succeed.)
+func (c *Container) FirewallSubdirs(ctx context.Context) ([]string, error) {
+	return c.firewallDiridx(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/firewall", c.Node, c.VMID))
+}
+
+func (c *Container) firewallDiridx(ctx context.Context, path string) ([]string, error) {
+	return decodeSubdirList(ctx, c.client, path)
 }
 
 func (c *Container) GetFirewallAliases(ctx context.Context) (aliases []*FirewallAlias, err error) {

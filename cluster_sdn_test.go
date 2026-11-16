@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
@@ -107,6 +108,30 @@ func TestCluster_SDNZone_Basic(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "test1", zone.Name)
 	assert.Equal(t, "vxlan", zone.Type)
+	// Pending is an object of not-yet-applied changes. The old `bool` typing
+	// made the whole GET fail to decode whenever pending data was present.
+	assert.Equal(t, "changed", zone.State)
+	assert.Equal(t, "host1,host2,host3", zone.Pending["nodes"])
+}
+
+func TestSDNZoneOptions_ExitNodeTags(t *testing.T) {
+	// Write path: the SDN zone schema spells the exit-node keys without
+	// hyphens (exitnodes / exitnodes-local-routing / exitnodes-primary); the
+	// old `exit-nodes*` tags were silently ignored by PVE.
+	opts := &SDNZoneOptions{
+		Name:                  "evpn1",
+		Type:                  "evpn",
+		ExitNodes:             "node1,node2",
+		ExitNodesLocalRouting: IntOrBool(true),
+		ExitNodesPrimary:      "node1",
+	}
+	b, err := json.Marshal(opts)
+	assert.Nil(t, err)
+	s := string(b)
+	assert.Contains(t, s, `"exitnodes":"node1,node2"`)
+	assert.Contains(t, s, `"exitnodes-local-routing":1`)
+	assert.Contains(t, s, `"exitnodes-primary":"node1"`)
+	assert.NotContains(t, s, `"exit-nodes"`)
 }
 
 func TestCluster_NewSDNZone(t *testing.T) {

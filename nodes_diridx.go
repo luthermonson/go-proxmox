@@ -68,11 +68,12 @@ func (t *Task) Subdirs(ctx context.Context) ([]string, error) {
 	return t.taskDiridx(ctx, fmt.Sprintf("/nodes/%s/tasks/%s", t.Node, t.UPID))
 }
 
-// StorageStatus is the response of GET /nodes/{node}/storage/{storage}.
-// Despite its path being a diridx, PVE returns the storage's capability /
-// status object directly: type + plugin metadata (Active, Enabled, Shared),
-// declared Content types, and (when active) capacity counters. Numeric
-// fields are int/uint64 to match what the JSON envelope unmarshals into.
+// StorageStatus is the response of GET /nodes/{node}/storage/{storage}/status.
+// It is the storage's capability / status object: type + plugin metadata
+// (Active, Enabled, Shared), declared Content types, and (when active)
+// capacity counters. Numeric fields are int/uint64 to match what the JSON
+// envelope unmarshals into. (The bare /nodes/{node}/storage/{storage} path is
+// a directory index, not this object — see Status.)
 type StorageStatus struct {
 	// Type is the storage plugin ("dir", "lvm", "lvmthin", "zfs", "nfs",
 	// "cifs", "pbs", "rbd", "cephfs", …).
@@ -100,13 +101,14 @@ type StorageStatus struct {
 	UsedFraction float64 `json:"used_fraction,omitempty"`
 }
 
-// Status returns the storage's status / capability object from
-// GET /nodes/{node}/storage/{storage}. Despite living at the directory-index
-// path, PVE publishes the storage's status payload here (Active, Content
-// types, Type, Enabled, capacity counters), not the usual `[{"subdir":...}]`
-// envelope — see StorageStatus.
+// Status returns the storage's status / capability object (Active, Content
+// types, Type, Enabled, capacity counters) from
+// GET /nodes/{node}/storage/{storage}/status — see StorageStatus. The bare
+// /nodes/{node}/storage/{storage} path is a directory index that enumerates
+// this storage's sub-resources (content, status, …) and would decode to an
+// empty StorageStatus.
 func (s *Storage) Status(ctx context.Context) (status *StorageStatus, err error) {
-	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s", s.Node, s.Name), &status)
+	err = s.client.Get(ctx, fmt.Sprintf("/nodes/%s/storage/%s/status", s.Node, s.Name), &status)
 	return
 }
 
@@ -141,18 +143,30 @@ func (t *Task) taskDiridx(ctx context.Context, path string) ([]string, error) {
 	return decodeSubdirList(ctx, t.client, path)
 }
 
-// decodeSubdirList is the underlying [{"subdir":...}] decoder. Centralised
-// so the per-receiver `<area>Diridx` helpers stay trivial one-liners.
+// decodeSubdirList is the underlying directory-index decoder. Centralised so
+// the per-receiver `<area>Diridx` helpers stay trivial one-liners.
+//
+// PVE diridx responses are arrays whose child objects identify themselves by
+// one of three keys depending on the area: most use "subdir", /cluster/sdn
+// and its children use "id", and the per-guest / firewall indexes use "name"
+// (the schema's child-link href spells out which). Reading only "subdir" made
+// SDNSubdirs (keyed by "id") and the per-guest firewall indexes (keyed by
+// "name") decode to empty strings. We decode each row into a generic map and
+// take the first identifying key that is present, so every diridx area yields
+// the correct child names.
 func decodeSubdirList(ctx context.Context, c *Client, path string) ([]string, error) {
-	var items []struct {
-		Subdir string `json:"subdir"`
-	}
+	var items []map[string]any
 	if err := c.Get(ctx, path, &items); err != nil {
 		return nil, err
 	}
 	out := make([]string, 0, len(items))
 	for _, it := range items {
-		out = append(out, it.Subdir)
+		for _, k := range []string{"subdir", "id", "name"} {
+			if v, ok := it[k].(string); ok && v != "" {
+				out = append(out, v)
+				break
+			}
+		}
 	}
 	return out, nil
 }

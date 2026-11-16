@@ -150,6 +150,10 @@ func TestStorage_GetContent(t *testing.T) {
 	assert.Equal(t, "vma.zst", content[2].Format)
 	assert.Equal(t, uint64(2147483648), content[2].Size)
 	assert.Equal(t, uint64(100), content[2].VMID)
+	// protected decodes from the upstream `protected` key (previously mis-tagged
+	// `protection`, so it never decoded); approximate-size is the new field.
+	assert.True(t, bool(content[2].Protection))
+	assert.Equal(t, uint64(2147500000), content[2].ApproximateSize)
 }
 
 func TestStorage_DeleteContent(t *testing.T) {

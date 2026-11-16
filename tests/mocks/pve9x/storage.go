@@ -123,7 +123,9 @@ func storage() {
             "format": "vma.zst",
             "size": 2147483648,
             "ctime": 1693252800,
-            "vmid": 100
+            "vmid": 100,
+            "protected": 1,
+            "approximate-size": 2147500000
         }
     ]
 }`)

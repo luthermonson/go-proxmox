@@ -987,17 +987,20 @@ func virtualMachines() {
 
 	// ----- Per-VM firewall (vmid 100) -----
 
+	// GET /nodes/node1/qemu/100/firewall — directory index (array of child
+	// links keyed by "name", per the PVE schema), not a single firewall object.
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/qemu/100/firewall$").
 		Reply(200).
-		JSON(`{
-    "data": {
-        "rules": [{"pos": 0, "action": "ACCEPT", "type": "in"}],
-        "aliases": [{"name": "internal", "cidr": "10.0.0.0/8"}],
-        "ipset": [{"name": "blocked", "comment": "blocked clients"}]
-    }
-}`)
+		JSON(`{"data":[
+    {"name":"rules"},
+    {"name":"aliases"},
+    {"name":"ipset"},
+    {"name":"options"},
+    {"name":"log"},
+    {"name":"refs"}
+]}`)
 
 	gock.New(config.C.URI).
 		Persist().
