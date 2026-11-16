@@ -2,6 +2,7 @@ package pve9x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
@@ -589,10 +590,12 @@ func clusterBackup() {
     }
 }`)
 
-	// POST /cluster/backup — create
+	// POST /cluster/backup — create. The create and update bodies are
+	// recorded by capture.RequestMatcher.
 	gock.New(config.C.URI).
 		Persist().
 		Post("^/cluster/backup$").
+		AddMatcher(capture.RequestMatcher()).
 		Reply(200).
 		JSON(`{"data": null}`)
 
@@ -600,6 +603,7 @@ func clusterBackup() {
 	gock.New(config.C.URI).
 		Persist().
 		Put("^/cluster/backup/backup-1$").
+		AddMatcher(capture.RequestMatcher()).
 		Reply(200).
 		JSON(`{"data": null}`)
 

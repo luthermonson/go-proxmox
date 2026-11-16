@@ -211,3 +211,16 @@ func TestStorageDownloadURLOptions_VerifyCertificatesDefaultsToServerDefault(t *
 	_, present := m["verify-certificates"]
 	assert.Falsef(t, present, "verify-certificates must be omitted when unset; pre-fix it silently sent 0 and disabled cert verification")
 }
+
+func TestClusterBackupOptions_DefaultsOmittedWhenUnset(t *testing.T) {
+	m := marshalToMap(t, ClusterBackupOptions{Schedule: "daily"})
+	for _, k := range []string{"enabled", "remove", "stdexcludes"} {
+		_, present := m[k]
+		assert.Falsef(t, present, "%q should be omitted when unset so PVE applies its default", k)
+	}
+
+	m = marshalToMap(t, ClusterBackupOptions{Enabled: Ptr(false), Remove: Ptr(false), StdExcludes: Ptr(true)})
+	assert.Equal(t, false, m["enabled"])
+	assert.Equal(t, false, m["remove"])
+	assert.Equal(t, true, m["stdexcludes"])
+}

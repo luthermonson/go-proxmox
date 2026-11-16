@@ -2,10 +2,13 @@ package proxmox
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCluster(t *testing.T) {
@@ -205,6 +208,45 @@ func TestClusterBackup_Update(t *testing.T) {
 		Schedule: "weekly",
 	}))
 	assert.Nil(t, backup.Update(ctx, nil)) // nil opts ok
+}
+
+// TestClusterBackup_UpdateSendsExplicitFalse checks that the options PVE
+// defaults to true can be turned off: a disabled job, remove=0 to keep old
+// backups and stdexcludes=0 reach the API instead of being dropped.
+func TestClusterBackup_UpdateSendsExplicitFalse(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	require.NoError(t, err)
+	backup, err := cluster.Backup(ctx, "backup-1")
+	require.NoError(t, err)
+
+	require.NoError(t, backup.Update(ctx, &ClusterBackupOptions{
+		Enabled:     Ptr(false),
+		Remove:      Ptr(false),
+		StdExcludes: Ptr(false),
+	}))
+	require.NoError(t, cluster.NewBackup(ctx, &ClusterBackupOptions{
+		Schedule: "daily 02:00",
+		Storage:  "local",
+		All:      true,
+		Enabled:  Ptr(false),
+	}))
+
+	var bodies []map[string]any
+	for _, r := range capture.Requests {
+		if r.Method == http.MethodPut || r.Method == http.MethodPost {
+			bodies = append(bodies, r.Body)
+		}
+	}
+	require.Len(t, bodies, 2)
+	assert.Equal(t, false, bodies[0]["enabled"])
+	assert.Equal(t, false, bodies[0]["remove"])
+	assert.Equal(t, false, bodies[0]["stdexcludes"])
+	assert.Equal(t, false, bodies[1]["enabled"])
 }
 
 func TestClusterBackup_Delete(t *testing.T) {
