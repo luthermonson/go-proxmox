@@ -1914,7 +1914,10 @@ type ClusterBackup struct {
 
 // ClusterBackupOptions is the request body for POST /cluster/backup
 // (create) and PUT /cluster/backup/{id} (update). All fields are optional;
-// see the PVE API docs for semantics.
+// see the PVE API docs for semantics. Enabled, Remove and StdExcludes default
+// to true on the PVE side, so they are pointers: leave them nil to keep the
+// default, or set Ptr(false) to disable a job, keep old backups or back up
+// the standard excludes.
 type ClusterBackupOptions struct {
 	All                bool   `json:"all,omitempty"`
 	BwLimit            uint64 `json:"bwlimit,omitempty"`
@@ -1922,7 +1925,7 @@ type ClusterBackupOptions struct {
 	Compress           string `json:"compress,omitempty"`
 	Dow                string `json:"dow,omitempty"`
 	DumpDir            string `json:"dumpdir,omitempty"`
-	Enabled            bool   `json:"enabled,omitempty"`
+	Enabled            *bool  `json:"enabled,omitempty"` // PVE default 1
 	Exclude            string `json:"exclude,omitempty"`
 	ExcludePath        string `json:"exclude-path,omitempty"`
 	ID                 string `json:"id,omitempty"`
@@ -1943,11 +1946,11 @@ type ClusterBackupOptions struct {
 	Protected          bool   `json:"protected,omitempty"`
 	PruneBackups       string `json:"prune-backups,omitempty"`
 	Quiet              bool   `json:"quiet,omitempty"`
-	Remove             bool   `json:"remove,omitempty"`
+	Remove             *bool  `json:"remove,omitempty"` // PVE default 1
 	RepeatMissed       bool   `json:"repeat-missed,omitempty"`
 	Schedule           string `json:"schedule,omitempty"`
 	Script             string `json:"script,omitempty"`
-	StdExcludes        bool   `json:"stdexcludes,omitempty"`
+	StdExcludes        *bool  `json:"stdexcludes,omitempty"` // PVE default 1
 	Stop               bool   `json:"stop,omitempty"`
 	StopWait           uint   `json:"stopwait,omitempty"`
 	Storage            string `json:"storage,omitempty"`
