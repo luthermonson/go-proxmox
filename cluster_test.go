@@ -249,6 +249,41 @@ func TestClusterBackup_UpdateSendsExplicitFalse(t *testing.T) {
 	assert.Equal(t, false, bodies[1]["enabled"])
 }
 
+// TestClusterBackup_UpdateSendsZeroCounts checks that zstd=0 (half of the
+// cores), ionice=0, lockwait=0 and stopwait=0 reach the API instead of being
+// dropped, which left the job on the PVE defaults 1, 7, 180 and 10.
+func TestClusterBackup_UpdateSendsZeroCounts(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	cluster, err := client.Cluster(ctx)
+	require.NoError(t, err)
+	backup, err := cluster.Backup(ctx, "backup-1")
+	require.NoError(t, err)
+
+	require.NoError(t, backup.Update(ctx, &ClusterBackupOptions{
+		IoNice:   Ptr(uint(0)),
+		LockWait: Ptr(uint(0)),
+		StopWait: Ptr(uint(0)),
+		Zstd:     Ptr(uint(0)),
+	}))
+
+	var body map[string]any
+	for _, r := range capture.Requests {
+		if r.Method == http.MethodPut {
+			body = r.Body
+		}
+	}
+	require.NotNil(t, body)
+	for _, k := range []string{"ionice", "lockwait", "stopwait", "zstd"} {
+		v, present := body[k]
+		assert.Truef(t, present, "%q missing from the PUT body", k)
+		assert.EqualValues(t, 0, v)
+	}
+}
+
 func TestClusterBackup_Delete(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()

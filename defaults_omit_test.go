@@ -224,3 +224,19 @@ func TestClusterBackupOptions_DefaultsOmittedWhenUnset(t *testing.T) {
 	assert.Equal(t, false, m["remove"])
 	assert.Equal(t, true, m["stdexcludes"])
 }
+
+func TestClusterBackupOptions_ZeroCountsSentWhenSet(t *testing.T) {
+	m := marshalToMap(t, ClusterBackupOptions{Schedule: "daily"})
+	for _, k := range []string{"ionice", "lockwait", "stopwait", "zstd"} {
+		_, present := m[k]
+		assert.Falsef(t, present, "%q should be omitted when unset so PVE applies its default", k)
+	}
+
+	zero := uint(0)
+	m = marshalToMap(t, ClusterBackupOptions{IoNice: &zero, LockWait: &zero, StopWait: &zero, Zstd: &zero})
+	for _, k := range []string{"ionice", "lockwait", "stopwait", "zstd"} {
+		v, present := m[k]
+		assert.Truef(t, present, "%q set to 0 must reach PVE instead of falling back to its non-zero default", k)
+		assert.EqualValues(t, 0, v)
+	}
+}
