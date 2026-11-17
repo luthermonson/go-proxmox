@@ -2,6 +2,20 @@
 
 Per-release upgrade instructions live in [`migration/`](./migration/). Releases before v0.9.0 are listed on the [GitHub releases page](https://github.com/luthermonson/go-proxmox/releases).
 
+## v0.10.0
+
+Upgrade guide: [`migration/v0.10.0.md`](./migration/v0.10.0.md). Two source-level breaks, both the same shape: an option field that defaults to true on the PVE side became a pointer so `false` can actually be sent. Wrap the value you were passing in `Ptr(...)`; unset behaves as before. If your code compiles, you have migrated.
+
+### Fixes
+
+- `NodeStopAllOptions.ForceStop` is `*IntOrBool` (was `IntOrBool`): `force-stop=0` now reaches PVE, so `StopAll` can let a graceful shutdown time out instead of hard-stopping guests. Unset still omits the field (PVE default 1) (#374)
+- `ClusterBackupOptions.Enabled`, `.Remove` and `.StdExcludes` are `*bool` (was `bool`): a backup job can now be created or updated disabled, and `remove=0`/`stdexcludes=0` reach PVE instead of being dropped (#373)
+
+### Breaking changes
+
+- `NodeStopAllOptions.ForceStop` is now `*IntOrBool`; set it with `Ptr(IntOrBool(false))` (#374)
+- `ClusterBackupOptions.Enabled`, `.Remove` and `.StdExcludes` are now `*bool`; set them with `Ptr(false)` / `Ptr(true)` (#373)
+
 ## v0.9.0
 
 Upgrade guide: [`migration/v0.9.0.md`](./migration/v0.9.0.md). One source-level break (`AgentExecStatus` field types); the rest changes behaviour without changing a signature, so read the guide even if your code builds.
