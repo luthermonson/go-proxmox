@@ -1,0 +1,86 @@
+name: API Type Drift
+
+# Weekly check that the library's return types still match the upstream Proxmox
+# VE API schema. Fetches apidoc.js, runs `go run ./cmd/apidrift`, and — when
+# drift is found — opens or refreshes a single tracking issue with the report.
+# Opening an issue (rather than auto-committing code) is deliberate: new nested
+# structs and property-string fields can't be synthesized safely, so a human
+# applies the change. The report lists exactly what to add.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    # Don't run on forks — the scheduled job and its issue only make sense on
+    # the canonical repo.
+    if: github.repository == 'luthermonson/go-proxmox'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.25"
+      - name: Test the drift tool
+        # The repo's main CI (`mage test`) only covers the root package, so run
+        # the apidrift unit tests here where the tool itself is exercised.
+        run: go test ./internal/apidrift/... ./cmd/apidrift/...
+      - name: Run drift report
+        id: drift
+        run: |
+          set +e
+          go run ./cmd/apidrift -md drift-report.md -json drift-report.json
+          code=$?
+          echo "exit_code=${code}" >> "$GITHUB_OUTPUT"
+          # 0 = clean, 1 = drift found, 2 = tool error.
+          if [ "${code}" -eq 2 ]; then
+            echo "apidrift failed to run" >&2
+            exit 2
+          fi
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: api-type-drift
+          path: |
+            drift-report.md
+            drift-report.json
+          if-no-files-found: ignore
+      - name: Open or update tracking issue
+        if: steps.drift.outputs.exit_code == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title="API return-type drift detected"
+          {
+            echo "_Automated by the weekly [API Type Drift](.github/workflows/type-drift.yaml) workflow on $(date -u +%Y-%m-%d). Re-run anytime via workflow_dispatch._"
+            echo
+            cat drift-report.md
+          } > issue-body.md
+
+          # Ensure the label exists (ignore error if it already does).
+          gh label create type-drift --color FBCA04 --description "Return types drifted from upstream PVE schema" 2>/dev/null || true
+
+          existing="$(gh issue list --state open --label type-drift --json number --jq '.[0].number // empty')"
+          if [ -z "${existing}" ]; then
+            existing="$(gh issue list --state open --search "in:title ${title}" --json number,title \
+              --jq "map(select(.title == \"${title}\")) | .[0].number // empty")"
+          fi
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --body-file issue-body.md
+            gh issue comment "${existing}" --body "Drift report refreshed on $(date -u +%Y-%m-%d) ([run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}))."
+            echo "Updated issue #${existing}."
+          else
+            gh issue create --title "${title}" --label type-drift --body-file issue-body.md
+            echo "Created a new drift tracking issue."
+          fi

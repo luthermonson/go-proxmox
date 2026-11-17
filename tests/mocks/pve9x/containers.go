@@ -421,10 +421,13 @@ func containers() {
 		JSON(`{
     "data": {
         "running": true,
-        "allowed_nodes": ["node2", "node3"],
-        "not_allowed_nodes": {},
-        "local_disks": [],
-        "local_resources": []
+        "allowed-nodes": ["node2", "node3"],
+        "not-allowed-nodes": {
+            "blocking-ha-resources": [
+                {"cause": "node-affinity", "sid": "ct:100"}
+            ]
+        },
+        "dependent-ha-resources": ["ct:101"]
     }
 }`)
 
@@ -533,18 +536,20 @@ func containers() {
 
 	// ----- Per-container firewall (VMID 100) -----
 
-	// GET /nodes/node1/lxc/100/firewall — directory index
+	// GET /nodes/node1/lxc/100/firewall — directory index (array of child
+	// links keyed by "name", per the PVE schema), not a single firewall object.
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/lxc/100/firewall$").
 		Reply(200).
-		JSON(`{
-    "data": {
-        "rules": [{"pos": 0, "action": "ACCEPT", "type": "in", "enable": 1}],
-        "aliases": [{"name": "lan", "cidr": "192.168.0.0/16"}],
-        "ipset": [{"name": "blocked"}]
-    }
-}`)
+		JSON(`{"data":[
+    {"name":"rules"},
+    {"name":"aliases"},
+    {"name":"ipset"},
+    {"name":"options"},
+    {"name":"log"},
+    {"name":"refs"}
+]}`)
 
 	// GET /nodes/node1/lxc/100/firewall/aliases
 	gock.New(config.C.URI).

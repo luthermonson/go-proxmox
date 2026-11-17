@@ -284,6 +284,11 @@ func TestUser(t *testing.T) {
 	u, err := client.User(ctx, "root@pam")
 	assert.Nil(t, err)
 	assert.Equal(t, u.UserID, "root@pam")
+	// Single-user response: tokens is an object keyed by token id; the key is
+	// copied into Token.TokenID.
+	require.Len(t, u.Tokens, 2)
+	assert.Equal(t, "token1", u.Tokens["token1"].TokenID)
+	assert.Equal(t, 2000, u.Tokens["token2"].Expire)
 }
 
 func TestUsers(t *testing.T) {
@@ -295,6 +300,17 @@ func TestUsers(t *testing.T) {
 	users, err := client.Users(ctx)
 	assert.Nil(t, err)
 	assert.Len(t, users, 4)
+	// List response: tokens is an ARRAY of token objects. The previous
+	// map[string]Token typing made the whole list fail to decode; UserTokens
+	// normalizes the array into a map keyed by tokenid.
+	for _, u := range users {
+		if u.UserID == "root@pam" {
+			require.Len(t, u.Tokens, 2)
+			assert.Equal(t, "monitoring", u.Tokens["monitoring"].TokenID)
+			assert.True(t, bool(u.Tokens["monitoring"].Privsep))
+			assert.False(t, bool(u.Tokens["backup"].Privsep))
+		}
+	}
 }
 
 func TestRole(t *testing.T) {

@@ -20,6 +20,11 @@ func TestNode_Disks(t *testing.T) {
 	assert.Len(t, disks, 2)
 	assert.Equal(t, "/dev/sda", disks[0].DevPath)
 	assert.Equal(t, "ssd", disks[0].Type)
+	// mounted is a boolean upstream (the old `MountPoint string` could not
+	// decode it); osdid-list is the new multi-OSD field.
+	assert.False(t, bool(disks[0].Mounted))
+	assert.True(t, bool(disks[1].Mounted))
+	assert.Equal(t, []int{3, 4}, disks[1].OSDIDList)
 }
 
 func TestNode_DiskSMART(t *testing.T) {

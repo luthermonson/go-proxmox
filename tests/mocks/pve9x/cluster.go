@@ -414,7 +414,7 @@ func cluster() {
 		Get("^/cluster/sdn/zones/test1$").
 		Reply(200).
 		JSON(`{
-		"data": {"zone":"test1","type":"vxlan","ipam":"pve","nodes":"host1,host2","peers":"203.0.113.184,203.0.113.185"}
+		"data": {"zone":"test1","type":"vxlan","ipam":"pve","nodes":"host1,host2","peers":"203.0.113.184,203.0.113.185","state":"changed","pending":{"mtu":1450,"nodes":"host1,host2,host3"}}
 	}`)
 
 	gock.New(config.C.URI).
@@ -1702,19 +1702,20 @@ func clusterReplication() {
 			{"subdir":"refs"}
 		]}`)
 
-	// GET /cluster/sdn — cluster sdn diridx
+	// GET /cluster/sdn — cluster sdn diridx. PVE keys these child links by
+	// "id" (not "subdir"); the fixture reflects the real schema shape.
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/cluster/sdn$").
 		Reply(200).
 		JSON(`{"data":[
-			{"subdir":"vnets"},
-			{"subdir":"zones"},
-			{"subdir":"controllers"},
-			{"subdir":"ipams"},
-			{"subdir":"dns"},
-			{"subdir":"fabrics"},
-			{"subdir":"subnets"}
+			{"id":"vnets"},
+			{"id":"zones"},
+			{"id":"controllers"},
+			{"id":"ipams"},
+			{"id":"dns"},
+			{"id":"fabrics"},
+			{"id":"subnets"}
 		]}`)
 
 	// GET /cluster/ceph — cluster ceph diridx
@@ -2579,7 +2580,7 @@ func clusterReplication() {
 		Persist().
 		Get("^/cluster/ceph/flags/noout$").
 		Reply(200).
-		JSON(`{"data":"set"}`)
+		JSON(`{"data":true}`)
 
 	gock.New(config.C.URI).
 		Persist().

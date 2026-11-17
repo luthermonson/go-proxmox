@@ -687,6 +687,11 @@ func TestContainer_MigratePreconditions(t *testing.T) {
 	require.NotNil(t, pre)
 	assert.True(t, pre.Running)
 	assert.Contains(t, pre.AllowedNodes, "node2")
+	assert.Contains(t, pre.DependentHAResources, "ct:101")
+	require.NotNil(t, pre.NotAllowedNodes)
+	require.Len(t, pre.NotAllowedNodes.BlockingHAResources, 1)
+	assert.Equal(t, "node-affinity", pre.NotAllowedNodes.BlockingHAResources[0].Cause)
+	assert.Equal(t, "ct:100", pre.NotAllowedNodes.BlockingHAResources[0].SID)
 
 	// with target — same mock fields, just verify the call shape
 	pre2, err := ct100().MigratePreconditions(context.Background(), "node2")
@@ -957,14 +962,18 @@ func TestContainer_ErrorPaths_Mutations(t *testing.T) {
 
 // ----- Firewall: top-level + aliases -----
 
-func TestContainer_Firewall(t *testing.T) {
+func TestContainer_FirewallSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	fw, err := ct100().Firewall(context.Background())
+	// Directory index: returns the list of firewall sub-resources, not a
+	// single *Firewall struct (the old Firewall method decoded the array into
+	// one struct and always failed).
+	subdirs, err := ct100().FirewallSubdirs(context.Background())
 	assert.Nil(t, err)
-	require.NotNil(t, fw)
-	assert.NotEmpty(t, fw.Rules)
-	assert.NotEmpty(t, fw.Aliases)
+	require.NotEmpty(t, subdirs)
+	assert.Contains(t, subdirs, "rules")
+	assert.Contains(t, subdirs, "aliases")
+	assert.Contains(t, subdirs, "options")
 }
 
 func TestContainer_FirewallAliases(t *testing.T) {
