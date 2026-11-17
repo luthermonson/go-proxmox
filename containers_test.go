@@ -7,6 +7,7 @@ import (
 
 	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1106,6 +1107,20 @@ func TestContainer_FirewallOptions(t *testing.T) {
 		PolicyIn:  "ACCEPT",
 		PolicyOut: "ACCEPT",
 	}))
+}
+
+// TestContainer_UpdateFirewallOptions_NDPOff checks that the guest NDP
+// toggle (PVE default 1) can be turned off through UpdateFirewallOptions.
+func TestContainer_UpdateFirewallOptions_NDPOff(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	ctx := context.Background()
+	c := ct100()
+
+	require.NoError(t, c.UpdateFirewallOptions(ctx, &FirewallVirtualMachineOption{NDP: Ptr(IntOrBool(false))}))
+
+	require.Len(t, capture.Requests, 1)
+	assert.Equal(t, float64(0), capture.Requests[0].Body["ndp"])
 }
 
 // TestContainer_DeleteFirewallIPSet_ParamsOnWire checks that force and digest
