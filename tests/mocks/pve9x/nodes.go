@@ -600,6 +600,7 @@ func nodes() {
 	gock.New(config.C.URI).
 		Persist().
 		Put("^/nodes/node1/firewall/options$").
+		AddMatcher(capture.RequestMatcher()).
 		Reply(200).
 		JSON(`{
     "data": null

@@ -303,6 +303,33 @@ func TestNode_FirewallOptionSet(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// TestNode_FirewallOptionSet_NDPOff checks that NDP, which PVE enables by
+// default, can be turned off: Ptr(IntOrBool(false)) must put "ndp": 0 in
+// the PUT body, and an unset NDP must stay out of it.
+func TestNode_FirewallOptionSet_NDPOff(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	require.NoError(t, node.FirewallOptionSet(ctx, &FirewallNodeOption{NDP: Ptr(IntOrBool(false))}))
+	require.NoError(t, node.FirewallOptionSet(ctx, &FirewallNodeOption{LogLevelIn: "info"}))
+
+	var bodies []map[string]any
+	for _, r := range capture.Requests {
+		if strings.HasSuffix(r.Path, "/nodes/node1/firewall/options") {
+			bodies = append(bodies, r.Body)
+		}
+	}
+	require.Len(t, bodies, 2)
+	assert.Equal(t, float64(0), bodies[0]["ndp"])
+	_, present := bodies[1]["ndp"]
+	assert.False(t, present, "unset NDP must not be sent")
+}
+
 func TestNode_FirewallRules(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
