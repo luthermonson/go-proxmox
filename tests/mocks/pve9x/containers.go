@@ -2,6 +2,7 @@ package pve9x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
@@ -725,6 +726,7 @@ func containers() {
 	gock.New(config.C.URI).
 		Persist().
 		Put("^/nodes/node1/lxc/100/firewall/options$").
+		AddMatcher(capture.RequestMatcher()).
 		Reply(200).
 		JSON(`{"data": null}`)
 }

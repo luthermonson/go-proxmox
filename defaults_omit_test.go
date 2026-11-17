@@ -224,3 +224,15 @@ func TestClusterBackupOptions_DefaultsOmittedWhenUnset(t *testing.T) {
 	assert.Equal(t, false, m["remove"])
 	assert.Equal(t, true, m["stdexcludes"])
 }
+
+func TestFirewallOptions_NDPOmittedUnlessSet(t *testing.T) {
+	for _, m := range []map[string]any{
+		marshalToMap(t, FirewallNodeOption{}),
+		marshalToMap(t, FirewallVirtualMachineOption{}),
+	} {
+		_, present := m["ndp"]
+		assert.False(t, present, "ndp must be omitted when unset so PVE keeps its default of 1")
+	}
+	assert.Equal(t, float64(0), marshalToMap(t, FirewallNodeOption{NDP: Ptr(IntOrBool(false))})["ndp"])
+	assert.Equal(t, float64(0), marshalToMap(t, FirewallVirtualMachineOption{NDP: Ptr(IntOrBool(false))})["ndp"])
+}
