@@ -835,9 +835,9 @@ type NodeStartAllOptions struct {
 
 // NodeStopAllOptions is the optional body for POST /nodes/{node}/stopall.
 type NodeStopAllOptions struct {
-	ForceStop IntOrBool `json:"force-stop,omitempty"` // PVE default 1; pass IntOrBool(false) to allow graceful shutdown to time out
-	Timeout   uint64    `json:"timeout,omitempty"`    // per-guest shutdown timeout in seconds (PVE default 180)
-	VMs       string    `json:"vms,omitempty"`        // comma-separated VMID list to limit
+	ForceStop *IntOrBool `json:"force-stop,omitempty"` // PVE default 1; pass Ptr(IntOrBool(false)) to allow graceful shutdown to time out
+	Timeout   uint64     `json:"timeout,omitempty"`    // per-guest shutdown timeout in seconds (PVE default 180)
+	VMs       string     `json:"vms,omitempty"`        // comma-separated VMID list to limit
 }
 
 // NodeSuspendAllOptions is the optional body for POST /nodes/{node}/suspendall.

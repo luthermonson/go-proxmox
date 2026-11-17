@@ -2,10 +2,12 @@ package proxmox
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/h2non/gock"
 	"github.com/luthermonson/go-proxmox/tests/mocks"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -757,6 +759,35 @@ func TestNode_StopAll(t *testing.T) {
 	assert.Nil(t, err)
 	require.NotNil(t, task)
 	assert.Contains(t, string(task.UPID), ":stopall:")
+}
+
+// TestNode_StopAll_ForceStopFalse checks that force-stop=0, which lets the
+// shutdown time out instead of hard-stopping the guests, reaches PVE. PVE
+// defaults force-stop to 1, so an unset ForceStop must stay off the wire.
+func TestNode_StopAll_ForceStopFalse(t *testing.T) {
+	mocks.On(mockConfig)
+	defer mocks.Off()
+	client := mockClient()
+	ctx := context.Background()
+
+	node, err := client.Node(ctx, "node1")
+	require.NoError(t, err)
+
+	_, err = node.StopAll(ctx, &NodeStopAllOptions{ForceStop: Ptr(IntOrBool(false)), Timeout: 60})
+	require.NoError(t, err)
+	_, err = node.StopAll(ctx, &NodeStopAllOptions{Timeout: 60})
+	require.NoError(t, err)
+
+	var bodies []map[string]any
+	for _, r := range capture.Requests {
+		if strings.HasSuffix(r.Path, "/nodes/node1/stopall") {
+			bodies = append(bodies, r.Body)
+		}
+	}
+	require.Len(t, bodies, 2)
+	assert.Equal(t, float64(0), bodies[0]["force-stop"])
+	_, present := bodies[1]["force-stop"]
+	assert.False(t, present, "force-stop should be omitted when unset so PVE applies its default")
 }
 
 func TestNode_SuspendAll(t *testing.T) {

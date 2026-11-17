@@ -2,6 +2,7 @@ package pve9x
 
 import (
 	"github.com/h2non/gock"
+	"github.com/luthermonson/go-proxmox/tests/mocks/capture"
 	"github.com/luthermonson/go-proxmox/tests/mocks/config"
 )
 
@@ -874,10 +875,12 @@ func nodes() {
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:startall::root@pam:"}`)
 
-	// POST /nodes/{node}/stopall — mass stop
+	// POST /nodes/{node}/stopall — mass stop. The body is recorded by
+	// capture.RequestMatcher.
 	gock.New(config.C.URI).
 		Persist().
 		Post("^/nodes/node1/stopall$").
+		AddMatcher(capture.RequestMatcher()).
 		Reply(200).
 		JSON(`{"data": "UPID:node1:00001111:00002222:5A3B7C8D:stopall::root@pam:"}`)
 
