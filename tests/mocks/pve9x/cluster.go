@@ -24,6 +24,19 @@ func cluster() {
 		Reply(400).
 		JSON(`{"errors":{"vmid":"VM 200 already exists"},"data":null}`)
 
+	// pve-manager 9.2.31 and later word a taken ID differently
+	gock.New(config.C.URI).
+		Get("/cluster/nextid").
+		MatchParam("vmid", "300").
+		Reply(400).
+		JSON(`{"errors":{"vmid":"guest ID 300 is already in use"},"message":"Parameter verification failed.\n","data":null}`)
+
+	gock.New(config.C.URI).
+		Get("/cluster/nextid").
+		MatchParam("vmid", "99").
+		Reply(400).
+		JSON(`{"errors":{"vmid":"value must have a minimum value of 100"},"message":"Parameter verification failed.\n","data":null}`)
+
 	gock.New(config.C.URI).
 		Get("/cluster/status").
 		Reply(200).

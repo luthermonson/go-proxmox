@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -47,12 +48,26 @@ func (cl *Cluster) NextID(ctx context.Context) (int, error) {
 func (cl *Cluster) CheckID(ctx context.Context, vmid int) (bool, error) {
 	var ret string
 	err := cl.client.Get(ctx, fmt.Sprintf("/cluster/nextid?vmid=%d", vmid), ret)
-	if err != nil && strings.Contains(err.Error(), fmt.Sprintf("VM %d already exists", vmid)) {
-		return false, nil
-	} else if err != nil {
-		return false, err
+	if err == nil {
+		return true, nil
 	}
-	return true, nil
+	if vmidInUse(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// vmidInUse reports whether err is PVE's 400 for a taken VMID on /cluster/nextid.
+// pve-manager 9.2.31 changed the "vmid" message from "VM <id> already exists" to
+// "guest ID <id> is already in use"; both are accepted. Other "vmid" errors, such
+// as an ID below the allowed range, are not a taken ID and stay errors.
+func vmidInUse(err error) bool {
+	apiErr, ok := AsAPIError(err)
+	if !ok || apiErr.StatusCode != http.StatusBadRequest {
+		return false
+	}
+	msg := apiErr.Errors["vmid"]
+	return strings.Contains(msg, "already exists") || strings.Contains(msg, "already in use")
 }
 
 // Resources retrieves a summary list of all resources in the cluster.
