@@ -2448,7 +2448,9 @@ type FirewallNodeOption struct {
 	LogNfConntrack IntOrBool  `json:"log_nf_conntrack,omitempty"`
 	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
 	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
-	NDP IntOrBool `json:"ndp,omitempty"`
+	// Pointer so Ptr(IntOrBool(false)) reaches PVE and turns NDP off; a
+	// plain zero was dropped by omitempty and left the default on.
+	NDP *IntOrBool `json:"ndp,omitempty"`
 	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
 	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
 	// has no effect on PVE and reads always return zero. Will be removed in
@@ -2492,7 +2494,9 @@ type FirewallVirtualMachineOption struct {
 	Macfilter *IntOrBool `json:"macfilter,omitempty"`
 	// NDP — Neighbor Discovery Protocol toggle (PVE default 1). Use this
 	// field rather than Ntp; the upstream API field is `ndp`, not `ntp`.
-	NDP IntOrBool `json:"ndp,omitempty"`
+	// Pointer so Ptr(IntOrBool(false)) reaches PVE and turns NDP off; a
+	// plain zero was dropped by omitempty and left the default on.
+	NDP *IntOrBool `json:"ndp,omitempty"`
 	// Deprecated: PVE never had an `ntp` firewall option — this was a typo
 	// shipped since v0.1.x. The intended field is NDP (above). Setting Ntp
 	// has no effect on PVE and reads always return zero. Will be removed in
