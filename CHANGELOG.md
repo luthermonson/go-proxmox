@@ -2,6 +2,29 @@
 
 Per-release upgrade instructions live in [`migration/`](./migration/). Releases before v0.9.0 are listed on the [GitHub releases page](https://github.com/luthermonson/go-proxmox/releases).
 
+## v0.11.0
+
+Upgrade guide: [`migration/v0.11.0.md`](./migration/v0.11.0.md). Mostly decode fixes — fields and methods whose Go type or JSON tag did not match what PVE returns, so they never decoded. Every change is source-incompatible, but in each case the old shape could not carry the real value, so fixing your code gets you data you weren't getting before.
+
+### Features
+
+- Schema return-type drift tooling: `cmd/apidrift` diffs the library's mapped return types against the upstream PVE API schema and reports drift; a weekly GitHub Actions job runs it and opens a tracking issue when the schema moves. Maintainer tooling, not part of the client API (#375)
+
+### Fixes
+
+- `Cluster.CephFlag` returns `bool`, matching the API (was `string`) (#375)
+- `Container.Firewall` / `VirtualMachine.Firewall` replaced by `FirewallSubdirs() ([]string, error)`; the endpoint is a directory index, not a firewall object. Added on `Cluster` and `Node` too (#375)
+- `User.Tokens` is a `UserTokens` with a custom unmarshaller accepting both the array (`GET /access/users`) and object (`GET /access/users/{userid}`) forms (#375)
+- `NodeCertificate.NotAfter` / `.NotBefore` are `int64` Unix timestamps, with the correct tags (were `string`) (#375)
+- `SDNZone.Pending` is `map[string]any` (PVE returns a pending-changes object, not a bool); `SDNZoneOptions.ExitNodesLocalRouting` is `IntOrBool` (#375)
+- `Disk.MountPoint string` replaced by `Disk.Mounted IntOrBool`; added `Disk.OSDIDList`; `Storage.Status` targets `/storage/{storage}/status` so its fields decode (#375)
+- `ContainerMigratePreconditions` reshaped to the LXC schema (`*ContainerMigrateNotAllowedNodes`, `DependentHAResources`); `StorageContent.ApproximateSize` added (#375)
+- `ClusterBackupOptions.IoNice`, `.LockWait`, `.StopWait` and `.Zstd` are `*uint`, so `0` (a valid non-default value) reaches PVE instead of being dropped — matching `VirtualMachineBackupOptions` (#379)
+
+### Breaking changes
+
+- 17 source-level signature changes, all of the "field/method couldn't decode what PVE sends" kind. See the [migration guide](./migration/v0.11.0.md) for the full list and before/after. The notable ones: `CephFlag` return type, `Firewall` methods removed, `User.Tokens` type, `NodeCertificate` time fields, `SDNZone.Pending`, `Disk.MountPoint`→`Mounted` (and `Disk` is no longer comparable), `ContainerMigratePreconditions` shape, and the four `ClusterBackupOptions` `*uint` fields (#375, #379)
+
 ## v0.10.0
 
 Upgrade guide: [`migration/v0.10.0.md`](./migration/v0.10.0.md). Two source-level breaks, both the same shape: an option field that defaults to true on the PVE side became a pointer so `false` can actually be sent. Wrap the value you were passing in `Ptr(...)`; unset behaves as before. If your code compiles, you have migrated.
