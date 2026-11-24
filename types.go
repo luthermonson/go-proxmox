@@ -1313,10 +1313,14 @@ type ContainerStatusIndexEntry struct {
 // blocking resources ({cause, sid}) rather than the qemu storage/resource
 // shape.
 type ContainerMigratePreconditions struct {
-	Running              bool                             `json:"running"`
-	AllowedNodes         []string                         `json:"allowed-nodes,omitempty"`
-	NotAllowedNodes      *ContainerMigrateNotAllowedNodes `json:"not-allowed-nodes,omitempty"`
-	DependentHAResources []string                         `json:"dependent-ha-resources,omitempty"`
+	// Running is reported by PVE as a 0/1 integer, so it is IntOrBool, not
+	// bool (a plain bool fails to decode the 1 PVE sends).
+	Running IntOrBool `json:"running"`
+	// NotAllowedNodes is keyed by node name, like the qemu endpoint's
+	// not_allowed_nodes; each value carries that node's blocking HA resources.
+	AllowedNodes         []string                                    `json:"allowed-nodes,omitempty"`
+	NotAllowedNodes      map[string]*ContainerMigrateNotAllowedNodes `json:"not-allowed-nodes,omitempty"`
+	DependentHAResources []string                                    `json:"dependent-ha-resources,omitempty"`
 }
 
 // ContainerMigrateNotAllowedNodes holds the additional information PVE reports
@@ -1412,8 +1416,10 @@ type VirtualMachineMigratePreconditionsNotAllowedNodes struct {
 // VM can be migrated, which nodes accept it, and what local state would
 // have to be moved along with it. Pre-flight only; no task is created.
 type VirtualMachineMigratePreconditions struct {
-	Running              bool                                                          `json:"running"`
-	HasDBusVMState       bool                                                          `json:"has-dbus-vmstate"`
+	// Running and HasDBusVMState are reported by PVE as 0/1 integers, so they
+	// are IntOrBool, not bool (a plain bool fails to decode the 1 PVE sends).
+	Running              IntOrBool                                                     `json:"running"`
+	HasDBusVMState       IntOrBool                                                     `json:"has-dbus-vmstate"`
 	AllowedNodes         []string                                                      `json:"allowed_nodes,omitempty"`
 	NotAllowedNodes      map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
 	LocalDisks           []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
@@ -5316,7 +5322,9 @@ type BackupIncludedVolumesVolume struct {
 type CephFlag struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Value       bool   `json:"value"`
+	// Value is PVE's 0/1 flag state, so IntOrBool (which accepts 1/0 and
+	// true/false), not a plain bool.
+	Value IntOrBool `json:"value"`
 }
 
 // CephFlagsUpdateOptions is the body of PUT /cluster/ceph/flags. Each pointer

@@ -27,9 +27,13 @@ func (cl *Cluster) CephFlag(ctx context.Context, flag string) (value bool, err e
 		err = errors.New("ceph flag: name is required")
 		return
 	}
-	// The endpoint returns a bare JSON boolean; decoding it into a string
-	// (the previous return type) always failed.
-	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/ceph/flags/%s", flag), &value)
+	// PVE returns the flag state as a 0/1 integer, not a JSON string or a JSON
+	// boolean, so decode through IntOrBool (which accepts 1/0 and true/false)
+	// and hand the caller a plain bool. Decoding straight into a bool fails on
+	// the 1 PVE sends; the previous string return type failed too.
+	var v IntOrBool
+	err = cl.client.Get(ctx, fmt.Sprintf("/cluster/ceph/flags/%s", flag), &v)
+	value = bool(v)
 	return
 }
 

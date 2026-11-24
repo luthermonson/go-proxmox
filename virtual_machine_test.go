@@ -82,8 +82,8 @@ func TestVirtualMachine_MigratePreconditions(t *testing.T) {
 	pre, err := vm.MigratePreconditions(ctx, "")
 	assert.Nil(t, err)
 	require.NotNil(t, pre)
-	assert.True(t, pre.Running)
-	assert.True(t, pre.HasDBusVMState)
+	assert.True(t, bool(pre.Running))        // running:1 on the wire decodes to true
+	assert.True(t, bool(pre.HasDBusVMState)) // has-dbus-vmstate:1 decodes to true
 	assert.Equal(t, []string{"node2", "node3"}, pre.AllowedNodes)
 	require.Contains(t, pre.NotAllowedNodes, "node4")
 	assert.Equal(t, []string{"local-lvm"}, pre.NotAllowedNodes["node4"].UnavailableStorages)

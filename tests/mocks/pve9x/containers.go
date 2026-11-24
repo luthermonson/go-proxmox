@@ -420,12 +420,14 @@ func containers() {
 		Reply(200).
 		JSON(`{
     "data": {
-        "running": true,
+        "running": 1,
         "allowed-nodes": ["node2", "node3"],
         "not-allowed-nodes": {
-            "blocking-ha-resources": [
-                {"cause": "node-affinity", "sid": "ct:100"}
-            ]
+            "node4": {
+                "blocking-ha-resources": [
+                    {"cause": "node-affinity", "sid": "ct:100"}
+                ]
+            }
         },
         "dependent-ha-resources": ["ct:101"]
     }

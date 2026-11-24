@@ -17,7 +17,8 @@ func TestCluster_CephFlags(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, flags, 2)
 	assert.Equal(t, "noout", flags[0].Name)
-	assert.True(t, flags[0].Value)
+	assert.True(t, bool(flags[0].Value))  // value:1 on the wire decodes to true
+	assert.False(t, bool(flags[1].Value)) // value:0 decodes to false
 }
 
 func TestCluster_CephFlag(t *testing.T) {

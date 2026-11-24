@@ -730,8 +730,8 @@ func virtualMachines() {
 		Reply(200).
 		JSON(`{
     "data": {
-        "running": true,
-        "has-dbus-vmstate": true,
+        "running": 1,
+        "has-dbus-vmstate": 1,
         "allowed_nodes": ["node2", "node3"],
         "not_allowed_nodes": {
             "node4": {
