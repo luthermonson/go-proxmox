@@ -2572,15 +2572,15 @@ func clusterReplication() {
 		Get("^/cluster/ceph/flags$").
 		Reply(200).
 		JSON(`{"data":[
-			{"name":"noout","description":"OSDs will not be marked out","value":true},
-			{"name":"noscrub","description":"Scrubbing disabled","value":false}
+			{"name":"noout","description":"OSDs will not be marked out","value":1},
+			{"name":"noscrub","description":"Scrubbing disabled","value":0}
 		]}`)
 
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/cluster/ceph/flags/noout$").
 		Reply(200).
-		JSON(`{"data":true}`)
+		JSON(`{"data":1}`)
 
 	gock.New(config.C.URI).
 		Persist().

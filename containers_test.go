@@ -685,13 +685,15 @@ func TestContainer_MigratePreconditions(t *testing.T) {
 	pre, err := ct100().MigratePreconditions(context.Background(), "")
 	assert.Nil(t, err)
 	require.NotNil(t, pre)
-	assert.True(t, pre.Running)
+	assert.True(t, bool(pre.Running)) // running:1 on the wire decodes to true
 	assert.Contains(t, pre.AllowedNodes, "node2")
 	assert.Contains(t, pre.DependentHAResources, "ct:101")
+	// not-allowed-nodes is keyed by node name; node4 carries the blocking HA resource
 	require.NotNil(t, pre.NotAllowedNodes)
-	require.Len(t, pre.NotAllowedNodes.BlockingHAResources, 1)
-	assert.Equal(t, "node-affinity", pre.NotAllowedNodes.BlockingHAResources[0].Cause)
-	assert.Equal(t, "ct:100", pre.NotAllowedNodes.BlockingHAResources[0].SID)
+	require.Contains(t, pre.NotAllowedNodes, "node4")
+	require.Len(t, pre.NotAllowedNodes["node4"].BlockingHAResources, 1)
+	assert.Equal(t, "node-affinity", pre.NotAllowedNodes["node4"].BlockingHAResources[0].Cause)
+	assert.Equal(t, "ct:100", pre.NotAllowedNodes["node4"].BlockingHAResources[0].SID)
 
 	// with target — same mock fields, just verify the call shape
 	pre2, err := ct100().MigratePreconditions(context.Background(), "node2")
