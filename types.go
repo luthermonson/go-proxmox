@@ -1416,8 +1416,10 @@ type VirtualMachineMigratePreconditionsNotAllowedNodes struct {
 // VM can be migrated, which nodes accept it, and what local state would
 // have to be moved along with it. Pre-flight only; no task is created.
 type VirtualMachineMigratePreconditions struct {
-	Running              bool                                                          `json:"running"`
-	HasDBusVMState       bool                                                          `json:"has-dbus-vmstate"`
+	// Running and HasDBusVMState are reported by PVE as 0/1 integers, so they
+	// are IntOrBool, not bool (a plain bool fails to decode the 1 PVE sends).
+	Running              IntOrBool                                                     `json:"running"`
+	HasDBusVMState       IntOrBool                                                     `json:"has-dbus-vmstate"`
 	AllowedNodes         []string                                                      `json:"allowed_nodes,omitempty"`
 	NotAllowedNodes      map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
 	LocalDisks           []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
