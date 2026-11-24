@@ -376,7 +376,12 @@ func TestNode_GetCustomCertificates(t *testing.T) {
 
 	certs, err := node.GetCustomCertificates(ctx)
 	assert.Nil(t, err)
-	assert.NotNil(t, certs)
+	require.NotNil(t, certs)
+	require.NotEmpty(t, *certs)
+	// notafter/notbefore are unhyphenated integer epochs upstream; the old
+	// `not-after`/`not-before` string fields never decoded them.
+	assert.Equal(t, int64(1735689600), (*certs)[0].NotAfter)
+	assert.Equal(t, int64(1704153600), (*certs)[0].NotBefore)
 }
 
 func TestNode_UploadCustomCertificate(t *testing.T) {

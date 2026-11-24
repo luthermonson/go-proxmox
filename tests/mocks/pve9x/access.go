@@ -639,7 +639,11 @@ func access() {
             "realm-type": "pam",
             "email": "root@email.com",
             "userid": "root@pam",
-            "enable": 1
+            "enable": 1,
+            "tokens": [
+                {"tokenid": "monitoring", "comment": "metrics", "expire": 0, "privsep": 1},
+                {"tokenid": "backup", "expire": 0, "privsep": 0}
+            ]
         },
         {
             "expire": 0,

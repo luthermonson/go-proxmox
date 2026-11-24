@@ -12,14 +12,17 @@ func vm100() *VirtualMachine {
 	return &VirtualMachine{client: mockClient(), Node: "node1", VMID: 100}
 }
 
-func TestVirtualMachine_Firewall(t *testing.T) {
+func TestVirtualMachine_FirewallSubdirs(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	fw, err := vm100().Firewall(context.Background())
+	// The endpoint is a directory index: it returns an array of child-link
+	// objects, which the old Firewall method tried to decode into a single
+	// *Firewall struct and always failed. FirewallSubdirs returns the list.
+	subdirs, err := vm100().FirewallSubdirs(context.Background())
 	assert.Nil(t, err)
-	assert.NotNil(t, fw)
-	assert.NotEmpty(t, fw.Rules)
-	assert.NotEmpty(t, fw.Aliases)
+	assert.Contains(t, subdirs, "rules")
+	assert.Contains(t, subdirs, "aliases")
+	assert.Contains(t, subdirs, "options")
 }
 
 func TestVirtualMachine_FirewallRule_Get(t *testing.T) {

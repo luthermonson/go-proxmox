@@ -1308,14 +1308,32 @@ type ContainerStatusIndexEntry struct {
 
 // ContainerMigratePreconditions is the response from
 // GET /nodes/{node}/lxc/{vmid}/migrate — the migration precondition check.
-// Re-uses the VM-side sub-types (NotAllowedNodes, LocalDisk) because PVE
-// shares the same migration-constraint shapes between qemu and lxc.
+// The LXC schema differs from the qemu one: its keys are hyphenated, it does
+// not report local disks / resources, and its not-allowed-nodes carry HA
+// blocking resources ({cause, sid}) rather than the qemu storage/resource
+// shape.
 type ContainerMigratePreconditions struct {
-	Running         bool                                                          `json:"running"`
-	AllowedNodes    []string                                                      `json:"allowed_nodes,omitempty"`
-	NotAllowedNodes map[string]*VirtualMachineMigratePreconditionsNotAllowedNodes `json:"not_allowed_nodes,omitempty"`
-	LocalDisks      []*VirtualMachineMigratePreconditionsLocalDisk                `json:"local_disks,omitempty"`
-	LocalResources  []string                                                      `json:"local_resources,omitempty"`
+	Running              bool                             `json:"running"`
+	AllowedNodes         []string                         `json:"allowed-nodes,omitempty"`
+	NotAllowedNodes      *ContainerMigrateNotAllowedNodes `json:"not-allowed-nodes,omitempty"`
+	DependentHAResources []string                         `json:"dependent-ha-resources,omitempty"`
+}
+
+// ContainerMigrateNotAllowedNodes holds the additional information PVE reports
+// for nodes a container may not migrate to — currently the HA resources that
+// block the migration.
+type ContainerMigrateNotAllowedNodes struct {
+	BlockingHAResources []*MigrateBlockingHAResource `json:"blocking-ha-resources,omitempty"`
+}
+
+// MigrateBlockingHAResource is one HA resource blocking a container migration,
+// as reported under ContainerMigratePreconditions.NotAllowedNodes.
+type MigrateBlockingHAResource struct {
+	// Cause is why the resource blocks migration ("node-affinity" or
+	// "resource-affinity").
+	Cause string `json:"cause,omitempty"`
+	// SID is the blocking HA resource id ("<type>:<id>").
+	SID string `json:"sid,omitempty"`
 }
 
 // ContainerMigrationTunnel is the response from
@@ -2628,19 +2646,65 @@ type Group struct {
 type Users []*User
 type User struct {
 	client         *Client
-	UserID         string           `json:"userid,omitempty"`
-	Comment        string           `json:"comment,omitempty"`
-	Email          string           `json:"email,omitempty"`
-	Enable         IntOrBool        `json:"enable"`
-	Expire         int              `json:"expire,omitempty"`
-	Firstname      string           `json:"firstname,omitempty"`
-	Lastname       string           `json:"lastname,omitempty"`
-	Groups         CSV              `json:"groups,omitempty"`
-	Keys           string           `json:"keys,omitempty"`
-	Tokens         map[string]Token `json:"tokens,omitempty"`
-	RealmType      string           `json:"realm-type,omitempty"`
-	TFALockedUntil string           `json:"tfa-locked-until,omitempty"`
-	TOTPLocked     IntOrBool        `json:"totp-locked,omitempty"`
+	UserID         string     `json:"userid,omitempty"`
+	Comment        string     `json:"comment,omitempty"`
+	Email          string     `json:"email,omitempty"`
+	Enable         IntOrBool  `json:"enable"`
+	Expire         int        `json:"expire,omitempty"`
+	Firstname      string     `json:"firstname,omitempty"`
+	Lastname       string     `json:"lastname,omitempty"`
+	Groups         CSV        `json:"groups,omitempty"`
+	Keys           string     `json:"keys,omitempty"`
+	Tokens         UserTokens `json:"tokens,omitempty"`
+	RealmType      string     `json:"realm-type,omitempty"`
+	TFALockedUntil string     `json:"tfa-locked-until,omitempty"`
+	TOTPLocked     IntOrBool  `json:"totp-locked,omitempty"`
+}
+
+// UserTokens is the per-user API-token map keyed by token id. PVE serializes
+// this field two different ways: the single-user response
+// (GET /access/users/{userid}) returns an object keyed by token id, while the
+// user-list response (GET /access/users) returns an array of token objects
+// that each carry their own tokenid. A plain map[string]Token decoded only the
+// object form and failed the whole list response; UserTokens accepts both and
+// always normalizes to a map keyed by token id (with Token.TokenID populated).
+type UserTokens map[string]Token
+
+func (t *UserTokens) UnmarshalJSON(b []byte) error {
+	trimmed := bytes.TrimSpace(b)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		*t = nil
+		return nil
+	}
+
+	switch trimmed[0] {
+	case '[':
+		var list []Token
+		if err := json.Unmarshal(trimmed, &list); err != nil {
+			return err
+		}
+		out := make(UserTokens, len(list))
+		for _, tok := range list {
+			out[tok.TokenID] = tok
+		}
+		*t = out
+	case '{':
+		var m map[string]Token
+		if err := json.Unmarshal(trimmed, &m); err != nil {
+			return err
+		}
+		out := make(UserTokens, len(m))
+		for id, tok := range m {
+			if tok.TokenID == "" {
+				tok.TokenID = id
+			}
+			out[id] = tok
+		}
+		*t = out
+	default:
+		return fmt.Errorf("proxmox: unexpected JSON for user tokens: %s", string(trimmed))
+	}
+	return nil
 }
 
 type UserOptions struct {
@@ -2725,11 +2789,17 @@ type StorageContent struct {
 	// encrypted without a known fingerprint. PBS-only; empty for other
 	// storage types. (The upstream field is `encrypted`, not `encryption`
 	// — the latter tag was a typo on this struct prior to v0.7.1.)
-	Encrypted  string    `json:"encrypted,omitempty"`
-	Notes      string    `json:"notes,omitempty"`
-	Parent     string    `json:"parent,omitempty"`
-	Protection IntOrBool `json:"protection,omitempty"`
-	Used       uint64    `json:"used,omitempty"`
+	Encrypted string `json:"encrypted,omitempty"`
+	Notes     string `json:"notes,omitempty"`
+	Parent    string `json:"parent,omitempty"`
+	// Protection is the backup protection flag. The upstream key is
+	// `protected`, not `protection` — the latter tag was wrong, so the flag
+	// never decoded.
+	Protection IntOrBool `json:"protected,omitempty"`
+	// ApproximateSize is present instead of Size for storages that cannot
+	// cheaply report an exact size; it is typically an upper bound.
+	ApproximateSize uint64 `json:"approximate-size,omitempty"`
+	Used            uint64 `json:"used,omitempty"`
 	// Verification is the last PBS verification result for this backup
 	// (PBS-only; nil for other storage types). Upstream returns a nested
 	// object {state, upid}; prior to v0.7.1 this field was typed as a
@@ -2795,11 +2865,14 @@ type NodeDNS struct {
 type NodeCertificates []*NodeCertificate
 
 type NodeCertificate struct {
-	Filename      string   `json:"filename,omitempty"`
-	Fingerprint   string   `json:"fingerprint,omitempty"`
-	Issuer        string   `json:"issuer,omitempty"`
-	NotAfter      string   `json:"not-after,omitempty"`
-	NotBefore     string   `json:"not-before,omitempty"`
+	Filename    string `json:"filename,omitempty"`
+	Fingerprint string `json:"fingerprint,omitempty"`
+	Issuer      string `json:"issuer,omitempty"`
+	// NotAfter / NotBefore are UNIX-epoch timestamps. The upstream keys are
+	// `notafter`/`notbefore` (unhyphenated) and the values are integers — the
+	// previous `not-after`/`not-before` string fields never decoded.
+	NotAfter      int64    `json:"notafter,omitempty"`
+	NotBefore     int64    `json:"notbefore,omitempty"`
 	Pem           string   `json:"pem,omitempty"`
 	PublicKeyBits int      `json:"public-key-bits,omitempty"`
 	PublicKeyType string   `json:"public-key-type,omitempty"`
@@ -3462,18 +3535,23 @@ type IPAM struct {
 }
 
 type SDNZone struct {
-	Name       string `json:"zone"`
-	Type       string `json:"type"`
-	DHCP       string `json:"dhcp,omitempty"`
-	DNS        string `json:"dns,omitempty"`
-	DNSZone    string `json:"dnszone,omitempty"`
-	IPAM       string `json:"ipam,omitempty"`
-	MTU        int    `json:"mtu,omitempty"`
-	Nodes      CSV    `json:"nodes,omitempty"`
-	Peers      CSV    `json:"peers,omitempty"`
-	Pending    bool   `json:"pending,omitempty"`
-	ReverseDNS string `json:"reversedns,omitempty"`
-	State      string `json:"state,omitempty"`
+	Name    string `json:"zone"`
+	Type    string `json:"type"`
+	DHCP    string `json:"dhcp,omitempty"`
+	DNS     string `json:"dns,omitempty"`
+	DNSZone string `json:"dnszone,omitempty"`
+	IPAM    string `json:"ipam,omitempty"`
+	MTU     int    `json:"mtu,omitempty"`
+	Nodes   CSV    `json:"nodes,omitempty"`
+	Peers   CSV    `json:"peers,omitempty"`
+	// Pending holds the zone's not-yet-applied configuration changes. The
+	// schema declares it as an object mirroring the zone's own fields (plus a
+	// per-key change marker), so the previous `bool` typing failed to decode
+	// whenever pending changes were present. It is kept as a generic map
+	// because PVE returns an arbitrary subset of the zone keys here.
+	Pending    map[string]any `json:"pending,omitempty"`
+	ReverseDNS string         `json:"reversedns,omitempty"`
+	State      string         `json:"state,omitempty"`
 }
 
 type SDNZoneOptions struct {
@@ -3488,18 +3566,21 @@ type SDNZoneOptions struct {
 	DNS                      string    `json:"dns,omitempty"`
 	DNSZone                  string    `json:"dnszone,omitempty"`
 	DPID                     int       `json:"dpid,omitempty"`
-	ExitNodes                string    `json:"exit-nodes,omitempty"`
-	ExitNodesLocalRouting    bool      `json:"exit-nodes-local-routing,omitempty"`
-	ExitNodesPrimary         string    `json:"exit-nodes-primary,omitempty"`
-	Fabric                   string    `json:"fabric,omitempty"`
-	IPAM                     string    `json:"ipam,omitempty"`
-	MAC                      string    `json:"mac,omitempty"`
-	MTU                      int       `json:"mtu,omitempty"`
-	Nodes                    string    `json:"nodes,omitempty"`
-	Peers                    string    `json:"peers,omitempty"`
-	ReverseDNS               string    `json:"reversedns,omitempty"`
-	RTImport                 string    `json:"rt-import,omitempty"`
-	Tag                      uint      `json:"tag,omitempty"`
+	// Exit-node keys are unhyphenated in the SDN zone schema
+	// (exitnodes / exitnodes-local-routing / exitnodes-primary); the previous
+	// `exit-nodes*` tags were silently ignored by PVE on write.
+	ExitNodes             string    `json:"exitnodes,omitempty"`
+	ExitNodesLocalRouting IntOrBool `json:"exitnodes-local-routing,omitempty"`
+	ExitNodesPrimary      string    `json:"exitnodes-primary,omitempty"`
+	Fabric                string    `json:"fabric,omitempty"`
+	IPAM                  string    `json:"ipam,omitempty"`
+	MAC                   string    `json:"mac,omitempty"`
+	MTU                   int       `json:"mtu,omitempty"`
+	Nodes                 string    `json:"nodes,omitempty"`
+	Peers                 string    `json:"peers,omitempty"`
+	ReverseDNS            string    `json:"reversedns,omitempty"`
+	RTImport              string    `json:"rt-import,omitempty"`
+	Tag                   uint      `json:"tag,omitempty"`
 	// VLANProtocol — PVE default "802.1q". An empty-string override would
 	// drop 802.1ad zones; pointer keeps the server default. See #199.
 	VLANProtocol *string `json:"vlan-protocol,omitempty"`
@@ -4036,8 +4117,13 @@ type Disk struct {
 	Parent       string    `json:"parent,omitempty"`
 	RPM          int       `json:"rpm,omitempty"`
 	BLKSize      int       `json:"blocksize,omitempty"`
-	MountPoint   string    `json:"mounted,omitempty"`
-	Vendor2      string    `json:"vendor2,omitempty"`
+	// Mounted reports whether the device is mounted. The schema type is
+	// boolean — the previous `MountPoint string` field could not decode it.
+	Mounted IntOrBool `json:"mounted,omitempty"`
+	// OSDIDList is the set of Ceph OSD ids backed by this device (a device may
+	// back more than one OSD); OSDID holds only the first/legacy value.
+	OSDIDList []int  `json:"osdid-list,omitempty"`
+	Vendor2   string `json:"vendor2,omitempty"`
 }
 
 // DiskSMART is the response from GET /nodes/{node}/disks/smart.

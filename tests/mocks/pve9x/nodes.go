@@ -1030,8 +1030,8 @@ func nodes() {
 		Get("^/nodes/node1/disks/list").
 		Reply(200).
 		JSON(`{"data": [
-			{"devpath": "/dev/sda", "size": 512000000000, "model": "Samsung SSD 870 EVO", "type": "ssd", "health": "PASSED", "gpt": 1, "used": "LVM"},
-			{"devpath": "/dev/sdb", "size": 2000000000000, "model": "Seagate ST2000DM008", "type": "hdd", "health": "PASSED", "gpt": 0}
+			{"devpath": "/dev/sda", "size": 512000000000, "model": "Samsung SSD 870 EVO", "type": "ssd", "health": "PASSED", "gpt": 1, "used": "LVM", "mounted": false, "osdid": -1, "osdid-list": []},
+			{"devpath": "/dev/sdb", "size": 2000000000000, "model": "Seagate ST2000DM008", "type": "hdd", "health": "PASSED", "gpt": 0, "mounted": true, "osdid": 3, "osdid-list": [3, 4]}
 		]}`)
 
 	gock.New(config.C.URI).
@@ -1225,21 +1225,18 @@ func nodes() {
 			{"subdir":"schedule_now"}
 		]}`)
 
-	// GET /nodes/{node}/storage/{storage} — diridx path that returns the
-	// storage's status/capability object directly (not a subdir list).
+	// GET /nodes/{node}/storage/{storage} — directory index. Per the PVE
+	// schema this returns an array of child-link objects (status, content, …),
+	// NOT the status object; the status object lives at the /status child.
+	// Storage.Status must therefore hit /status, not this bare path.
 	gock.New(config.C.URI).
 		Persist().
 		Get("^/nodes/node1/storage/local$").
 		Reply(200).
-		JSON(`{"data":{
-			"type":"dir",
-			"content":"images,rootdir,vztmpl,backup,iso,snippets",
-			"active":1,
-			"enabled":1,
-			"shared":0,
-			"total":60000000000,
-			"used":10000000000,
-			"avail":50000000000,
-			"used_fraction":0.16667
-		}}`)
+		JSON(`{"data":[
+			{"subdir":"status"},
+			{"subdir":"content"},
+			{"subdir":"rrd"},
+			{"subdir":"rrddata"}
+		]}`)
 }
