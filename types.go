@@ -1935,7 +1935,9 @@ type ClusterBackup struct {
 // see the PVE API docs for semantics. Enabled, Remove and StdExcludes default
 // to true on the PVE side, so they are pointers: leave them nil to keep the
 // default, or set Ptr(false) to disable a job, keep old backups or back up
-// the standard excludes.
+// the standard excludes. IoNice, LockWait, StopWait and Zstd have non-zero
+// PVE defaults where 0 is a valid setting, so they are pointers too: set
+// Ptr(uint(0)) to send 0 (for Zstd, half of the available cores).
 type ClusterBackupOptions struct {
 	All                bool   `json:"all,omitempty"`
 	BwLimit            uint64 `json:"bwlimit,omitempty"`
@@ -1947,8 +1949,8 @@ type ClusterBackupOptions struct {
 	Exclude            string `json:"exclude,omitempty"`
 	ExcludePath        string `json:"exclude-path,omitempty"`
 	ID                 string `json:"id,omitempty"`
-	IoNice             uint   `json:"ionice,omitempty"`
-	LockWait           uint   `json:"lockwait,omitempty"`
+	IoNice             *uint  `json:"ionice,omitempty"`   // PVE default 7
+	LockWait           *uint  `json:"lockwait,omitempty"` // PVE default 180
 	MailNotification   string `json:"mailnotification,omitempty"`
 	MailTo             string `json:"mailto,omitempty"`
 	MaxFiles           uint   `json:"maxfiles,omitempty"`
@@ -1970,11 +1972,11 @@ type ClusterBackupOptions struct {
 	Script             string `json:"script,omitempty"`
 	StdExcludes        *bool  `json:"stdexcludes,omitempty"` // PVE default 1
 	Stop               bool   `json:"stop,omitempty"`
-	StopWait           uint   `json:"stopwait,omitempty"`
+	StopWait           *uint  `json:"stopwait,omitempty"` // PVE default 10
 	Storage            string `json:"storage,omitempty"`
 	TmpDir             string `json:"tmpdir,omitempty"`
 	VMID               string `json:"vmid,omitempty"`
-	Zstd               uint   `json:"zstd,omitempty"`
+	Zstd               *uint  `json:"zstd,omitempty"` // PVE default 1
 }
 
 type ClusterStorages []*ClusterStorage
