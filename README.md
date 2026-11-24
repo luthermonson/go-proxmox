@@ -510,6 +510,7 @@ Release notes are in the [CHANGELOG](./CHANGELOG.md). Per-release migration guid
 - [`migration/v0.9.0.md`](./migration/v0.9.0.md) — task waits report failed tasks as errors; typed API errors (`*APIError`); non-2xx responses that used to be ignored now return errors; `AgentExecStatus` field types; `Node.Storage` and the `New` constructors deprecated in favour of refs
 - [`migration/v0.10.0.md`](./migration/v0.10.0.md) — `NodeStopAllOptions.ForceStop` and `ClusterBackupOptions.Enabled`/`.Remove`/`.StdExcludes` became pointers so `false` can be sent instead of being dropped to PVE's default
 - [`migration/v0.11.0.md`](./migration/v0.11.0.md) — decode fixes: `CephFlag`→`bool`, `Firewall`→`FirewallSubdirs`, `User.Tokens`→`UserTokens`, `NodeCertificate` times→`int64`, `SDNZone.Pending`→map, `Disk.MountPoint`→`Mounted` (and `Disk` non-comparable), `ContainerMigratePreconditions` reshaped, and four `ClusterBackupOptions` `*uint` fields
+- [`migration/v0.12.0.md`](./migration/v0.12.0.md) — more 0/1-integer decode fixes: `CephFlag.Value` and the migrate-precondition `Running`/`HasDBusVMState` fields→`IntOrBool`, `ContainerMigratePreconditions.NotAllowedNodes`→node-keyed map, and firewall `NDP`→`*IntOrBool`
 
 # Developing
 This project relies on [Mage](https://magefile.org/) for cross os/arch compatibility, please see their installation guide. 

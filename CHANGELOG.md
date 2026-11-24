@@ -2,6 +2,24 @@
 
 Per-release upgrade instructions live in [`migration/`](./migration/). Releases before v0.9.0 are listed on the [GitHub releases page](https://github.com/luthermonson/go-proxmox/releases).
 
+## v0.12.0
+
+Upgrade guide: [`migration/v0.12.0.md`](./migration/v0.12.0.md). Decode fixes for fields PVE returns as `0`/`1` integers that were typed `bool` (so they failed to decode or dropped data), plus one more option field made a pointer so `0`/`false` can be sent. Seven source-level changes; if your code compiles, you've migrated.
+
+### Fixes
+
+- `Cluster.CephFlag` decodes PVE's `0`/`1` flag state correctly (it errored on the integer before); the `(bool, error)` signature is unchanged. `CephFlag.Value` is now `IntOrBool` (#383)
+- `ContainerMigratePreconditions.NotAllowedNodes` is keyed by node name (`map[string]*ContainerMigrateNotAllowedNodes`) like the qemu endpoint; v0.11.0's flat struct silently dropped the per-node blocking-HA data (#383)
+- `ContainerMigratePreconditions.Running`, `VirtualMachineMigratePreconditions.Running` and `.HasDBusVMState` are `IntOrBool` — PVE sends them as `0`/`1`, which a plain `bool` failed to decode (#383)
+- `FirewallNodeOption.NDP` and `FirewallVirtualMachineOption.NDP` are `*IntOrBool`, so `Ptr(IntOrBool(false))` sends `ndp=0` instead of being dropped and PVE keeping its default of 1 (#380, rebased)
+- `Cluster.CheckID` recognises PVE 9.2's reworded "guest ID N is already in use" error (older PVE: "VM N already exists"), so a taken VMID is reported as taken instead of surfacing the 400; matches on the typed `*APIError`. Behaviour-only, no API change (#378)
+
+### Breaking changes
+
+Seven incompatible field changes (`apidiff v0.11.0..v0.12.0` reports exactly these); see the [migration guide](./migration/v0.12.0.md). All are "the field couldn't decode what PVE sends" fixes: `CephFlag.Value`, the three migrate-precondition `Running`/`HasDBusVMState` fields, `ContainerMigratePreconditions.NotAllowedNodes`, and the two firewall `NDP` fields. The `CephFlag(...)` method signature is unchanged. (#383, #380)
+
+Thanks to @lbarrosby (#380) and @themoriarti (#378).
+
 ## v0.11.0
 
 Upgrade guide: [`migration/v0.11.0.md`](./migration/v0.11.0.md). Mostly decode fixes — fields and methods whose Go type or JSON tag did not match what PVE returns, so they never decoded. Every change is source-incompatible, but in each case the old shape could not carry the real value, so fixing your code gets you data you weren't getting before.
