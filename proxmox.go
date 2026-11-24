@@ -140,6 +140,9 @@ type Client struct {
 	endpointFailureThreshold int
 	endpointCooldownBase     time.Duration
 	endpointCooldownMax      time.Duration
+	endpointStrategy         EndpointStrategy
+	endpointHealthCtx        context.Context
+	endpointMaxDowntime      time.Duration
 }
 
 // runInterceptors invokes the registered request interceptors in registration
