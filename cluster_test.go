@@ -54,6 +54,11 @@ func TestCheckID(t *testing.T) {
 	checkIDTaken, err := cluster.CheckID(ctx, 200)
 	assert.Nil(t, err)
 	assert.Equal(t, false, checkIDTaken)
+	checkIDInUse, err := cluster.CheckID(ctx, 300)
+	assert.Nil(t, err)
+	assert.Equal(t, false, checkIDInUse)
+	_, err = cluster.CheckID(ctx, 99)
+	assert.True(t, IsBadRequest(err))
 }
 
 func TestCluster_Resources(t *testing.T) {
