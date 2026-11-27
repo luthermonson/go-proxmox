@@ -198,7 +198,12 @@ func TestStringOrFloat64(t *testing.T) {
 		assert.Equal(t, test.err, json.Unmarshal([]byte(m), &unmarshall))
 		assert.Equal(t, test.expected, unmarshall.Value)
 	}
+
+	var value StringOrFloat64
+	require.NoError(t, json.Unmarshal([]byte("1e-5"), &value))
+	assert.Equal(t, StringOrFloat64(1e-5), value)
 }
+
 func TestIntOrBool_UnmarshalJSON(t *testing.T) {
 	cases := []struct {
 		name    string

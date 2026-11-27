@@ -74,8 +74,12 @@ func TestContainer(t *testing.T) {
 		Name:   "node1",
 	}
 	container, err := node.Container(ctx, 101)
-	assert.Nil(t, err)
-	assert.NotEmpty(t, container, container.ContainerConfig)
+	require.NoError(t, err)
+	require.NotNil(t, container)
+	assert.Equal(t, 0.5, float64(container.CPUs))
+	require.NotNil(t, container.ContainerConfig)
+	require.NotNil(t, container.ContainerConfig.CPULimit)
+	assert.Equal(t, 0.5, float64(*container.ContainerConfig.CPULimit))
 }
 
 func TestContainers(t *testing.T) {
@@ -88,8 +92,11 @@ func TestContainers(t *testing.T) {
 		Name:   "node1",
 	}
 	containers, err := node.Containers(ctx)
-	assert.Nil(t, err)
-	assert.Len(t, containers, 3)
+	require.NoError(t, err)
+	require.Len(t, containers, 3)
+	assert.Equal(t, 0.5, float64(containers[0].CPUs))
+	assert.Equal(t, 0.5, float64(containers[1].CPUs))
+	assert.Equal(t, 2.0, float64(containers[2].CPUs))
 }
 
 func TestContainerClone(t *testing.T) {
@@ -495,9 +502,10 @@ func TestContainerRRDData(t *testing.T) {
 
 	c := &Container{client: client, Node: "node1", VMID: 101}
 	data, err := c.RRDData(ctx, TimeframeHour)
-	assert.Nil(t, err)
-	assert.Len(t, data, 2)
+	require.NoError(t, err)
+	require.Len(t, data, 2)
 	assert.Equal(t, uint64(1715299200), data[0].Time)
+	assert.Equal(t, 0.5, float64(data[0].MaxCPU))
 }
 
 func TestContainerPending(t *testing.T) {

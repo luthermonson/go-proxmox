@@ -13,7 +13,7 @@ import (
 // one QEMU guest on node2 and one LXC guest on node3.
 const clusterResourcesJSON = `{"data": [
 	{"id": "qemu/101", "type": "qemu", "vmid": 101, "node": "node2", "name": "vm101", "status": "running"},
-	{"id": "lxc/100", "type": "lxc", "vmid": 100, "node": "node3", "name": "ct100", "status": "running"}
+	{"id": "lxc/100", "type": "lxc", "vmid": 100, "node": "node3", "name": "ct100", "status": "running", "maxcpu": 0.5}
 ]}`
 
 func TestFindVirtualMachine(t *testing.T) {

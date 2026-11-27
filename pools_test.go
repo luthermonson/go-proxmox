@@ -6,6 +6,7 @@ import (
 
 	"github.com/luthermonson/go-proxmox/tests/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPools(t *testing.T) {
@@ -24,13 +25,12 @@ func TestPoolGet(t *testing.T) {
 	client := mockClient()
 
 	pool, err := client.Pool(context.Background(), "test-pool")
-	assert.Nil(t, err)
-	assert.NotNil(t, pool)
-	if pool != nil {
-		assert.Equal(t, "test-pool", pool.PoolID)
-		assert.Equal(t, "Test pool", pool.Comment)
-		assert.Len(t, pool.Members, 3)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, pool)
+	assert.Equal(t, "test-pool", pool.PoolID)
+	assert.Equal(t, "Test pool", pool.Comment)
+	require.Len(t, pool.Members, 3)
+	assert.Equal(t, 0.5, float64(pool.Members[1].MaxCPU))
 }
 
 func TestPoolCreate(t *testing.T) {
