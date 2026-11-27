@@ -45,6 +45,35 @@ func (c *Client) FindContainer(ctx context.Context, vmid int) (*Container, error
 	return c.NodeRef(node).ContainerRef(vmid), nil
 }
 
+// FindGuestByUID returns the /cluster/resources row of the guest (QEMU or
+// LXC) whose UID matches uid, in a single GET /cluster/resources?type=vm.
+// Unlike a VMID, the UID (PVE 9.3+) stays the same when a guest is restored
+// under another VMID or moved to another cluster, so backup and inventory
+// tools can use it to recognise the same guest.
+//
+// The row's Type ("qemu" or "lxc"), Node and VMID say where the guest is now;
+// build a handle with NodeRef(r.Node).VirtualMachineRef or ContainerRef.
+// A uid with no match returns an error that satisfies IsNotFound. Guests
+// without a UID (older PVE, or not yet written by a 9.3 node) never match.
+//
+// The same eventual-consistency caveat as FindVirtualMachine applies.
+func (c *Client) FindGuestByUID(ctx context.Context, uid string) (*ClusterResource, error) {
+	if uid == "" {
+		return nil, fmt.Errorf("find guest by uid: uid is empty")
+	}
+	cluster := &Cluster{client: c}
+	resources, err := cluster.Resources(ctx, "vm")
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range resources {
+		if r.UID == uid && (r.Type == resourceTypeQemu || r.Type == resourceTypeLXC) {
+			return r, nil
+		}
+	}
+	return nil, fmt.Errorf("no guest with uid %q in cluster resources: %w", uid, ErrNotFound)
+}
+
 // findGuestNode issues one GET /cluster/resources?type=vm (which covers both
 // QEMU and LXC guests) and returns the node hosting the guest with the given
 // VMID and resource type ("qemu" or "lxc"). The Cluster handle is built

@@ -464,6 +464,7 @@ func containers() {
         "maxdisk": 10737418240,
         "maxswap": 536870912,
         "uptime": 12345,
+        "uid": "mnopqrstuv234567wxyz",
         "tags": "prod;web"
     }
 }`)
@@ -478,6 +479,7 @@ func containers() {
         "arch": "amd64",
         "cores": 2,
         "hostname": "ct-test-1",
+        "meta": "ctime=1795763078,rtime=1795763078193,uid=mnopqrstuv234567wxyz",
         "memory": 2048,
         "ostype": "debian",
         "rootfs": "local-lvm:vm-100-disk-0,size=10G",

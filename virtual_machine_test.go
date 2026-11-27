@@ -33,6 +33,13 @@ func TestVirtualMachine_Ping(t *testing.T) {
 	assert.Nil(t, vm.Ping(ctx))
 	assert.Equal(t, StringOrUint64(101), vm.VMID)
 	assert.Equal(t, IntOrBool(true), vm.Spice)
+	assert.Equal(t, "qrstuvwxyz234567abcd", vm.UID)
+
+	meta, err := vm.VirtualMachineConfig.GuestMeta()
+	require.NoError(t, err)
+	assert.Equal(t, vm.UID, meta.UID)
+	assert.Equal(t, "11.1.3", meta.CreationQEMU)
+	assert.Equal(t, int64(1795762726284), meta.RTime)
 }
 
 func TestVirtualMachine_RRDData(t *testing.T) {

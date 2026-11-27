@@ -17,6 +17,7 @@ func virtualMachines() {
         "digest": "abc123def456",
         "name": "matt",
         "vmid": 101,
+        "meta": "creation-qemu=11.1.3,ctime=1795762726,rtime=1795762726284,uid=qrstuvwxyz234567abcd",
         "cores": 2,
         "memory": 2048,
         "sockets": 1,
@@ -98,6 +99,7 @@ func virtualMachines() {
 		JSON(`{
     "data": {
         "pid": 1563102,
+        "uid": "qrstuvwxyz234567abcd",
         "shares": 1000,
         "agent": 1,
         "spice": 1,

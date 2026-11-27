@@ -81,6 +81,65 @@ func TestFindVirtualMachine(t *testing.T) {
 	})
 }
 
+func TestFindGuestByUID(t *testing.T) {
+	ctx := context.Background()
+	const resources = `{"data": [
+		{"id": "qemu/101", "type": "qemu", "vmid": 101, "node": "node2", "uid": "abcdefghij234567klmn", "rtime": 1764150000000},
+		{"id": "lxc/100", "type": "lxc", "vmid": 100, "node": "node3", "uid": "mnopqrstuv234567wxyz"},
+		{"id": "qemu/102", "type": "qemu", "vmid": 102, "node": "node1"}
+	]}`
+
+	t.Run("resolves a container by uid in one request", func(t *testing.T) {
+		client, rec := newRefsClient(t)
+		gock.New(refsTestURI).Get("^/cluster/resources$").Reply(200).JSON(resources)
+
+		r, err := client.FindGuestByUID(ctx, "mnopqrstuv234567wxyz")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"GET /cluster/resources"}, rec.calls())
+		assert.Equal(t, "lxc", r.Type)
+		assert.Equal(t, "node3", r.Node)
+		assert.Equal(t, uint64(100), r.VMID)
+	})
+
+	t.Run("resolves a vm by uid", func(t *testing.T) {
+		client, _ := newRefsClient(t)
+		gock.New(refsTestURI).Get("^/cluster/resources$").Reply(200).JSON(resources)
+
+		r, err := client.FindGuestByUID(ctx, "abcdefghij234567klmn")
+		require.NoError(t, err)
+		assert.Equal(t, "qemu", r.Type)
+		assert.Equal(t, int64(1764150000000), r.RTime)
+	})
+
+	t.Run("unknown uid is not found", func(t *testing.T) {
+		client, _ := newRefsClient(t)
+		gock.New(refsTestURI).Get("^/cluster/resources$").Reply(200).JSON(resources)
+
+		r, err := client.FindGuestByUID(ctx, "zzzzzzzzzzzzzzzzzzzz")
+		require.Error(t, err)
+		assert.Nil(t, r)
+		assert.True(t, IsNotFound(err))
+	})
+
+	t.Run("empty uid is rejected without a request", func(t *testing.T) {
+		client, rec := newRefsClient(t)
+
+		_, err := client.FindGuestByUID(ctx, "")
+		require.Error(t, err)
+		assert.False(t, IsNotFound(err), "must not match guests that have no uid")
+		assert.Empty(t, rec.calls())
+	})
+
+	t.Run("a resources error propagates", func(t *testing.T) {
+		client, _ := newRefsClient(t)
+		gock.New(refsTestURI).Get("^/cluster/resources$").Reply(500)
+
+		_, err := client.FindGuestByUID(ctx, "abcdefghij234567klmn")
+		require.Error(t, err)
+		assert.False(t, IsNotFound(err))
+	})
+}
+
 func TestFindContainer(t *testing.T) {
 	ctx := context.Background()
 
