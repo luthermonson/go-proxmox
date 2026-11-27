@@ -26,7 +26,7 @@ func marshalToMap(t *testing.T, v any) map[string]any {
 func TestContainerConfig_DefaultsOmittedWhenUnset(t *testing.T) {
 	// Bare struct — none of the pointer-typed fields should appear.
 	m := marshalToMap(t, ContainerConfig{})
-	for _, k := range []string{"arch", "cmode", "console", "cpuunits", "memory", "swap", "tty"} {
+	for _, k := range []string{"arch", "cmode", "console", "cpulimit", "cpuunits", "memory", "swap", "tty"} {
 		_, present := m[k]
 		assert.Falsef(t, present, "%q should be omitted when unset so PVE applies its default", k)
 	}
@@ -37,6 +37,7 @@ func TestContainerConfig_ExplicitValuesAppearOnTheWire(t *testing.T) {
 		Arch:     Ptr("amd64"),
 		CMode:    Ptr("tty"),
 		Console:  Ptr(IntOrBool(false)), // explicit disable — must reach PVE as 0, not be silently swallowed
+		CPULimit: Ptr(StringOrFloat64(0)),
 		CPUUnits: Ptr(1024),
 		Memory:   Ptr(512),
 		Swap:     Ptr(0), // explicit no-swap — must reach PVE as 0, not be omitted
@@ -46,10 +47,14 @@ func TestContainerConfig_ExplicitValuesAppearOnTheWire(t *testing.T) {
 	assert.Equal(t, "amd64", m["arch"])
 	assert.Equal(t, "tty", m["cmode"])
 	assert.Equal(t, float64(0), m["console"]) // IntOrBool false marshals to 0
+	assert.Equal(t, float64(0), m["cpulimit"])
 	assert.Equal(t, float64(1024), m["cpuunits"])
 	assert.Equal(t, float64(512), m["memory"])
 	assert.Equal(t, float64(0), m["swap"])
 	assert.Equal(t, float64(2), m["tty"])
+
+	cfg.CPULimit = Ptr(StringOrFloat64(0.5))
+	assert.Equal(t, 0.5, marshalToMap(t, cfg)["cpulimit"])
 }
 
 func TestVirtualMachineConfig_DefaultsOmittedWhenUnset(t *testing.T) {

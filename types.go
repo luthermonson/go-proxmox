@@ -372,7 +372,7 @@ type ClusterResource struct {
 	DiskWrite  uint64  `json:",omitempty"`
 	HAstate    string  `json:",omitempty"`
 	Level      string  `json:",omitempty"`
-	MaxCPU     uint64  `json:",omitempty"`
+	MaxCPU     float64 `json:",omitempty"` // fractional for a CT with cpulimit and no cores
 	MaxDisk    uint64  `json:",omitempty"`
 	MaxMem     uint64  `json:",omitempty"`
 	Mem        uint64  `json:",omitempty"` // documented as string but this is an int
@@ -1001,7 +1001,7 @@ const (
 type RRDData struct {
 	Time      uint64
 	CPU       float64
-	MaxCPU    int
+	MaxCPU    float64
 	Mem       float64
 	MaxMem    uint64
 	Disk      int
@@ -1659,7 +1659,9 @@ type Container struct {
 	client          *Client
 	ContainerConfig *ContainerConfig
 
-	CPUs    int
+	// CPUs falls back to cpulimit when cores is unset, so it can be
+	// fractional. Before pve-container 6.1.21 it could be quoted (bug #8162).
+	CPUs    StringOrFloat64
 	MaxDisk uint64
 	MaxMem  uint64
 	MaxSwap uint64
@@ -1708,9 +1710,11 @@ type ContainerConfig struct {
 	// Console — PVE default 1 (console enabled). A non-pointer zero would
 	// silently disable the container console on any update that didn't set
 	// the field. See #178 (boolean wire type) + #199.
-	Console  *IntOrBool `json:"console,omitempty"`
-	Cores    int        `json:"cores,omitempty"`
-	CPULimit int        `json:"cpulimit,omitempty"`
+	Console *IntOrBool `json:"console,omitempty"`
+	Cores   int        `json:"cores,omitempty"`
+	// CPULimit can be fractional or quoted. PVE defaults to 0 (no cap).
+	// A pointer lets callers explicitly send 0 to clear an existing cap.
+	CPULimit *StringOrFloat64 `json:"cpulimit,omitempty"`
 	// CPUUnits — PVE default 1024 (cgroup v1) / 100 (cgroup v2). Plain int
 	// would default to 0 and override the server's CPU weight on edit. See #199.
 	CPUUnits    *int      `json:"cpuunits,omitempty"`
@@ -2143,7 +2147,16 @@ func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
 type StringOrFloat64 float64
 
 func (d *StringOrFloat64) UnmarshalJSON(b []byte) error {
-	str := strings.ReplaceAll(string(b), "\"", "")
+	if !bytes.HasPrefix(b, []byte(`"`)) {
+		var value float64
+		if err := json.Unmarshal(b, &value); err != nil {
+			return err
+		}
+		*d = StringOrFloat64(value)
+		return nil
+	}
+
+	str := strings.Trim(string(b), "\"")
 	if str == "" || str == "null" {
 		*d = StringOrFloat64(0)
 		return nil

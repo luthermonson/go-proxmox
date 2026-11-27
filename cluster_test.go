@@ -73,11 +73,15 @@ func TestCluster_Resources(t *testing.T) {
 
 	// json unmarshaling tests
 	rs, err := cluster.Resources(ctx)
-	assert.Nil(t, err)
-	assert.Equal(t, 20, len(rs))
-	assert.Equal(t, "abcdefghij234567klmn", rs[0].UID)
-	assert.Equal(t, int64(1795762726284), rs[0].RTime)
-	assert.Empty(t, rs[1].UID, "guests without an identity decode to an empty UID")
+	require.NoError(t, err)
+	require.Len(t, rs, 21)
+	// rs[0] is the fractional-CPU lxc/103 row (no identity); the qemu/100 row
+	// that carries the uid/rtime follows it.
+	assert.Equal(t, 0.5, float64(rs[0].MaxCPU))
+	assert.Equal(t, 4.0, float64(rs[2].MaxCPU))
+	assert.Equal(t, "abcdefghij234567klmn", rs[1].UID)
+	assert.Equal(t, int64(1795762726284), rs[1].RTime)
+	assert.Empty(t, rs[0].UID, "guests without an identity decode to an empty UID")
 
 	// type param test
 	rs, err = cluster.Resources(ctx, "node")

@@ -114,6 +114,7 @@ func cluster() {
 		Reply(200).
 		JSON(`{
     "data": [
+        {"id": "lxc/103", "type": "lxc", "vmid": 103, "node": "node1", "maxcpu": 0.5},
         {
             "netout": 545248946,
             "type": "qemu",

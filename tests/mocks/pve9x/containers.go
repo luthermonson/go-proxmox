@@ -8,6 +8,7 @@ import (
 
 func containers() {
 	// GET /nodes/{node}/lxc - List containers
+	// Without cores, cpus can be quoted before pve-container 6.1.21 (bug #8162).
 	gock.New(config.C.URI).
 		Get("^/nodes/node1/lxc$").
 		Reply(200).
@@ -17,7 +18,7 @@ func containers() {
             "vmid": 100,
             "status": "running",
             "name": "ct-test-1",
-            "cpus": 2,
+            "cpus": "0.5",
             "maxmem": 2147483648,
             "maxdisk": 10737418240,
             "maxswap": 536870912,
@@ -28,7 +29,7 @@ func containers() {
             "vmid": 101,
             "status": "stopped",
             "name": "ct-test-2",
-            "cpus": 1,
+            "cpus": 0.5,
             "maxmem": 1073741824,
             "maxdisk": 8589934592,
             "maxswap": 268435456,
@@ -39,7 +40,7 @@ func containers() {
             "vmid": 102,
             "status": "running",
             "name": "ct-test-3",
-            "cpus": 4,
+            "cpus": "2",
             "maxmem": 4294967296,
             "maxdisk": 21474836480,
             "maxswap": 1073741824,
@@ -104,7 +105,7 @@ func containers() {
         "vmid": 101,
         "status": "stopped",
         "name": "ct-test-2",
-        "cpus": 1,
+        "cpus": 0.5,
         "maxmem": 1073741824,
         "maxdisk": 8589934592,
         "maxswap": 268435456,
@@ -120,7 +121,7 @@ func containers() {
 		JSON(`{
     "data": {
         "arch": "amd64",
-        "cores": 1,
+        "cpulimit": "0.5",
         "hostname": "ct-test-2",
         "memory": 1024,
         "net0": "name=eth0,bridge=vmbr0,firewall=1,hwaddr=BC:24:11:2E:C5:7E,ip=dhcp,type=veth",
@@ -295,7 +296,7 @@ func containers() {
 		Reply(200).
 		JSON(`{
     "data": [
-        {"time": 1715299200, "cpu": 0.05, "mem": 268435456, "maxmem": 1073741824, "disk": 0, "maxdisk": 8589934592, "netin": 1000, "netout": 500, "diskread": 0, "diskwrite": 0},
+        {"time": 1715299200, "cpu": 0.05, "maxcpu": 0.5, "mem": 268435456, "maxmem": 1073741824, "disk": 0, "maxdisk": 8589934592, "netin": 1000, "netout": 500, "diskread": 0, "diskwrite": 0},
         {"time": 1715299260, "cpu": 0.10, "mem": 270000000, "maxmem": 1073741824, "disk": 0, "maxdisk": 8589934592, "netin": 1500, "netout": 700, "diskread": 0, "diskwrite": 0}
     ]
 }`)
