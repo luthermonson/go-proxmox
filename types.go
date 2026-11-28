@@ -273,6 +273,19 @@ type Cluster struct {
 	Nodes   NodeStatuses
 	Name    string
 	ID      string
+	// ClusterID is the cluster's random identifier (PVE 9.3+), read from the
+	// "cluster" entry of /cluster/status. Combined with a guest UID it tells
+	// apart guests with the same UID in different clusters. A standalone
+	// node has no cluster entry; its identifier is on its NodeStatus and is
+	// copied here so ClusterID is set in both cases.
+	//
+	// Empty until pmxcfs has generated the ID. In a cluster only the node
+	// with the lowest node ID does that (pve-cluster 9.1.13+, shipped with
+	// PVE 9.3), and only while more than half of the configured nodes are
+	// present and in sync. A partly upgraded cluster whose lowest node ID
+	// still runs an older release has no ID, even when queried through an
+	// upgraded node.
+	ClusterID string
 }
 
 func (cl *Cluster) UnmarshalJSON(b []byte) error {
@@ -301,6 +314,9 @@ func (cl *Cluster) UnmarshalJSON(b []byte) error {
 			if v, ok := d["quorate"]; ok {
 				cl.Quorate = int(v.(float64))
 			}
+			if v, ok := d["cluster-id"].(string); ok {
+				cl.ClusterID = v
+			}
 		case "node":
 			ns := NodeStatus{
 				Status: "offline",
@@ -327,9 +343,17 @@ func (cl *Cluster) UnmarshalJSON(b []byte) error {
 			if v, ok := d["local"]; ok {
 				ns.Local = int(v.(float64))
 			}
+			if v, ok := d["cluster-id"].(string); ok {
+				ns.ClusterID = v
+			}
 
 			cl.Nodes = append(cl.Nodes, &ns)
 		}
+	}
+
+	// A standalone node reports the identifier on its own node entry.
+	if cl.ClusterID == "" && len(cl.Nodes) == 1 {
+		cl.ClusterID = cl.Nodes[0].ClusterID
 	}
 
 	return nil
@@ -365,6 +389,14 @@ type ClusterResource struct {
 	Template   uint64  `json:",omitempty"`
 	Uptime     uint64  `json:",omitempty"`
 	VMID       uint64  `json:",omitempty"`
+	// UID is the guest's random identity (PVE 9.3+, qemu and lxc rows only).
+	// It survives migrations, backups and restores, also under a new VMID.
+	// Empty on older PVE and for guests no 9.3 node has written yet.
+	UID string `json:"uid,omitempty"`
+	// RTime is when the guest was registered in this cluster (creation,
+	// restore to a free VMID, or migration in from another cluster), in
+	// milliseconds since the UNIX epoch. PVE 9.3+, qemu and lxc rows only.
+	RTime int64 `json:"rtime,omitempty"`
 }
 
 type Ceph struct {
@@ -825,6 +857,9 @@ type NodeStatus struct {
 	IP     string `json:",omitempty"`
 	Online int    `json:",omitempty"`
 	Local  int    `json:",omitempty"`
+	// ClusterID is set only on a standalone node's entry in /cluster/status
+	// (PVE 9.3+); in a cluster the identifier is on Cluster.ClusterID.
+	ClusterID string `json:"cluster-id,omitempty"`
 }
 
 // NodeStartAllOptions is the optional body for POST /nodes/{node}/startall.
@@ -902,6 +937,10 @@ type VirtualMachine struct {
 	Uptime         uint64
 	Template       IsTemplate // empty str if a vm, int 1 if a template
 	HA             HA         `json:",omitempty"`
+	// UID is the guest's random identity from status/current (PVE 9.3+). See
+	// ClusterResource.UID. Empty until Ping has run, on older PVE, and for
+	// guests no 9.3 node has written yet.
+	UID string `json:"uid,omitempty"`
 }
 
 type HA struct {
@@ -1630,6 +1669,10 @@ type Container struct {
 	Tags    string
 	Uptime  uint64
 	VMID    StringOrUint64
+	// UID is the guest's random identity from status/current (PVE 9.3+). See
+	// ClusterResource.UID. Empty until Ping has run, on older PVE, and for
+	// guests no 9.3 node has written yet.
+	UID string `json:"uid,omitempty"`
 }
 
 type ContainerInterfaces []*ContainerInterface
@@ -1687,6 +1730,9 @@ type ContainerConfig struct {
 	LXC        [][]string `json:"lxc,omitempty"`
 	Hostname   string     `json:"hostname,omitempty"`
 	Lock       string     `json:"lock,omitempty"`
+	// Meta is PVE's read-only meta property string (creation time and, on
+	// PVE 9.3+, the guest uid and rtime). Use GuestMeta to parse it.
+	Meta string `json:"meta,omitempty"`
 	// Memory — PVE default 512 (MB). A plain int defaults to 0, which the
 	// API rejects on create and which silently shrinks RAM on edit. See #199.
 	Memory       *int      `json:"memory,omitempty"`

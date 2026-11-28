@@ -744,8 +744,16 @@ func TestContainer_MigrationTunnelWebSocketPath(t *testing.T) {
 func TestContainer_Ping(t *testing.T) {
 	mocks.On(mockConfig)
 	defer mocks.Off()
-	err := ct100().Ping(context.Background())
+	ct := ct100()
+	err := ct.Ping(context.Background())
 	assert.Nil(t, err)
+	assert.Equal(t, "mnopqrstuv234567wxyz", ct.UID)
+
+	meta, err := ct.ContainerConfig.GuestMeta()
+	require.NoError(t, err)
+	assert.Equal(t, ct.UID, meta.UID)
+	assert.Empty(t, meta.CreationQEMU)
+	assert.Equal(t, int64(1795763078), meta.CTime)
 }
 
 func TestContainer_TermProxy(t *testing.T) {

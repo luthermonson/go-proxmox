@@ -21,6 +21,7 @@ func TestCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 4, cluster.Version)
 	assert.Equal(t, "cluster", cluster.ID)
+	assert.Equal(t, "k3vq7xmzp4hdry5tbn2w", cluster.ClusterID)
 	for _, n := range cluster.Nodes {
 		assert.Contains(t, n.ID, "node/node")
 		assert.Equal(t, "node", n.Type)
@@ -74,6 +75,9 @@ func TestCluster_Resources(t *testing.T) {
 	rs, err := cluster.Resources(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, 20, len(rs))
+	assert.Equal(t, "abcdefghij234567klmn", rs[0].UID)
+	assert.Equal(t, int64(1795762726284), rs[0].RTime)
+	assert.Empty(t, rs[1].UID, "guests without an identity decode to an empty UID")
 
 	// type param test
 	rs, err = cluster.Resources(ctx, "node")

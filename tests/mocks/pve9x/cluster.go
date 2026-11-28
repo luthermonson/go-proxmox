@@ -48,6 +48,7 @@ func cluster() {
             "quorate": 1,
             "name": "clustername",
             "id": "cluster",
+            "cluster-id": "k3vq7xmzp4hdry5tbn2w",
             "nodes": 4
         },
         {
@@ -131,7 +132,9 @@ func cluster() {
             "status": "running",
             "template": 0,
             "id": "qemu/100",
-            "uptime": 874350
+            "uptime": 874350,
+            "uid": "abcdefghij234567klmn",
+            "rtime": 1795762726284
         },
         {
             "id": "qemu/101",
