@@ -85,10 +85,13 @@ const (
 // cooldown window (WithEndpointCooldown; default 10s, doubling per further
 // consecutive failure up to 180s) and is skipped without being dialed while
 // another endpoint is healthy, so a dead node is not re-probed on every
-// request. The bench is evaluated lazily on the request path — there is no
-// background goroutine — and the endpoint is re-probed once the window
-// expires; a success clears the state. When every endpoint is benched they are
-// all still tried, in order, rather than failing without an attempt.
+// request. By default the bench is evaluated lazily on the request path — there
+// is no background goroutine — and the endpoint is re-probed once the window
+// expires; a success clears the state. WithEndpointHealthCheck adds an opt-in
+// background supervisor that probes benched endpoints proactively instead, and
+// WithEndpointMaxDowntime soft-evicts one that stays down too long. When every
+// endpoint is benched they are all still tried, in order, rather than failing
+// without an attempt.
 //
 // After a request succeeds against an endpoint, that endpoint becomes the
 // current one for subsequent requests (sticky last-good); the client does not
@@ -113,6 +116,67 @@ const (
 func WithAdditionalEndpoints(urls ...string) Option {
 	return func(c *Client) {
 		c.fallbackEndpoints = append(c.fallbackEndpoints, urls...)
+	}
+}
+
+// EndpointStrategy selects the endpoint a request is sent to first when more
+// than one is configured with WithAdditionalEndpoints. Failover, the circuit
+// breaker and the replay rules above apply the same way under every strategy;
+// the strategy only decides where a request starts.
+type EndpointStrategy int
+
+const (
+	// EndpointSticky stays on the endpoint that last answered until it fails
+	// (sticky last-good). The default, and the behaviour before strategies
+	// existed: a brand-new client starts on the primary and only moves when
+	// the current endpoint is unreachable or returns a gateway-class status.
+	EndpointSticky EndpointStrategy = iota
+
+	// EndpointRoundRobin starts each request on the next healthy endpoint in
+	// turn, so API load spreads over every node instead of pinning the one
+	// behind the NewClient URL, and the proxy hop a pinned node adds for
+	// every other node's resources is spread with it. Benched endpoints are
+	// skipped in the rotation and come back once their cooldown ends. Any
+	// node answers any request (pveproxy forwards node-specific calls to the
+	// owner), so correctness does not depend on which node is hit; a listing
+	// read from a non-owning node may lag the owner by a moment, as it does
+	// for any request that node serves.
+	EndpointRoundRobin
+)
+
+// String implements fmt.Stringer.
+func (s EndpointStrategy) String() string {
+	switch s {
+	case EndpointSticky:
+		return "sticky"
+	case EndpointRoundRobin:
+		return "round-robin"
+	default:
+		return fmt.Sprintf("EndpointStrategy(%d)", int(s))
+	}
+}
+
+// ParseEndpointStrategy returns the strategy named by s: "sticky" or
+// "round-robin" (also "roundrobin" and "rr"), ignoring case. It is the
+// counterpart of EndpointStrategy.String for configuration files and
+// environment variables.
+func ParseEndpointStrategy(s string) (EndpointStrategy, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "sticky":
+		return EndpointSticky, nil
+	case "round-robin", "roundrobin", "rr":
+		return EndpointRoundRobin, nil
+	default:
+		return EndpointSticky, fmt.Errorf("unknown endpoint strategy %q (want sticky or round-robin)", s)
+	}
+}
+
+// WithEndpointStrategy sets how the client chooses the endpoint a request
+// starts on; see EndpointStrategy. The default is EndpointSticky. Has no
+// effect without WithAdditionalEndpoints.
+func WithEndpointStrategy(s EndpointStrategy) Option {
+	return func(c *Client) {
+		c.endpointStrategy = s
 	}
 }
 
@@ -143,6 +207,35 @@ func WithEndpointCooldown(base, max time.Duration) Option {
 		if max > 0 {
 			c.endpointCooldownMax = max
 		}
+	}
+}
+
+// WithEndpointHealthCheck turns on active health checking for the failover
+// endpoints. By default a benched endpoint is only re-probed lazily, when a
+// request happens to reach it; with this option a single background goroutine
+// probes benched endpoints on the circuit breaker's backoff schedule and
+// returns them to rotation the moment they answer, off the request critical
+// path. The goroutine runs only while at least one endpoint is down and stops
+// once they have all recovered, so nothing runs while the cluster is healthy;
+// it is also stopped when ctx is cancelled, so pass a context tied to the
+// client's lifetime (one you cancel on shutdown). A nil ctx leaves health
+// checking off. Has no effect without WithAdditionalEndpoints.
+func WithEndpointHealthCheck(ctx context.Context) Option {
+	return func(c *Client) {
+		c.endpointHealthCtx = ctx
+	}
+}
+
+// WithEndpointMaxDowntime soft-evicts an endpoint that has been continuously
+// unreachable for at least d: it is dropped from the normal rotation and
+// probed only at the cooldown maximum, but it is never removed for good — a
+// probe that finally answers restores it — and the last endpoint still eligible
+// is never evicted, so the client can always reach the cluster. Requires
+// WithEndpointHealthCheck (eviction relies on the active probe to bring a node
+// back); d <= 0 disables eviction. Has no effect without WithAdditionalEndpoints.
+func WithEndpointMaxDowntime(d time.Duration) Option {
+	return func(c *Client) {
+		c.endpointMaxDowntime = d
 	}
 }
 
@@ -203,9 +296,12 @@ func (c *Client) installFailoverWrapper() {
 		base:         base,
 		log:          c.log,
 		now:          time.Now,
+		strategy:     c.endpointStrategy,
 		threshold:    threshold,
 		cooldownBase: cooldownBase,
 		cooldownMax:  cooldownMax,
+		healthCtx:    c.endpointHealthCtx,
+		maxDowntime:  c.endpointMaxDowntime,
 		endpoints:    make([]*endpoint, len(bases)),
 	}
 	for i, b := range bases {
@@ -232,6 +328,8 @@ type endpoint struct {
 
 	failures   int       // consecutive transport failures
 	benchedTil time.Time // zero when healthy; otherwise skip until this time
+	downSince  time.Time // first failure of the current down streak; zero when healthy
+	evicted    bool      // soft-evicted after exceeding max downtime; healthy() stays false until a probe clears it
 }
 
 // failoverRoundTripper redirects requests addressed to the primary base URL to
@@ -252,6 +350,20 @@ type failoverRoundTripper struct {
 	mu        sync.Mutex
 	endpoints []*endpoint // endpoints[0] is the primary; slice is immutable, elements are guarded by mu
 	current   int         // index into endpoints; the sticky last-good endpoint
+
+	// strategy decides where a request starts (see EndpointStrategy); cursor
+	// is the round-robin position, advanced once per request.
+	strategy EndpointStrategy
+	cursor   atomic.Uint64
+
+	// Active health checking (WithEndpointHealthCheck). healthCtx is nil when
+	// disabled; while set, a single supervisor goroutine — guarded by probing,
+	// started on demand and self-exiting when every endpoint is healthy —
+	// probes down endpoints and restores them off the request path. maxDowntime
+	// soft-evicts an endpoint that stays down that long (WithEndpointMaxDowntime).
+	healthCtx   context.Context
+	maxDowntime time.Duration
+	probing     atomic.Bool
 }
 
 // RoundTrip implements http.RoundTripper.
@@ -422,14 +534,33 @@ func (f *failoverRoundTripper) suffix(u *url.URL) (string, bool) {
 	return rest, true
 }
 
-// order returns the endpoint indices to try for one request: the current
-// (sticky last-good) endpoint first when it is healthy, then the remaining
-// healthy endpoints in configured order, and finally any benched endpoints as
-// a last resort (so a request still goes out when everything is cooling down).
+// order returns the endpoint indices to try for one request: the healthy
+// endpoints first, then any benched endpoints as a last resort (so a request
+// still goes out when everything is cooling down). Which healthy endpoint
+// leads depends on the strategy: under EndpointSticky it is the current
+// (sticky last-good) endpoint, followed by the rest in configured order;
+// under EndpointRoundRobin each call advances a cursor over the endpoints and
+// the healthy ones follow in cyclic order from there.
 func (f *failoverRoundTripper) order() []int {
 	now := f.now()
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if f.strategy == EndpointRoundRobin {
+		n := len(f.endpoints)
+		start := int(f.cursor.Add(1)-1) % n
+		healthy := make([]int, 0, n)
+		var benched []int
+		for k := range n {
+			i := (start + k) % n
+			if f.endpoints[i].healthy(now) {
+				healthy = append(healthy, i)
+			} else {
+				benched = append(benched, i)
+			}
+		}
+		return append(healthy, benched...)
+	}
 
 	cur := f.current
 	healthy := make([]int, 0, len(f.endpoints))
@@ -455,8 +586,14 @@ func (f *failoverRoundTripper) order() []int {
 	return append(healthy, benched...)
 }
 
-// healthy reports whether the endpoint may be dialed at time now.
+// healthy reports whether the endpoint may be dialed at time now. A
+// soft-evicted endpoint is never healthy until a health probe restores it, so
+// it stays out of the normal rotation (it remains a last-resort target in
+// order()).
 func (e *endpoint) healthy(now time.Time) bool {
+	if e.evicted {
+		return false
+	}
 	return e.benchedTil.IsZero() || !now.Before(e.benchedTil)
 }
 
@@ -467,26 +604,36 @@ func (f *failoverRoundTripper) currentBase() string {
 	return f.endpoints[f.current].base
 }
 
-// markCurrent records idx as the current endpoint for subsequent requests.
+// markCurrent records idx as the current endpoint: the one subsequent requests
+// start on under EndpointSticky, and the one connections that cannot fail over
+// mid-flight (see endpointBaseURL) dial under every strategy. Under round robin
+// the current endpoint changes with nearly every request, so it is not logged.
 func (f *failoverRoundTripper) markCurrent(idx int) {
 	f.mu.Lock()
 	changed := f.current != idx
 	f.current = idx
 	f.mu.Unlock()
-	if changed {
+	if changed && f.strategy != EndpointRoundRobin {
 		f.log.Infof("proxmox: current endpoint is now %s", f.endpoints[idx].base)
 	}
 }
 
-// markOK clears an endpoint's failure state after a successful request.
+// markOK clears an endpoint's failure state after a successful request or
+// health probe, returning it to rotation (including from soft-eviction).
 func (f *failoverRoundTripper) markOK(idx int) {
 	f.mu.Lock()
 	ep := f.endpoints[idx]
-	wasDown := ep.failures > 0 || !ep.benchedTil.IsZero()
+	wasEvicted := ep.evicted
+	wasDown := ep.failures > 0 || !ep.benchedTil.IsZero() || wasEvicted
 	ep.failures = 0
 	ep.benchedTil = time.Time{}
+	ep.downSince = time.Time{}
+	ep.evicted = false
 	f.mu.Unlock()
-	if wasDown {
+	switch {
+	case wasEvicted:
+		f.log.Infof("proxmox endpoint %s recovered and is back in rotation", ep.base)
+	case wasDown:
 		f.log.Infof("proxmox endpoint %s is answering again", ep.base)
 	}
 }
@@ -495,9 +642,13 @@ func (f *failoverRoundTripper) markOK(idx int) {
 // the consecutive-failure threshold is reached, with an exponentially growing
 // cooldown capped at cooldownMax.
 func (f *failoverRoundTripper) markFailed(idx int, cause error) {
+	now := f.now()
 	f.mu.Lock()
 	ep := f.endpoints[idx]
 	ep.failures++
+	if ep.downSince.IsZero() {
+		ep.downSince = now
+	}
 	var benched time.Duration
 	if ep.failures >= f.threshold {
 		benched = f.cooldownBase
@@ -507,7 +658,18 @@ func (f *failoverRoundTripper) markFailed(idx int, cause error) {
 		if benched > f.cooldownMax {
 			benched = f.cooldownMax
 		}
-		ep.benchedTil = f.now().Add(benched)
+		ep.benchedTil = now.Add(benched)
+	}
+	// Soft-evict an endpoint that has stayed down past maxDowntime: it leaves
+	// the rotation (healthy() is false until a probe restores it) and is then
+	// probed only at the cooldown maximum. The last endpoint still eligible is
+	// never evicted, so the client can always reach the cluster. Eviction only
+	// applies with the active poller (WithEndpointHealthCheck) to bring it back.
+	evicted := false
+	if f.healthCtx != nil && f.maxDowntime > 0 && !ep.evicted &&
+		now.Sub(ep.downSince) >= f.maxDowntime && f.nonEvictedCountLocked() > 1 {
+		ep.evicted = true
+		evicted = true
 	}
 	failures := ep.failures
 	f.mu.Unlock()
@@ -516,6 +678,170 @@ func (f *failoverRoundTripper) markFailed(idx int, cause error) {
 		f.log.Warnf("proxmox endpoint %s benched for %s after %d consecutive failure(s): %v",
 			ep.base, benched, failures, cause)
 	}
+	if evicted {
+		f.log.Warnf("proxmox endpoint %s evicted from rotation after being down for at least %s; it will be probed at the %s cooldown maximum until it answers",
+			ep.base, f.maxDowntime, f.cooldownMax)
+	}
+	// A newly or still-benched endpoint has work for the health-check supervisor;
+	// start it if active health checking is on and it is not already running.
+	if benched > 0 {
+		f.maybeStartHealthCheck()
+	}
+}
+
+// nonEvictedCountLocked returns how many endpoints are not soft-evicted. The
+// caller must hold f.mu.
+func (f *failoverRoundTripper) nonEvictedCountLocked() int {
+	n := 0
+	for _, ep := range f.endpoints {
+		if !ep.evicted {
+			n++
+		}
+	}
+	return n
+}
+
+// maybeStartHealthCheck launches the background health-check supervisor when
+// active health checking is enabled (WithEndpointHealthCheck) and it is not
+// already running. It is called whenever an endpoint is benched; the goroutine
+// exits on its own once every endpoint is healthy again, so no goroutine runs
+// while the cluster is up.
+func (f *failoverRoundTripper) maybeStartHealthCheck() {
+	if f.healthCtx == nil || f.healthCtx.Err() != nil {
+		return
+	}
+	if f.probing.CompareAndSwap(false, true) {
+		go f.healthCheckLoop()
+	}
+}
+
+// healthCheckLoop probes down endpoints on the circuit breaker's own backoff
+// schedule and returns each to rotation as soon as it answers. It runs only
+// while at least one endpoint is down and stops when all have recovered or the
+// health context is cancelled.
+func (f *failoverRoundTripper) healthCheckLoop() {
+	for {
+		wait, any := f.nextProbe(f.now())
+		if !any {
+			// Nothing to probe. Release the running flag, then re-check to close
+			// the race with a concurrent bench that set it just after our check:
+			// if work reappeared, reclaim the flag and keep going, otherwise a
+			// fresh bench will start a new loop.
+			f.probing.Store(false)
+			if _, stillAny := f.nextProbe(f.now()); !stillAny {
+				return
+			}
+			if !f.probing.CompareAndSwap(false, true) {
+				return // another goroutine took over
+			}
+			continue
+		}
+		if wait > 0 {
+			select {
+			case <-f.healthCtx.Done():
+				f.probing.Store(false)
+				return
+			case <-time.After(wait):
+			}
+		} else if f.healthCtx.Err() != nil {
+			f.probing.Store(false)
+			return
+		}
+		f.probeDown()
+	}
+}
+
+// nextProbe reports how long until the earliest benched endpoint is due to be
+// re-probed, and whether any endpoint is down at all. A zero wait with any true
+// means at least one down endpoint is due to be probed now. Holds f.mu.
+func (f *failoverRoundTripper) nextProbe(now time.Time) (time.Duration, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var (
+		any  bool
+		next time.Time
+	)
+	for _, ep := range f.endpoints {
+		// benchedTil stays non-zero from the first bench until a success clears
+		// it, so it — not healthy(), which flips back lazily once the cooldown
+		// window passes — is the signal that an endpoint is still down and owed
+		// a probe. The probe is due when its bench window has elapsed.
+		if ep.benchedTil.IsZero() {
+			continue
+		}
+		any = true
+		if !ep.benchedTil.After(now) {
+			return 0, true
+		}
+		if next.IsZero() || ep.benchedTil.Before(next) {
+			next = ep.benchedTil
+		}
+	}
+	if !any {
+		return 0, false
+	}
+	return next.Sub(now), true
+}
+
+// probeDown probes every endpoint whose bench window has elapsed, restoring the
+// ones that answer and re-benching (and eventually evicting) the ones that do
+// not.
+func (f *failoverRoundTripper) probeDown() {
+	now := f.now()
+	f.mu.Lock()
+	var toProbe []int
+	for i, ep := range f.endpoints {
+		// Probe every endpoint whose bench window has elapsed but which a
+		// success has not yet cleared (benchedTil still set); see nextProbe.
+		if !ep.benchedTil.IsZero() && !ep.benchedTil.After(now) {
+			toProbe = append(toProbe, i)
+		}
+	}
+	f.mu.Unlock()
+
+	for _, idx := range toProbe {
+		if f.healthCtx.Err() != nil {
+			return
+		}
+		if err := f.probe(idx); err != nil {
+			f.markFailed(idx, fmt.Errorf("health probe: %w", err))
+		} else {
+			f.markOK(idx)
+		}
+	}
+}
+
+// probe issues a lightweight GET /version to the endpoint and reports whether
+// it is reachable. Any HTTP response — an auth challenge included — means the
+// node answered; only a transport error counts as still-down, which is exactly
+// what benched the endpoint in the first place. It dials f.base directly so the
+// probe neither recurses through failover nor disturbs the sticky cursor.
+func (f *failoverRoundTripper) probe(idx int) error {
+	ctx, cancel := context.WithTimeout(f.healthCtx, f.probeTimeout())
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.endpoints[idx].base+"/version", nil)
+	if err != nil {
+		return err
+	}
+	res, err := f.base.RoundTrip(req)
+	if err != nil {
+		return err
+	}
+	drainResponse(res)
+	return nil
+}
+
+// probeTimeout bounds a single health probe so it cannot outlast the window it
+// is refreshing.
+func (f *failoverRoundTripper) probeTimeout() time.Duration {
+	d := f.cooldownBase
+	if d <= 0 || d > 15*time.Second {
+		d = 15 * time.Second
+	}
+	if d < time.Second {
+		d = time.Second
+	}
+	return d
 }
 
 // isSafeMethod reports whether replaying the request on another node after it
